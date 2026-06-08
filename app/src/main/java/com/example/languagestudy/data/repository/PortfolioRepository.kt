@@ -1,15 +1,60 @@
 package com.example.languagestudy.data.repository
 
 import com.example.languagestudy.data.model.PortfolioItem
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.tasks.await
 
 interface PortfolioRepository {
     fun getPortfolioItems(limit: Long = 10, lastTimestamp: Long? = null): Flow<List<PortfolioItem>>
     suspend fun addPortfolioItem(item: PortfolioItem)
     suspend fun deletePortfolioItem(id: String)
     suspend fun updatePortfolioItem(item: PortfolioItem)
+}
+
+class FirestorePortfolioRepository(
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+) : PortfolioRepository {
+    private val portfolioCollection = firestore.collection("portfolio")
+
+    override fun getPortfolioItems(limit: Long, lastTimestamp: Long?): Flow<List<PortfolioItem>> = callbackFlow {
+        var query = portfolioCollection
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(limit)
+
+        if (lastTimestamp != null) {
+            query = query.startAfter(lastTimestamp)
+        }
+
+        val listener = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                val items = snapshot.toObjects(PortfolioItem::class.java)
+                trySend(items)
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
+    override suspend fun addPortfolioItem(item: PortfolioItem) {
+        portfolioCollection.add(item.copy(timestamp = System.currentTimeMillis())).await()
+    }
+
+    override suspend fun deletePortfolioItem(id: String) {
+        portfolioCollection.document(id).delete().await()
+    }
+
+    override suspend fun updatePortfolioItem(item: PortfolioItem) {
+        portfolioCollection.document(item.id).set(item).await()
+    }
 }
 
 class MockPortfolioRepository : PortfolioRepository {

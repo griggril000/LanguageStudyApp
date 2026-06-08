@@ -3,13 +3,13 @@ package com.example.languagestudy.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.languagestudy.data.model.PortfolioItem
-import com.example.languagestudy.data.repository.MockPortfolioRepository
+import com.example.languagestudy.data.repository.FirestorePortfolioRepository
 import com.example.languagestudy.data.repository.PortfolioRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class PortfolioViewModel(
-    private val repository: PortfolioRepository = MockPortfolioRepository()
+    private val repository: PortfolioRepository = FirestorePortfolioRepository()
 ) : ViewModel() {
 
     private val _items = MutableStateFlow<List<PortfolioItem>>(emptyList())

@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "47054764584",
+    "project_id": "language-study-tracker",
+    "storage_bucket": "language-study-tracker.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:47054764584:android:bf6860481276efd161131d",
+        "android_client_info": {
+          "package_name": "com.example.languagestudy"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "47054764584-toogfgpr6rrqu8u23352s0qpk3glpgll.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAi6Ga9Sj8A5K-fFk_TJyhFgKUMUnNe3Z0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "47054764584-toogfgpr6rrqu8u23352s0qpk3glpgll.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
