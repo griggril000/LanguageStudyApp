@@ -1,0 +1,17 @@
+package com.example.languagestudy.data.local.dao
+
+import androidx.room.*
+import com.example.languagestudy.data.local.entity.SkillEntity
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface SkillDao {
+    @Query("SELECT * FROM skills")
+    fun getAllSkills(): Flow<List<SkillEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSkill(skill: SkillEntity)
+
+    @Update
+    suspend fun updateSkill(skill: SkillEntity)
+}

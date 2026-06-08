@@ -1,4 +1,6 @@
-<resources>
-
-    <style name="Theme.LanguageStudy" parent="Theme.MaterialComponents.Light" />
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.LanguageStudy" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your light theme here. -->
+    </style>
 </resources>
