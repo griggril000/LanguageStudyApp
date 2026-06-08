@@ -1,0 +1,4 @@
+<resources>
+
+    <style name="Theme.LanguageStudy" parent="Theme.MaterialComponents.Light" />
+</resources>
