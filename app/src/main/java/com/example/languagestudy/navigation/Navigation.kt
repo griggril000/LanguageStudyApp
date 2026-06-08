@@ -6,6 +6,8 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Login
+import androidx.compose.material.icons.rounded.Logout
 import androidx.compose.material.icons.rounded.Work
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.NavKey
@@ -13,6 +15,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 sealed interface NavRoute : NavKey {
+    @Serializable
+    data object Login : NavRoute
     @Serializable
     data object Portfolio : NavRoute
     @Serializable
@@ -31,6 +35,7 @@ sealed interface NavRoute : NavKey {
 
 val NavRoute.icon: ImageVector
     get() = when (this) {
+        NavRoute.Login -> Icons.Rounded.Login
         NavRoute.Portfolio -> Icons.Rounded.Work
         NavRoute.Vocab -> Icons.Rounded.Book
         NavRoute.Skills -> Icons.Rounded.Psychology
@@ -40,6 +45,7 @@ val NavRoute.icon: ImageVector
 
 val NavRoute.label: String
     get() = when (this) {
+        NavRoute.Login -> "Login"
         NavRoute.Portfolio -> "Portfolio"
         NavRoute.Vocab -> "Vocab"
         NavRoute.Skills -> "Skills"

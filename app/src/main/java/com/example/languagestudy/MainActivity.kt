@@ -13,10 +13,14 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavKey
@@ -29,6 +33,11 @@ import com.example.languagestudy.navigation.icon
 import com.example.languagestudy.navigation.label
 import com.example.languagestudy.ui.screens.*
 import com.example.languagestudy.ui.theme.LanguageStudyTheme
+
+import com.example.languagestudy.ui.auth.AuthViewModel
+import com.google.firebase.auth.FirebaseAuth
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.languagestudy.ui.auth.LoginScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,13 +53,23 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
-    val backStack = rememberNavBackStack(NavRoute.Portfolio as NavKey)
+fun MainScreen(authViewModel: AuthViewModel = viewModel()) {
+    val context = LocalContext.current
+    val currentUser by authViewModel.user.collectAsState()
+    val startRoute = if (currentUser == null) NavRoute.Login else NavRoute.Portfolio
+    val backStack = rememberNavBackStack(startRoute as NavKey)
+    
     val adaptiveInfo = currentWindowAdaptiveInfo()
     val useNavRail = adaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
 
     val provider = remember {
         entryProvider<NavKey> {
+            entry<NavRoute.Login> { 
+                LoginScreen(onLoginSuccess = {
+                    backStack.clear()
+                    backStack.add(NavRoute.Portfolio)
+                }) 
+            }
             entry<NavRoute.Portfolio> { PortfolioScreen() }
             entry<NavRoute.Vocab> { VocabScreen() }
             entry<NavRoute.Skills> { SkillsScreen() }
@@ -59,52 +78,61 @@ fun MainScreen() {
         }
     }
 
+    if (currentUser == null && backStack.lastOrNull() !is NavRoute.Login) {
+        LaunchedEffect(Unit) {
+            backStack.clear()
+            backStack.add(NavRoute.Login)
+        }
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Language Study",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Text(
-                            "Logged in as: user@example.com",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                        OutlinedButton(
-                            onClick = {},
-                            modifier = Modifier.padding(horizontal = 4.dp),
-                            shape = RoundedCornerShape(8.dp)
+            if (currentUser != null) {
+                TopAppBar(
+                    title = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Settings")
+                            Text(
+                                "Language Study",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                currentUser?.email ?: "User",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            OutlinedButton(
+                                onClick = {},
+                                modifier = Modifier.padding(horizontal = 4.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Settings")
+                            }
+                            Button(
+                                onClick = { authViewModel.signOut(context) },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFAB91)),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Rounded.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Logout", color = Color.Black)
+                            }
                         }
-                        Button(
-                            onClick = {},
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFAB91)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Icon(Icons.Rounded.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Logout", color = Color.Black)
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
-            )
+            }
         },
         bottomBar = {
-            if (!useNavRail) {
+            if (!useNavRail && currentUser != null) {
                 NavigationBar {
                     NavRoute.mainRoutes.forEach { route ->
                         NavigationBarItem(
@@ -128,7 +156,7 @@ fun MainScreen() {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            if (useNavRail) {
+            if (useNavRail && currentUser != null) {
                 NavigationRail(
                     containerColor = MaterialTheme.colorScheme.surface,
                     modifier = Modifier.padding(top = 8.dp)
