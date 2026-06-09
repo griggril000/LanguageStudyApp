@@ -31,7 +31,7 @@ sealed interface NavRoute : NavKey {
     data object Settings : NavRoute
 
     companion object {
-        val mainRoutes = listOf(Vocab, Skills, Portfolio, Journal, Settings, Admin)
+        val mainRoutes = listOf(Vocab, Skills, Portfolio, Journal)
     }
 }
 

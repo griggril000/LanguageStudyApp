@@ -26,15 +26,56 @@ import kotlinx.coroutines.tasks.await
 
 class AuthViewModel : ViewModel() {
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
-    
+
     private val _user = MutableStateFlow(auth.currentUser)
     val user: StateFlow<com.google.firebase.auth.FirebaseUser?> = _user.asStateFlow()
+
+    private val _isAdmin = MutableStateFlow(false)
+    val isAdmin: StateFlow<Boolean> = _isAdmin.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+    
+    init {
+        checkAdminStatus()
+    }
+
+    private fun checkAdminStatus() {
+        viewModelScope.launch {
+            val user = auth.currentUser
+            if (user == null) {
+                _isAdmin.value = false
+                return@launch
+            }
+            try {
+                // Force a refresh (true) to ensure we have the latest claims
+                val tokenResult = user.getIdToken(true).await()
+                
+                // Debug log ALL claims to see what we actually have
+                Log.d("AuthViewModel", "--- Claims for ${user.email} ---")
+                tokenResult.claims.forEach { (key, value) ->
+                    Log.d("AuthViewModel", "Claim: $key = $value (${value?.javaClass?.simpleName})")
+                }
+                
+                // Allow "true" (String), true (Boolean), or 1 (Integer) for flexibility
+                val adminClaim = tokenResult.claims["admin"]
+                val isAdmin = adminClaim == true || 
+                             adminClaim == "true" || 
+                             adminClaim == 1 || 
+                             adminClaim == 1L ||
+                             (adminClaim as? Number)?.toInt() == 1
+
+                Log.d("AuthViewModel", "Admin check result: $isAdmin")
+                _isAdmin.value = isAdmin
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Error checking admin status", e)
+                _isAdmin.value = false
+            }
+        }
+    }
 
     private fun Context.findActivity(): Activity? {
         var context = this
@@ -81,6 +122,7 @@ class AuthViewModel : ViewModel() {
                     
                     auth.signInWithCredential(firebaseCredential).await()
                     _user.value = auth.currentUser
+                    checkAdminStatus()
                 } else {
                     _error.value = "Unexpected credential type"
                 }
@@ -111,6 +153,7 @@ class AuthViewModel : ViewModel() {
             try {
                 auth.signInWithEmailAndPassword(email, password).await()
                 _user.value = auth.currentUser
+                checkAdminStatus()
             } catch (e: Exception) {
                 _error.value = "Login failed: ${e.message}"
             } finally {
@@ -130,6 +173,7 @@ class AuthViewModel : ViewModel() {
             try {
                 auth.createUserWithEmailAndPassword(email, password).await()
                 _user.value = auth.currentUser
+                checkAdminStatus()
             } catch (e: Exception) {
                 _error.value = "Sign up failed: ${e.message}"
             } finally {
@@ -142,6 +186,7 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             auth.signOut()
             _user.value = null
+            _isAdmin.value = false
             val credentialManager = CredentialManager.create(context)
             credentialManager.clearCredentialState(ClearCredentialStateRequest())
         }

@@ -9,15 +9,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AdminPanelSettings
 import androidx.compose.material.icons.rounded.Logout
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -59,9 +57,12 @@ class MainActivity : ComponentActivity() {
 fun MainScreen(authViewModel: AuthViewModel = viewModel()) {
     val context = LocalContext.current
     val currentUser by authViewModel.user.collectAsState()
+    val isAdmin by authViewModel.isAdmin.collectAsState()
     val startRoute = if (currentUser == null) NavRoute.Login else NavRoute.Portfolio
     val backStack = rememberNavBackStack(startRoute as NavKey)
     
+    var showMenu by remember { mutableStateOf(false) }
+
     val adaptiveInfo = currentWindowAdaptiveInfo()
     val useNavRail = adaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
 
@@ -117,27 +118,64 @@ fun MainScreen(authViewModel: AuthViewModel = viewModel()) {
                         }
                     },
                     actions = {
-                        OutlinedButton(
-                            onClick = { 
-                                backStack.clear()
-                                backStack.add(NavRoute.Settings) 
-                            },
-                            modifier = Modifier.padding(horizontal = 4.dp),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Settings")
-                        }
-                        Button(
-                            onClick = { authViewModel.signOut(context) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFAB91)),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Icon(Icons.Rounded.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Logout", color = Color.Black)
+                        Box {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
+                            }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                if (isAdmin) {
+                                    DropdownMenuItem(
+                                        text = { Text("Admin") },
+                                        onClick = {
+                                            showMenu = false
+                                            backStack.clear()
+                                            backStack.add(NavRoute.Admin)
+                                        },
+                                        leadingIcon = {
+                                            Icon(androidx.compose.material.icons.Icons.Rounded.AdminPanelSettings, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        }
+                                    )
+                                }
+                                
+                                // Temporary diagnostic menu item
+                                DropdownMenuItem(
+                                    text = { Text("Debug Info") },
+                                    onClick = {
+                                        showMenu = false
+                                        val status = if (isAdmin) "Admin" else "User"
+                                        val uid = currentUser?.uid ?: "No UID"
+                                        android.widget.Toast.makeText(context, "Status: $status\nUID: $uid", android.widget.Toast.LENGTH_LONG).show()
+                                    },
+                                    leadingIcon = {
+                                        Icon(androidx.compose.material.icons.Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    }
+                                )
+
+                                DropdownMenuItem(
+                                    text = { Text("Settings") },
+                                    onClick = {
+                                        showMenu = false
+                                        backStack.clear()
+                                        backStack.add(NavRoute.Settings)
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Logout") },
+                                    onClick = {
+                                        showMenu = false
+                                        authViewModel.signOut(context)
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Rounded.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    }
+                                )
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
