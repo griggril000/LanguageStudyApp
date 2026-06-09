@@ -54,12 +54,6 @@ class AuthViewModel : ViewModel() {
                 // Force a refresh (true) to ensure we have the latest claims
                 val tokenResult = user.getIdToken(true).await()
                 
-                // Debug log ALL claims to see what we actually have
-                Log.d("AuthViewModel", "--- Claims for ${user.email} ---")
-                tokenResult.claims.forEach { (key, value) ->
-                    Log.d("AuthViewModel", "Claim: $key = $value (${value?.javaClass?.simpleName})")
-                }
-                
                 // Allow "true" (String), true (Boolean), or 1 (Integer) for flexibility
                 val adminClaim = tokenResult.claims["admin"]
                 val isAdmin = adminClaim == true || 
@@ -68,7 +62,6 @@ class AuthViewModel : ViewModel() {
                              adminClaim == 1L ||
                              (adminClaim as? Number)?.toInt() == 1
 
-                Log.d("AuthViewModel", "Admin check result: $isAdmin")
                 _isAdmin.value = isAdmin
             } catch (e: Exception) {
                 Log.e("AuthViewModel", "Error checking admin status", e)

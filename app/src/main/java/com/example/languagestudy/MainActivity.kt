@@ -139,20 +139,6 @@ fun MainScreen(authViewModel: AuthViewModel = viewModel()) {
                                         }
                                     )
                                 }
-                                
-                                // Temporary diagnostic menu item
-                                DropdownMenuItem(
-                                    text = { Text("Debug Info") },
-                                    onClick = {
-                                        showMenu = false
-                                        val status = if (isAdmin) "Admin" else "User"
-                                        val uid = currentUser?.uid ?: "No UID"
-                                        android.widget.Toast.makeText(context, "Status: $status\nUID: $uid", android.widget.Toast.LENGTH_LONG).show()
-                                    },
-                                    leadingIcon = {
-                                        Icon(androidx.compose.material.icons.Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    }
-                                )
 
                                 DropdownMenuItem(
                                     text = { Text("Settings") },
