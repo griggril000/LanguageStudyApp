@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -19,6 +20,7 @@ import com.example.languagestudy.LanguageStudyApplication
 import com.example.languagestudy.data.local.entity.JournalEntryEntity
 import com.example.languagestudy.data.local.entity.SkillEntity
 import com.example.languagestudy.data.local.entity.VocabEntity
+import com.example.languagestudy.ui.auth.AuthViewModel
 import com.example.languagestudy.ui.viewmodel.*
 
 @Composable
@@ -39,12 +41,11 @@ fun VocabScreen() {
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            Text("Vocabulary", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(16.dp))
-
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = word,
@@ -117,12 +118,11 @@ fun SkillsScreen() {
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            Text("Skills", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(16.dp))
-
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = skillName,
@@ -195,12 +195,11 @@ fun JournalScreen() {
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            Text("Journal", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(16.dp))
-
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
@@ -265,11 +264,24 @@ fun AdminScreen() {
 }
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(authViewModel: AuthViewModel = viewModel()) {
+    val currentUser by authViewModel.user.collectAsState()
+    
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(16.dp))
-        
+        if (currentUser != null) {
+            Text(
+                text = "Logged in as:",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.secondary
+            )
+            Text(
+                text = currentUser?.email ?: "",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(24.dp))
+        }
+
         // Example setting: Dark Mode (aligned with site-data.json theme property)
         var darkModeEnabled by remember { mutableStateOf(false) }
         Row(

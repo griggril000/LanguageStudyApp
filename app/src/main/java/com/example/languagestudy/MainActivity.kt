@@ -65,6 +65,9 @@ fun MainScreen(authViewModel: AuthViewModel = viewModel()) {
     val adaptiveInfo = currentWindowAdaptiveInfo()
     val useNavRail = adaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
 
+    val currentRoute = backStack.lastOrNull() as? NavRoute
+    val pageTitle = currentRoute?.label ?: ""
+
     val provider = remember(currentUser) {
         entryProvider<NavKey> {
             entry<NavRoute.Login> { 
@@ -98,46 +101,47 @@ fun MainScreen(authViewModel: AuthViewModel = viewModel()) {
             if (currentUser != null) {
                 TopAppBar(
                     title = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 "Language Study",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                currentUser?.email ?: "User",
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                            OutlinedButton(
-                                onClick = { 
-                                    backStack.clear()
-                                    backStack.add(NavRoute.Settings) 
-                                },
-                                modifier = Modifier.padding(horizontal = 4.dp),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("Settings")
-                            }
-                            Button(
-                                onClick = { authViewModel.signOut(context) },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFAB91)),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Icon(Icons.Rounded.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("Logout", color = Color.Black)
+                            if (pageTitle.isNotBlank()) {
+                                Text(
+                                    " • $pageTitle",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                     },
+                    actions = {
+                        OutlinedButton(
+                            onClick = { 
+                                backStack.clear()
+                                backStack.add(NavRoute.Settings) 
+                            },
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Settings")
+                        }
+                        Button(
+                            onClick = { authViewModel.signOut(context) },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFAB91)),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Icon(Icons.Rounded.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Logout", color = Color.Black)
+                        }
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.background
                     )
                 )
             }

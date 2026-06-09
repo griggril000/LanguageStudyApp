@@ -2,6 +2,7 @@ package com.example.languagestudy.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.*
@@ -27,6 +29,7 @@ import com.example.languagestudy.ui.components.YouTubePlayer
 import com.example.languagestudy.ui.viewmodel.PortfolioViewModel
 import com.example.languagestudy.utils.UrlUtils
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PortfolioScreen(viewModel: PortfolioViewModel) {
     val context = LocalContext.current
@@ -36,6 +39,7 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
 
     var title by remember { mutableStateOf("") }
     var link by remember { mutableStateOf("") }
+    var showAddDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.error.collect { message ->
@@ -47,6 +51,7 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
         viewModel.addSuccess.collect {
             title = ""
             link = ""
+            showAddDialog = false
         }
     }
 
@@ -56,48 +61,53 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { 
             SnackbarHost(
                 hostState = snackbarHostState,
                 modifier = Modifier.padding(bottom = 8.dp)
             ) 
         },
-        bottomBar = {
-            Surface(
-                tonalElevation = 3.dp,
-                shadowElevation = 8.dp,
-                modifier = Modifier.navigationBarsPadding().imePadding()
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showAddDialog = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        label = { Text("Title") },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = link,
-                        onValueChange = { link = it },
-                        label = { Text("Link") },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
+                Icon(Icons.Rounded.Add, contentDescription = "Add Portfolio Item")
+            }
+        }
+    ) { padding ->
+        if (showAddDialog) {
+            AlertDialog(
+                onDismissRequest = { if (!isLoading) showAddDialog = false },
+                title = { Text("Add Portfolio Item") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = title,
+                            onValueChange = { title = it },
+                            label = { Text("Title") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = link,
+                            onValueChange = { link = it },
+                            label = { Text("YouTube or SoundCloud Link") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
+                        )
+                    }
+                },
+                confirmButton = {
                     Button(
-                        onClick = { 
-                            viewModel.addItem(title, link)
-                        },
-                        modifier = Modifier.height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        enabled = !isLoading
+                        onClick = { viewModel.addItem(title, link) },
+                        enabled = !isLoading,
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
@@ -105,41 +115,33 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
                             Text("Add")
                         }
                     }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAddDialog = false }, enabled = !isLoading) {
+                        Text("Cancel")
+                    }
                 }
-            }
-        }
-    ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
-            Spacer(Modifier.height(16.dp))
-            Text(
-                "Portfolio", 
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
             )
-            
-            Spacer(Modifier.height(16.dp))
-            
+        }
+
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             if (isLoading && items.isEmpty()) {
-                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.weight(1f).fillMaxWidth()
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
                 ) {
                     val featuredItems = items.filter { it.isTop }
                     val otherItems = items.filter { !it.isTop }
                     val canFeatureMore = featuredItems.size < 3
 
                     if (featuredItems.isNotEmpty()) {
-                        item {
-                            Text(
-                                "Featured Items (${featuredItems.size}/3)", 
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
+                        stickyHeader {
+                            HeaderSection("Featured Items (${featuredItems.size}/3)")
                         }
                         items(featuredItems, key = { it.id }) { item ->
                             FeaturedPortfolioItem(
@@ -151,12 +153,8 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
                     }
 
                     if (otherItems.isNotEmpty()) {
-                        item {
-                            Text(
-                                "Other Items", 
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
+                        stickyHeader {
+                            HeaderSection("Other Items")
                         }
                         items(otherItems, key = { it.id }) { item ->
                             StandardPortfolioItem(
@@ -170,8 +168,22 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
                     }
                 }
             }
-            Spacer(Modifier.height(16.dp))
         }
+    }
+}
+
+@Composable
+fun HeaderSection(title: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.background // Matches the seamless header
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
     }
 }
 
