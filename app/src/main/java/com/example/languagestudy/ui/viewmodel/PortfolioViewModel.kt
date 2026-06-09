@@ -26,6 +26,9 @@ class PortfolioViewModel(
     private val _error = MutableSharedFlow<String>()
     val error: SharedFlow<String> = _error.asSharedFlow()
 
+    private val _addSuccess = MutableSharedFlow<Unit>()
+    val addSuccess: SharedFlow<Unit> = _addSuccess.asSharedFlow()
+
     init {
         loadPortfolio()
     }
@@ -54,15 +57,21 @@ class PortfolioViewModel(
         
         val sanitizedUrl = UrlUtils.sanitizeHttpUrl(link)
         if (sanitizedUrl == null) {
-            viewModelScope.launch { _error.emit("Please enter a valid HTTP/HTTPS link") }
+            viewModelScope.launch { _error.emit("Please enter a valid YouTube or SoundCloud link") }
             return
         }
 
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val resolvedUrl = UrlUtils.resolveSoundCloudPortfolioLink(sanitizedUrl)
-                val type = UrlUtils.getPortfolioType(resolvedUrl) ?: "link"
+                val resolvedUrl = UrlUtils.resolveCanonicalUrl(sanitizedUrl)
+                val type = UrlUtils.getPortfolioType(resolvedUrl)
+                
+                if (type == null) {
+                    _error.emit("Only YouTube and SoundCloud links are supported")
+                    return@launch
+                }
+
                 val youtubeId = UrlUtils.getYouTubeId(resolvedUrl)
                 
                 repository.addPortfolioItem(
@@ -74,6 +83,7 @@ class PortfolioViewModel(
                         videoId = youtubeId
                     )
                 )
+                _addSuccess.emit(Unit)
             } catch (e: Exception) {
                 _error.emit("Failed to add item: ${e.message}")
             } finally {

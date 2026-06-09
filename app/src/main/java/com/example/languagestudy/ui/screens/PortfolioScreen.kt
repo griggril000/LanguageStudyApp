@@ -22,6 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.example.languagestudy.data.model.PortfolioItem
+import com.example.languagestudy.ui.components.SoundCloudPlayer
+import com.example.languagestudy.ui.components.YouTubePlayer
 import com.example.languagestudy.ui.viewmodel.PortfolioViewModel
 import com.example.languagestudy.utils.UrlUtils
 
@@ -41,6 +43,13 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.addSuccess.collect {
+            title = ""
+            link = ""
+        }
+    }
+
     val onPlay: (String) -> Unit = { url ->
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
         context.startActivity(intent)
@@ -50,8 +59,6 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
         snackbarHost = { 
             SnackbarHost(
                 hostState = snackbarHostState,
-                // Scaffold naturally places this above the bottomBar.
-                // We don't need imePadding here if the bottomBar already has it.
                 modifier = Modifier.padding(bottom = 8.dp)
             ) 
         },
@@ -59,8 +66,6 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
             Surface(
                 tonalElevation = 3.dp,
                 shadowElevation = 8.dp,
-                // Add imePadding to the container so the whole bar moves up.
-                // We also add navigationBarsPadding for when the keyboard is closed.
                 modifier = Modifier.navigationBarsPadding().imePadding()
             ) {
                 Row(
@@ -89,8 +94,6 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
                     Button(
                         onClick = { 
                             viewModel.addItem(title, link)
-                            title = ""
-                            link = ""
                         },
                         modifier = Modifier.height(56.dp),
                         shape = RoundedCornerShape(12.dp),
@@ -140,7 +143,6 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
                         items(featuredItems, key = { it.id }) { item ->
                             FeaturedPortfolioItem(
                                 item = item,
-                                onPlay = { onPlay(item.link) },
                                 onDelete = { viewModel.deleteItem(item.id) },
                                 onUnfeature = { viewModel.toggleFeatured(item) }
                             )
@@ -174,7 +176,6 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
 @Composable
 fun FeaturedPortfolioItem(
     item: PortfolioItem,
-    onPlay: () -> Unit,
     onDelete: () -> Unit,
     onUnfeature: () -> Unit
 ) {
@@ -187,29 +188,26 @@ fun FeaturedPortfolioItem(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp)
+                    .height(220.dp)
                     .background(Color.Black)
-                    .clickable { onPlay() }
             ) {
-                AsyncImage(
-                    model = getThumbnailUrl(item),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-                Surface(
-                    modifier = Modifier.align(Alignment.Center).size(64.dp),
-                    shape = RoundedCornerShape(50),
-                    color = Color.Red.copy(alpha = 0.9f)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Rounded.PlayArrow, 
-                            contentDescription = "Play", 
-                            tint = Color.White,
-                            modifier = Modifier.size(40.dp)
-                        )
-                    }
+                if (item.type == "youtube" && item.videoId != null) {
+                    YouTubePlayer(
+                        videoId = item.videoId,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else if (item.type == "soundcloud") {
+                    SoundCloudPlayer(
+                        url = item.link,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    AsyncImage(
+                        model = getThumbnailUrl(item),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
                 }
             }
             
@@ -220,11 +218,6 @@ fun FeaturedPortfolioItem(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
-                        onClick = {},
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
-                    ) { Text("Edit") }
                     OutlinedButton(
                         onClick = onUnfeature,
                         shape = RoundedCornerShape(8.dp)
@@ -268,7 +261,6 @@ fun StandardPortfolioItem(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = {}) { Text("Edit") }
                 TextButton(onClick = onFeature) { Text("Feature") }
                 IconButton(onClick = onDelete) {
                     Icon(
@@ -288,7 +280,6 @@ private fun getThumbnailUrl(item: PortfolioItem): String {
     return if (youtubeId != null) {
         "https://img.youtube.com/vi/$youtubeId/maxresdefault.jpg"
     } else if (UrlUtils.isSoundCloudUrl(item.link)) {
-        // SoundCloud doesn't have a simple URL-based thumbnail pattern like YouTube
         "https://via.placeholder.com/400x200?text=SoundCloud"
     } else {
         "https://via.placeholder.com/400x200?text=Link"

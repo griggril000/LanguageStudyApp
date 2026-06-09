@@ -15,6 +15,7 @@ object UrlUtils {
     private val client = OkHttpClient.Builder()
         .connectTimeout(4, TimeUnit.SECONDS)
         .readTimeout(4, TimeUnit.SECONDS)
+        .followRedirects(true)
         .build()
 
     fun getYouTubeId(url: String): String? {
@@ -33,14 +34,6 @@ object UrlUtils {
         return null
     }
 
-    fun escapeHtml(text: String): String {
-        return text.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&#039;")
-    }
-
     fun sanitizeHttpUrl(url: String?): String? {
         if (url == null) return null
         return try {
@@ -53,33 +46,39 @@ object UrlUtils {
         }
     }
 
-    private data class SoundCloudOEmbed(val html: String?)
-
-    suspend fun resolveSoundCloudPortfolioLink(rawUrl: String): String {
+    /**
+     * Resolves short URLs (on.soundcloud.com, snd.sc, youtu.be) to their full canonical URLs
+     * so they are stored consistently and go to the correct site.
+     */
+    suspend fun resolveCanonicalUrl(rawUrl: String): String {
         return withContext(Dispatchers.IO) {
             try {
                 val uri = Uri.parse(rawUrl)
                 val host = uri.host ?: return@withContext rawUrl
-                val needsResolve = host.contains("on.soundcloud.com") || host.contains("snd.sc")
-                if (!needsResolve) return@withContext rawUrl
+                
+                // YouTube short URL normalization
+                val youtubeId = getYouTubeId(rawUrl)
+                if (host == "youtu.be" && youtubeId != null) {
+                    return@withContext "https://www.youtube.com/watch?v=$youtubeId"
+                }
 
-                val oEmbedUrl = "https://soundcloud.com/oembed?format=json&url=${Uri.encode(rawUrl)}&iframe=true"
-                val request = Request.Builder().url(oEmbedUrl).build()
+                // SoundCloud short URL resolution
+                val isShortSoundCloud = host == "on.soundcloud.com" || host == "snd.sc"
+                if (!isShortSoundCloud) return@withContext rawUrl
+
+                val request = Request.Builder()
+                    .url(rawUrl)
+                    .head() // Use HEAD to just get the redirect location
+                    .build()
 
                 client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) return@withContext rawUrl
-                    
-                    val body = response.body?.string() ?: return@withContext rawUrl
-                    val data = gson.fromJson(body, SoundCloudOEmbed::class.java)
-                    
-                    val html = data.html ?: return@withContext rawUrl
-                    val srcRegex = "src=\"([^\"]+)\"".toRegex()
-                    val srcMatch = srcRegex.find(html)
-                    val src = srcMatch?.groupValues?.get(1) ?: return@withContext rawUrl
-                    
-                    val playerUri = Uri.parse(src)
-                    val resolved = playerUri.getQueryParameter("url")
-                    resolved ?: rawUrl
+                    val resolvedUrl = response.request.url.toString()
+                    // Filter out API URLs if it somehow redirected there, but usually it goes to the track page
+                    if (resolvedUrl.contains("api.soundcloud.com")) {
+                        rawUrl
+                    } else {
+                        resolvedUrl
+                    }
                 }
             } catch (e: Exception) {
                 rawUrl

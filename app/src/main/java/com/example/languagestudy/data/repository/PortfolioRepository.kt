@@ -46,14 +46,11 @@ class FirestorePortfolioRepository(
     }
 
     override suspend fun addPortfolioItem(userId: String, item: PortfolioItem) {
-        val type = if (item.link.contains("soundcloud")) "soundcloud" else "youtube"
-        val videoId = if (type == "youtube") extractVideoId(item.link) else null
-        
         val data = hashMapOf(
             "title" to item.title,
             "link" to item.link,
-            "type" to type,
-            "videoId" to videoId,
+            "type" to item.type,
+            "videoId" to item.videoId,
             "isTop" to item.isTop,
             "isPrivate" to item.isPrivate,
             "language" to item.language,
@@ -72,8 +69,7 @@ class FirestorePortfolioRepository(
     }
 
     private fun extractVideoId(url: String): String? {
-        val regex = "(?:youtube(?:-nocookie)?\\.com\\/(?:.*[?&]v=|v\\/|shorts\\/)|youtu\\.be\\/)([\\w-]{11})".toRegex()
-        return regex.find(url)?.groupValues?.get(1)
+        return com.example.languagestudy.utils.UrlUtils.getYouTubeId(url)
     }
 }
 
