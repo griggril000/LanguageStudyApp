@@ -1,8 +1,10 @@
 package com.example.languagestudy.data.repository
 
+import android.util.Log
 import com.example.languagestudy.data.model.PortfolioItem
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -11,28 +13,27 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
 
 interface PortfolioRepository {
-    fun getPortfolioItems(limit: Long = 10, lastTimestamp: Long? = null): Flow<List<PortfolioItem>>
-    suspend fun addPortfolioItem(item: PortfolioItem)
-    suspend fun deletePortfolioItem(id: String)
-    suspend fun updatePortfolioItem(item: PortfolioItem)
+    fun getPortfolioItems(userId: String, limit: Long = 10): Flow<List<PortfolioItem>>
+    suspend fun addPortfolioItem(userId: String, item: PortfolioItem)
+    suspend fun deletePortfolioItem(userId: String, id: String)
+    suspend fun updatePortfolioItem(userId: String, item: PortfolioItem)
 }
 
 class FirestorePortfolioRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : PortfolioRepository {
-    private val portfolioCollection = firestore.collection("portfolio")
+    
+    private fun getCollection(userId: String) = 
+        firestore.collection("users").document(userId).collection("portfolio")
 
-    override fun getPortfolioItems(limit: Long, lastTimestamp: Long?): Flow<List<PortfolioItem>> = callbackFlow {
-        var query = portfolioCollection
-            .orderBy("timestamp", Query.Direction.DESCENDING)
+    override fun getPortfolioItems(userId: String, limit: Long): Flow<List<PortfolioItem>> = callbackFlow {
+        val query = getCollection(userId)
+            .orderBy("dateAdded", Query.Direction.DESCENDING)
             .limit(limit)
-
-        if (lastTimestamp != null) {
-            query = query.startAfter(lastTimestamp)
-        }
 
         val listener = query.addSnapshotListener { snapshot, error ->
             if (error != null) {
+                Log.e("FirestoreRepo", "Error fetching portfolio for user $userId", error)
                 close(error)
                 return@addSnapshotListener
             }
@@ -44,45 +45,42 @@ class FirestorePortfolioRepository(
         awaitClose { listener.remove() }
     }
 
-    override suspend fun addPortfolioItem(item: PortfolioItem) {
-        portfolioCollection.add(item.copy(timestamp = System.currentTimeMillis())).await()
+    override suspend fun addPortfolioItem(userId: String, item: PortfolioItem) {
+        val type = if (item.link.contains("soundcloud")) "soundcloud" else "youtube"
+        val videoId = if (type == "youtube") extractVideoId(item.link) else null
+        
+        val data = hashMapOf(
+            "title" to item.title,
+            "link" to item.link,
+            "type" to type,
+            "videoId" to videoId,
+            "isTop" to item.isTop,
+            "isPrivate" to item.isPrivate,
+            "language" to item.language,
+            "dateAdded" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+        )
+        getCollection(userId).add(data).await()
     }
 
-    override suspend fun deletePortfolioItem(id: String) {
-        portfolioCollection.document(id).delete().await()
+    override suspend fun deletePortfolioItem(userId: String, id: String) {
+        getCollection(userId).document(id).delete().await()
     }
 
-    override suspend fun updatePortfolioItem(item: PortfolioItem) {
-        portfolioCollection.document(item.id).set(item).await()
+    override suspend fun updatePortfolioItem(userId: String, item: PortfolioItem) {
+        // Use set with SetOptions.merge() to avoid deleting fields the app doesn't know about
+        getCollection(userId).document(item.id).set(item, SetOptions.merge()).await()
+    }
+
+    private fun extractVideoId(url: String): String? {
+        val regex = "(?:youtube(?:-nocookie)?\\.com\\/(?:.*[?&]v=|v\\/|shorts\\/)|youtu\\.be\\/)([\\w-]{11})".toRegex()
+        return regex.find(url)?.groupValues?.get(1)
     }
 }
 
 class MockPortfolioRepository : PortfolioRepository {
-    private val mockData = mutableListOf(
-        PortfolioItem("1", "Fingerspelling Sample - 2023", "https://www.youtube.com/watch?v=V6360lvihAI", true, System.currentTimeMillis()),
-        PortfolioItem("2", "Timber Story", "https://www.youtube.com/watch?v=V6360lvihAI", false, System.currentTimeMillis() - 1000),
-        PortfolioItem("3", "News - 2023", "https://youtu.be/pQqSs-dtdfM", false, System.currentTimeMillis() - 2000),
-        PortfolioItem("4", "Sample Presentation", "https://www.youtube.com/watch?v=V6360lvihAI", false, System.currentTimeMillis() - 3000),
-        PortfolioItem("5", "Language Journey", "https://youtu.be/pQqSs-dtdfM", true, System.currentTimeMillis() - 4000)
-    )
-
-    override fun getPortfolioItems(limit: Long, lastTimestamp: Long?): Flow<List<PortfolioItem>> = flow {
-        delay(1000) // Simulate network delay
-        emit(mockData.toList())
-    }
-
-    override suspend fun addPortfolioItem(item: PortfolioItem) {
-        mockData.add(0, item.copy(id = (mockData.size + 1).toString(), timestamp = System.currentTimeMillis()))
-    }
-
-    override suspend fun deletePortfolioItem(id: String) {
-        mockData.removeAll { it.id == id }
-    }
-
-    override suspend fun updatePortfolioItem(item: PortfolioItem) {
-        val index = mockData.indexOfFirst { it.id == item.id }
-        if (index != -1) {
-            mockData[index] = item
-        }
-    }
+    private val mockData = mutableListOf<PortfolioItem>()
+    override fun getPortfolioItems(userId: String, limit: Long): Flow<List<PortfolioItem>> = flow { emit(mockData.toList()) }
+    override suspend fun addPortfolioItem(userId: String, item: PortfolioItem) {}
+    override suspend fun deletePortfolioItem(userId: String, id: String) {}
+    override suspend fun updatePortfolioItem(userId: String, item: PortfolioItem) {}
 }

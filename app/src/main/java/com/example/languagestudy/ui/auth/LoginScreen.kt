@@ -24,6 +24,7 @@ fun LoginScreen(
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var isSignUp by remember { mutableStateOf(false) }
 
     LaunchedEffect(user) {
         if (user != null) {
@@ -51,7 +52,7 @@ fun LoginScreen(
                 )
                 
                 Text(
-                    "Master a new language",
+                    if (isSignUp) "Create an account" else "Master a new language",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -76,12 +77,26 @@ fun LoginScreen(
                 )
 
                 Button(
-                    onClick = { /* Implement email login */ },
+                    onClick = { 
+                        if (isSignUp) {
+                            viewModel.signUpWithEmail(email, password)
+                        } else {
+                            viewModel.signInWithEmail(email, password)
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(12.dp),
                     enabled = !isLoading
                 ) {
-                    Text("Login")
+                    if (isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                    } else {
+                        Text(if (isSignUp) "Sign Up" else "Login")
+                    }
+                }
+
+                TextButton(onClick = { isSignUp = !isSignUp }) {
+                    Text(if (isSignUp) "Already have an account? Login" else "Don't have an account? Sign Up")
                 }
 
                 Row(
@@ -108,10 +123,6 @@ fun LoginScreen(
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
-                }
-
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 }
             }
         }

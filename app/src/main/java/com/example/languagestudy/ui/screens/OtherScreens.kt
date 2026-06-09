@@ -27,46 +27,59 @@ fun VocabScreen() {
     val repository = (context.applicationContext as LanguageStudyApplication).vocabRepository
     val viewModel: VocabViewModel = viewModel(factory = VocabViewModelFactory(repository))
     val vocabList by viewModel.allVocab.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var word by remember { mutableStateOf("") }
     var translation by remember { mutableStateOf("") }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Vocabulary", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(16.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = word,
-                onValueChange = { word = it },
-                label = { Text("Word") },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp)
-            )
-            Spacer(Modifier.width(8.dp))
-            OutlinedTextField(
-                value = translation,
-                onValueChange = { translation = it },
-                label = { Text("Translation") },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp)
-            )
-            IconButton(onClick = {
-                if (word.isNotBlank() && translation.isNotBlank()) {
-                    viewModel.addVocab(word, translation, "General")
-                    word = ""
-                    translation = ""
-                }
-            }) {
-                Icon(Icons.Rounded.Add, contentDescription = "Add")
-            }
+    LaunchedEffect(Unit) {
+        viewModel.error.collect { message ->
+            snackbarHostState.showSnackbar(message)
         }
+    }
 
-        Spacer(Modifier.height(16.dp))
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
+        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+            Text("Vocabulary", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(16.dp))
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(vocabList) { vocab ->
-                VocabItem(vocab, onDelete = { viewModel.deleteVocab(vocab) })
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = word,
+                    onValueChange = { word = it },
+                    label = { Text("Word") },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+                Spacer(Modifier.width(8.dp))
+                OutlinedTextField(
+                    value = translation,
+                    onValueChange = { translation = it },
+                    label = { Text("Translation") },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+                IconButton(onClick = {
+                    viewModel.addVocab(word, translation, "General", "en")
+                    if (word.isNotBlank() && translation.isNotBlank()) {
+                        word = ""
+                        translation = ""
+                    }
+                }) {
+                    Icon(Icons.Rounded.Add, contentDescription = "Add")
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(vocabList) { vocab ->
+                    VocabItem(vocab, onDelete = { viewModel.deleteVocab(vocab) })
+                }
             }
         }
     }
@@ -93,36 +106,48 @@ fun SkillsScreen() {
     val repository = (context.applicationContext as LanguageStudyApplication).skillRepository
     val viewModel: SkillViewModel = viewModel(factory = SkillViewModelFactory(repository))
     val skillsList by viewModel.allSkills.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var skillName by remember { mutableStateOf("") }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Skills", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(16.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = skillName,
-                onValueChange = { skillName = it },
-                label = { Text("New Skill") },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp)
-            )
-            IconButton(onClick = {
-                if (skillName.isNotBlank()) {
-                    viewModel.addSkill(skillName, "Beginner")
-                    skillName = ""
-                }
-            }) {
-                Icon(Icons.Rounded.Add, contentDescription = "Add")
-            }
+    LaunchedEffect(Unit) {
+        viewModel.error.collect { message ->
+            snackbarHostState.showSnackbar(message)
         }
+    }
 
-        Spacer(Modifier.height(16.dp))
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
+        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+            Text("Skills", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(16.dp))
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(skillsList) { skill ->
-                SkillItem(skill, onProgressChange = { viewModel.updateProgress(skill, it) })
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = skillName,
+                    onValueChange = { skillName = it },
+                    label = { Text("New Skill") },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+                IconButton(onClick = {
+                    viewModel.addSkill(skillName, "Beginner")
+                    if (skillName.isNotBlank()) {
+                        skillName = ""
+                    }
+                }) {
+                    Icon(Icons.Rounded.Add, contentDescription = "Add")
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(skillsList) { skill ->
+                    SkillItem(skill, onProgressChange = { viewModel.updateProgress(skill, it) })
+                }
             }
         }
     }
@@ -133,13 +158,21 @@ fun SkillItem(skill: SkillEntity, onProgressChange: (Int) -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(skill.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text("Level: ${skill.level}", style = MaterialTheme.typography.bodySmall)
+            Text("Level: ${skill.level} | Status: ${skill.status}", style = MaterialTheme.typography.bodySmall)
             Slider(
                 value = skill.progress.toFloat(),
                 onValueChange = { onProgressChange(it.toInt()) },
                 valueRange = 0f..100f
             )
             Text("Progress: ${skill.progress}%", style = MaterialTheme.typography.bodySmall)
+
+            if (skill.subtasks.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text("Subtasks:", style = MaterialTheme.typography.labelSmall)
+                skill.subtasks.forEach { subtask ->
+                    Text("• ${subtask.text} [${subtask.status}]", style = MaterialTheme.typography.bodySmall)
+                }
+            }
         }
     }
 }
@@ -150,48 +183,60 @@ fun JournalScreen() {
     val repository = (context.applicationContext as LanguageStudyApplication).journalRepository
     val viewModel: JournalViewModel = viewModel(factory = JournalViewModelFactory(repository))
     val entries by viewModel.allEntries.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var title by remember { mutableStateOf("") }
     var contentText by remember { mutableStateOf("") }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Journal", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = title,
-            onValueChange = { title = it },
-            label = { Text("Title") },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
-        )
-        Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
-            value = contentText,
-            onValueChange = { contentText = it },
-            label = { Text("Content") },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            minLines = 3
-        )
-        Button(
-            onClick = {
-                if (title.isNotBlank() && contentText.isNotBlank()) {
-                    viewModel.addEntry(title, contentText)
-                    title = ""
-                    contentText = ""
-                }
-            },
-            modifier = Modifier.align(Alignment.End).padding(top = 8.dp)
-        ) {
-            Text("Save Entry")
+    LaunchedEffect(Unit) {
+        viewModel.error.collect { message ->
+            snackbarHostState.showSnackbar(message)
         }
+    }
 
-        Spacer(Modifier.height(16.dp))
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
+        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+            Text("Journal", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(16.dp))
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(entries) { entry ->
-                JournalItem(entry, onDelete = { viewModel.deleteEntry(entry) })
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Title") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = contentText,
+                onValueChange = { contentText = it },
+                label = { Text("Content") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                minLines = 3
+            )
+            Button(
+                onClick = {
+                    viewModel.addEntry(title, contentText)
+                    if (title.isNotBlank() && contentText.isNotBlank()) {
+                        title = ""
+                        contentText = ""
+                    }
+                },
+                modifier = Modifier.align(Alignment.End).padding(top = 8.dp)
+            ) {
+                Text("Save Entry")
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(entries) { entry ->
+                    JournalItem(entry, onDelete = { viewModel.deleteEntry(entry) })
+                }
             }
         }
     }
@@ -216,5 +261,23 @@ fun JournalItem(entry: JournalEntryEntity, onDelete: () -> Unit) {
 fun AdminScreen() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(text = "Admin Screen", style = MaterialTheme.typography.headlineLarge)
+    }
+}
+
+@Composable
+fun SettingsScreen() {
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(16.dp))
+        
+        // Example setting: Dark Mode (aligned with site-data.json theme property)
+        var darkModeEnabled by remember { mutableStateOf(false) }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Dark Mode", modifier = Modifier.weight(1f))
+            Switch(checked = darkModeEnabled, onCheckedChange = { darkModeEnabled = it })
+        }
     }
 }

@@ -5,18 +5,27 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.languagestudy.data.local.entity.JournalEntryEntity
 import com.example.languagestudy.data.repository.JournalRepository
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class JournalViewModel(private val repository: JournalRepository) : ViewModel() {
     val allEntries: StateFlow<List<JournalEntryEntity>> = repository.allEntries
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _error = MutableSharedFlow<String>()
+    val error: SharedFlow<String> = _error.asSharedFlow()
+
     fun addEntry(title: String, content: String) {
+        if (title.isBlank() || content.isBlank()) {
+            viewModelScope.launch { _error.emit("Title and content cannot be empty") }
+            return
+        }
         viewModelScope.launch {
-            repository.insert(JournalEntryEntity(title = title, content = content))
+            try {
+                repository.insert(JournalEntryEntity(title = title.trim(), content = content.trim()))
+            } catch (e: Exception) {
+                _error.emit("Failed to save entry: ${e.message}")
+            }
         }
     }
 

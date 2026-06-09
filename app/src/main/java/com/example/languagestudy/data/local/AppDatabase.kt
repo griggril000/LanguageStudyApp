@@ -4,18 +4,21 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.example.languagestudy.data.local.dao.JournalDao
 import com.example.languagestudy.data.local.dao.SkillDao
 import com.example.languagestudy.data.local.dao.VocabDao
 import com.example.languagestudy.data.local.entity.JournalEntryEntity
 import com.example.languagestudy.data.local.entity.SkillEntity
+import com.example.languagestudy.data.local.entity.SkillTypeConverters
 import com.example.languagestudy.data.local.entity.VocabEntity
 
 @Database(
     entities = [VocabEntity::class, SkillEntity::class, JournalEntryEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
+@TypeConverters(SkillTypeConverters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun vocabDao(): VocabDao
     abstract fun skillDao(): SkillDao

@@ -5,18 +5,27 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.languagestudy.data.local.entity.VocabEntity
 import com.example.languagestudy.data.repository.VocabRepository
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class VocabViewModel(private val repository: VocabRepository) : ViewModel() {
     val allVocab: StateFlow<List<VocabEntity>> = repository.allVocab
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun addVocab(word: String, translation: String, category: String) {
+    private val _error = MutableSharedFlow<String>()
+    val error: SharedFlow<String> = _error.asSharedFlow()
+
+    fun addVocab(word: String, translation: String, category: String, language: String = "en") {
+        if (word.isBlank() || translation.isBlank()) {
+            viewModelScope.launch { _error.emit("Word and translation cannot be empty") }
+            return
+        }
         viewModelScope.launch {
-            repository.insert(VocabEntity(word = word, translation = translation, category = category))
+            try {
+                repository.insert(VocabEntity(word = word.trim(), translation = translation.trim(), category = category, language = language))
+            } catch (e: Exception) {
+                _error.emit("Failed to add vocab: ${e.message}")
+            }
         }
     }
 

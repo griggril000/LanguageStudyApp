@@ -1,6 +1,7 @@
 package com.example.languagestudy
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -23,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -31,17 +33,18 @@ import androidx.window.core.layout.WindowWidthSizeClass
 import com.example.languagestudy.navigation.NavRoute
 import com.example.languagestudy.navigation.icon
 import com.example.languagestudy.navigation.label
+import com.example.languagestudy.ui.auth.AuthViewModel
+import com.example.languagestudy.ui.auth.LoginScreen
 import com.example.languagestudy.ui.screens.*
 import com.example.languagestudy.ui.theme.LanguageStudyTheme
-
-import com.example.languagestudy.ui.auth.AuthViewModel
-import com.google.firebase.auth.FirebaseAuth
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.languagestudy.ui.auth.LoginScreen
+import com.example.languagestudy.ui.viewmodel.PortfolioViewModel
+import com.example.languagestudy.ui.viewmodel.PortfolioViewModelFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Keep the screen on during testing
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         enableEdgeToEdge()
         setContent {
             LanguageStudyTheme {
@@ -51,7 +54,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MainScreen(authViewModel: AuthViewModel = viewModel()) {
     val context = LocalContext.current
@@ -62,7 +65,7 @@ fun MainScreen(authViewModel: AuthViewModel = viewModel()) {
     val adaptiveInfo = currentWindowAdaptiveInfo()
     val useNavRail = adaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
 
-    val provider = remember {
+    val provider = remember(currentUser) {
         entryProvider<NavKey> {
             entry<NavRoute.Login> { 
                 LoginScreen(onLoginSuccess = {
@@ -70,11 +73,16 @@ fun MainScreen(authViewModel: AuthViewModel = viewModel()) {
                     backStack.add(NavRoute.Portfolio)
                 }) 
             }
-            entry<NavRoute.Portfolio> { PortfolioScreen() }
+            entry<NavRoute.Portfolio> { 
+                val userId = currentUser?.uid ?: ""
+                val portfolioVm: PortfolioViewModel = viewModel(factory = PortfolioViewModelFactory(userId))
+                PortfolioScreen(viewModel = portfolioVm) 
+            }
             entry<NavRoute.Vocab> { VocabScreen() }
             entry<NavRoute.Skills> { SkillsScreen() }
             entry<NavRoute.Journal> { JournalScreen() }
             entry<NavRoute.Admin> { AdminScreen() }
+            entry<NavRoute.Settings> { SettingsScreen() }
         }
     }
 
@@ -106,7 +114,10 @@ fun MainScreen(authViewModel: AuthViewModel = viewModel()) {
                                 modifier = Modifier.padding(horizontal = 16.dp)
                             )
                             OutlinedButton(
-                                onClick = {},
+                                onClick = { 
+                                    backStack.clear()
+                                    backStack.add(NavRoute.Settings) 
+                                },
                                 modifier = Modifier.padding(horizontal = 4.dp),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
@@ -132,7 +143,7 @@ fun MainScreen(authViewModel: AuthViewModel = viewModel()) {
             }
         },
         bottomBar = {
-            if (!useNavRail && currentUser != null) {
+            if (!useNavRail && currentUser != null && !WindowInsets.isImeVisible) {
                 NavigationBar {
                     NavRoute.mainRoutes.forEach { route ->
                         NavigationBarItem(

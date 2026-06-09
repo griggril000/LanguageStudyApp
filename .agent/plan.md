@@ -18,15 +18,19 @@
 - [x] **Task 4: Authentication**
     - Google Login using Jetpack Credential Manager.
     - AuthViewModel with Firebase Auth integration.
-    - LoginScreen UI with Email/Password (placeholders) and Google Login.
+    - LoginScreen UI with Email/Password (Login & Sign Up) and Google Login.
     - Conditional navigation logic in `MainActivity`.
 
 ### Upcoming Tasks
-- [ ] **Task 5: Refine Portfolio & Infinite Scrolling**
-    - Add paging logic to Firestore repository.
-    - Implement real video/media playback.
+- [x] **Task 5: Refine Portfolio & Infinite Scrolling**
+    - Aligned Firestore path with website (`users/{userId}/portfolio`).
+    - Implemented real paging/scrolling logic.
+    - Added thumbnail extraction for YouTube.
+    - Added Portfolio Sharing (Code generation & Public toggle).
 - [ ] **Task 6: Feature Enhancements**
-    - Add search/filter to Vocab and Journal.
+    - Implement Search Bar in Top Bar (Global Search).
+    - Add Language filters to Portfolio and Vocab.
+    - Implement "Mentor Mode" (View portfolios via code).
     - Implement notifications for study reminders.
 - [ ] **Task 7: Final Polishing**
     - Adaptive icon refinement.

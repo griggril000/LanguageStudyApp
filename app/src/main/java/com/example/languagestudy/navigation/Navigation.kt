@@ -27,9 +27,11 @@ sealed interface NavRoute : NavKey {
     data object Journal : NavRoute
     @Serializable
     data object Admin : NavRoute
+    @Serializable
+    data object Settings : NavRoute
 
     companion object {
-        val mainRoutes = listOf(Vocab, Skills, Portfolio, Journal, Admin)
+        val mainRoutes = listOf(Vocab, Skills, Portfolio, Journal, Settings, Admin)
     }
 }
 
@@ -41,6 +43,7 @@ val NavRoute.icon: ImageVector
         NavRoute.Skills -> Icons.Rounded.Psychology
         NavRoute.Journal -> Icons.Rounded.Edit
         NavRoute.Admin -> Icons.Rounded.Star
+        NavRoute.Settings -> Icons.Rounded.Settings
     }
 
 val NavRoute.label: String
@@ -51,4 +54,5 @@ val NavRoute.label: String
         NavRoute.Skills -> "Skills"
         NavRoute.Journal -> "Journal"
         NavRoute.Admin -> "Admin"
+        NavRoute.Settings -> "Settings"
     }

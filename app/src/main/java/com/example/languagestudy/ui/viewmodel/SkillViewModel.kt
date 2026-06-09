@@ -5,18 +5,27 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.languagestudy.data.local.entity.SkillEntity
 import com.example.languagestudy.data.repository.SkillRepository
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class SkillViewModel(private val repository: SkillRepository) : ViewModel() {
     val allSkills: StateFlow<List<SkillEntity>> = repository.allSkills
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _error = MutableSharedFlow<String>()
+    val error: SharedFlow<String> = _error.asSharedFlow()
+
     fun addSkill(name: String, level: String) {
+        if (name.isBlank()) {
+            viewModelScope.launch { _error.emit("Skill name cannot be empty") }
+            return
+        }
         viewModelScope.launch {
-            repository.insert(SkillEntity(name = name, progress = 0, level = level))
+            try {
+                repository.insert(SkillEntity(name = name.trim(), level = level))
+            } catch (e: Exception) {
+                _error.emit("Failed to add skill: ${e.message}")
+            }
         }
     }
 

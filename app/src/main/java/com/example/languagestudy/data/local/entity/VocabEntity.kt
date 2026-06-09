@@ -9,5 +9,6 @@ data class VocabEntity(
     val word: String,
     val translation: String,
     val category: String,
+    val language: String = "en", // Default to English or current study language
     val dateAdded: Long = System.currentTimeMillis()
 )

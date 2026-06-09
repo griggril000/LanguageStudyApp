@@ -1,0 +1,471 @@
+{
+  "site": {
+    "id": "language-study",
+    "title": "Language Study",
+    "description": "Learn and master languages with interactive vocabulary, skills, and portfolio tracking.",
+    "baseUrl": "/login.html",
+    "language": "en",
+    "theme": {
+      "primaryColor": "#c55a11",
+      "accentColor": null,
+      "darkMode": false
+    },
+    "pwa": {
+      "manifest": "manifest.json",
+      "serviceWorker": "sw.js",
+      "offlinePages": [
+        "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/index.html",
+        "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/info-update.html",
+        "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/login.html",
+        "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/privacy-policy.html"
+      ]
+    },
+    "auth": {
+      "loginPage": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/login.html",
+      "requiresAuthRoutes": [],
+      "providers": []
+    },
+    "navigation": [
+      {
+        "id": "index",
+        "title": "index",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/index.html",
+        "icon": null,
+        "order": 1,
+        "visible": true
+      },
+      {
+        "id": "info-update",
+        "title": "info-update",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/info-update.html",
+        "icon": null,
+        "order": 2,
+        "visible": true
+      },
+      {
+        "id": "login",
+        "title": "login",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/login.html",
+        "icon": null,
+        "order": 3,
+        "visible": true
+      },
+      {
+        "id": "privacy-policy",
+        "title": "privacy-policy",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/privacy-policy.html",
+        "icon": null,
+        "order": 4,
+        "visible": true
+      }
+    ],
+    "pages": [
+      {
+        "id": "index",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/index.html",
+        "title": "index",
+        "type": "static",
+        "content": {
+          "html": null,
+          "blocks": [
+            {
+              "type": "text",
+              "data": {
+                "source": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/index.html"
+              }
+            }
+          ]
+        },
+        "controllers": [],
+        "meta": {
+          "description": ""
+        },
+        "offline": {
+          "cache": true,
+          "fallback": "index.html"
+        }
+      },
+      {
+        "id": "info-update",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/info-update.html",
+        "title": "info-update",
+        "type": "static",
+        "content": {
+          "html": null,
+          "blocks": [
+            {
+              "type": "text",
+              "data": {
+                "source": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/info-update.html"
+              }
+            }
+          ]
+        },
+        "controllers": [],
+        "meta": {
+          "description": ""
+        },
+        "offline": {
+          "cache": true,
+          "fallback": "index.html"
+        }
+      },
+      {
+        "id": "login",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/login.html",
+        "title": "login",
+        "type": "static",
+        "content": {
+          "html": null,
+          "blocks": [
+            {
+              "type": "text",
+              "data": {
+                "source": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/login.html"
+              }
+            }
+          ]
+        },
+        "controllers": [],
+        "meta": {
+          "description": ""
+        },
+        "offline": {
+          "cache": true,
+          "fallback": "index.html"
+        }
+      },
+      {
+        "id": "privacy-policy",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/privacy-policy.html",
+        "title": "privacy-policy",
+        "type": "static",
+        "content": {
+          "html": null,
+          "blocks": [
+            {
+              "type": "text",
+              "data": {
+                "source": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/privacy-policy.html"
+              }
+            }
+          ]
+        },
+        "controllers": [],
+        "meta": {
+          "description": ""
+        },
+        "offline": {
+          "cache": true,
+          "fallback": "index.html"
+        }
+      },
+      {
+        "id": "app-page",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-page.js",
+        "title": "app-page",
+        "type": "app",
+        "controllers": [
+          "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-page.js"
+        ],
+        "content": {
+          "blocks": [
+            {
+              "type": "component",
+              "data": {
+                "script": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-page.js"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "app-portfolio-share",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-portfolio-share.js",
+        "title": "app-portfolio-share",
+        "type": "app",
+        "controllers": [
+          "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-portfolio-share.js"
+        ],
+        "content": {
+          "blocks": [
+            {
+              "type": "component",
+              "data": {
+                "script": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-portfolio-share.js"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "app-portfolio",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-portfolio.js",
+        "title": "app-portfolio",
+        "type": "app",
+        "controllers": [
+          "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-portfolio.js"
+        ],
+        "content": {
+          "blocks": [
+            {
+              "type": "component",
+              "data": {
+                "script": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-portfolio.js"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "app-settings",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-settings.js",
+        "title": "app-settings",
+        "type": "app",
+        "controllers": [
+          "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-settings.js"
+        ],
+        "content": {
+          "blocks": [
+            {
+              "type": "component",
+              "data": {
+                "script": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-settings.js"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "app-skills",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-skills.js",
+        "title": "app-skills",
+        "type": "app",
+        "controllers": [
+          "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-skills.js"
+        ],
+        "content": {
+          "blocks": [
+            {
+              "type": "component",
+              "data": {
+                "script": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-skills.js"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "app-vocabulary",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-vocabulary.js",
+        "title": "app-vocabulary",
+        "type": "app",
+        "controllers": [
+          "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-vocabulary.js"
+        ],
+        "content": {
+          "blocks": [
+            {
+              "type": "component",
+              "data": {
+                "script": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-vocabulary.js"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "info-update-page",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/info-update-page.js",
+        "title": "info-update-page",
+        "type": "app",
+        "controllers": [
+          "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/info-update-page.js"
+        ],
+        "content": {
+          "blocks": [
+            {
+              "type": "component",
+              "data": {
+                "script": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/info-update-page.js"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "login-page",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/login-page.js",
+        "title": "login-page",
+        "type": "app",
+        "controllers": [
+          "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/login-page.js"
+        ],
+        "content": {
+          "blocks": [
+            {
+              "type": "component",
+              "data": {
+                "script": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/login-page.js"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "assets": [],
+    "apis": [],
+    "dataSources": [
+      {
+        "id": "admin-resources",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/admin-resources.js"
+      },
+      {
+        "id": "app-inline",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/app-inline.js"
+      },
+      {
+        "id": "auth",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/auth.js"
+      },
+      {
+        "id": "badges",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/badges.js"
+      },
+      {
+        "id": "config",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/config.js"
+      },
+      {
+        "id": "tab-controller",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/controllers/tab-controller.js"
+      },
+      {
+        "id": "data-loader",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/data-loader.js"
+      },
+      {
+        "id": "flashcard",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/flashcard.js"
+      },
+      {
+        "id": "journal",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/journal.js"
+      },
+      {
+        "id": "link-aes",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/link-aes.js"
+      },
+      {
+        "id": "mentor-view",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/mentor-view.js"
+      },
+      {
+        "id": "onboarding",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/onboarding.js"
+      },
+      {
+        "id": "app-page",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-page.js"
+      },
+      {
+        "id": "app-portfolio-share",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-portfolio-share.js"
+      },
+      {
+        "id": "app-portfolio",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-portfolio.js"
+      },
+      {
+        "id": "app-settings",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-settings.js"
+      },
+      {
+        "id": "app-skills",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-skills.js"
+      },
+      {
+        "id": "app-vocabulary",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/app-vocabulary.js"
+      },
+      {
+        "id": "info-update-page",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/info-update-page.js"
+      },
+      {
+        "id": "login-page",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/pages/login-page.js"
+      },
+      {
+        "id": "portfolio-share",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/portfolio-share.js"
+      },
+      {
+        "id": "portfolio",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/portfolio.js"
+      },
+      {
+        "id": "site-message",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/site-message.js"
+      },
+      {
+        "id": "ui-utils",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/ui-utils.js"
+      },
+      {
+        "id": "vocabulary",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/js/vocabulary.js"
+      },
+      {
+        "id": "sw",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/sw.js"
+      },
+      {
+        "id": "extract-site-json",
+        "type": "local_js",
+        "path": "C:/Users/grigg/OneDrive/My Computer/Documents/Language-Study.github.io/tools/extract-site-json.js"
+      }
+    ],
+    "i18n": {
+      "defaultLocale": "en",
+      "locales": [
+        "en"
+      ],
+      "stringsPath": null
+    },
+    "buildHints": {
+      "minSdk": 21,
+      "targetSdk": 34,
+      "useJetpackCompose": true,
+      "useKotlin": true,
+      "packageName": "com.language study",
+      "appName": "Language Study"
+    }
+  }
+}

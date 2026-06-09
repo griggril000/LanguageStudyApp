@@ -3,13 +3,17 @@ package com.example.languagestudy.ui.auth
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.util.Log
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.languagestudy.R
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
@@ -52,12 +56,16 @@ class AuthViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             try {
+                // Hardcoding the ID temporarily to rule out resource issues
+                val serverClientId = "47054764584-toogfgpr6rrqu8u23352s0qpk3glpgll.apps.googleusercontent.com"
+                Log.d("AuthViewModel", "Requesting sign-in for client: $serverClientId")
+
                 val credentialManager = CredentialManager.create(context)
                 
                 val googleIdOption = GetGoogleIdOption.Builder()
                     .setFilterByAuthorizedAccounts(false)
-                    .setServerClientId("47054764584-toogfgpr6rrqu8u23352s0qpk3glpgll.apps.googleusercontent.com")
-                    .setAutoSelectEnabled(false) // Disable auto-select to force the picker
+                    .setServerClientId(serverClientId)
+                    .setAutoSelectEnabled(false)
                     .build()
 
                 val request = GetCredentialRequest.Builder()
@@ -73,11 +81,57 @@ class AuthViewModel : ViewModel() {
                     
                     auth.signInWithCredential(firebaseCredential).await()
                     _user.value = auth.currentUser
+                } else {
+                    _error.value = "Unexpected credential type"
                 }
+            } catch (e: NoCredentialException) {
+                _error.value = "No Google accounts found on this device."
+            } catch (e: GetCredentialCancellationException) {
+                _error.value = "Sign in was cancelled."
             } catch (e: GetCredentialException) {
-                _error.value = "Google Sign In failed: ${e.message}"
+                Log.e("AuthViewModel", "Credential Manager Error", e)
+                _error.value = "Sign in failed: ${e.message}"
             } catch (e: Exception) {
+                Log.e("AuthViewModel", "Unknown Auth Error", e)
                 _error.value = "An error occurred: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun signInWithEmail(email: String, password: String) {
+        if (email.isBlank() || password.isBlank()) {
+            _error.value = "Email and password cannot be empty"
+            return
+        }
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                auth.signInWithEmailAndPassword(email, password).await()
+                _user.value = auth.currentUser
+            } catch (e: Exception) {
+                _error.value = "Login failed: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun signUpWithEmail(email: String, password: String) {
+        if (email.isBlank() || password.isBlank()) {
+            _error.value = "Email and password cannot be empty"
+            return
+        }
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                auth.createUserWithEmailAndPassword(email, password).await()
+                _user.value = auth.currentUser
+            } catch (e: Exception) {
+                _error.value = "Sign up failed: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
