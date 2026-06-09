@@ -100,6 +100,14 @@ class PortfolioViewModel(
 
     fun toggleFeatured(item: PortfolioItem) {
         viewModelScope.launch {
+            if (!item.isTop) {
+                // If we are trying to feature an item, check the limit
+                val featuredCount = _items.value.count { it.isTop }
+                if (featuredCount >= 3) {
+                    _error.emit("You can only have up to 3 featured items")
+                    return@launch
+                }
+            }
             repository.updatePortfolioItem(userId, item.copy(isTop = !item.isTop))
         }
     }

@@ -131,11 +131,12 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
                 ) {
                     val featuredItems = items.filter { it.isTop }
                     val otherItems = items.filter { !it.isTop }
+                    val canFeatureMore = featuredItems.size < 3
 
                     if (featuredItems.isNotEmpty()) {
                         item {
                             Text(
-                                "Featured Items", 
+                                "Featured Items (${featuredItems.size}/3)", 
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -162,7 +163,8 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
                                 item = item,
                                 onPlay = { onPlay(item.link) },
                                 onDelete = { viewModel.deleteItem(item.id) },
-                                onFeature = { viewModel.toggleFeatured(item) }
+                                onFeature = { viewModel.toggleFeatured(item) },
+                                canFeature = canFeatureMore
                             )
                         }
                     }
@@ -243,7 +245,8 @@ fun StandardPortfolioItem(
     item: PortfolioItem,
     onPlay: () -> Unit,
     onDelete: () -> Unit,
-    onFeature: () -> Unit
+    onFeature: () -> Unit,
+    canFeature: Boolean
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onPlay() },
@@ -261,7 +264,15 @@ fun StandardPortfolioItem(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = onFeature) { Text("Feature") }
+                TextButton(
+                    onClick = onFeature,
+                    enabled = canFeature
+                ) { 
+                    Text(
+                        "Feature",
+                        color = if (canFeature) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                    ) 
+                }
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Rounded.Delete, 
