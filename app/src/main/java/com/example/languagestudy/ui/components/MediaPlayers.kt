@@ -54,42 +54,50 @@ fun SoundCloudPlayer(
                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                         val uri = request?.url ?: return false
                         val uriString = uri.toString()
+                        android.util.Log.d("SoundCloudPlayer", "URL Loading: $uriString")
                         
-                        // Handle SoundCloud app intents or specific deep links
+                        // 1. Check for SoundCloud's special "intent://" or "soundcloud://" schemes
                         if (uriString.startsWith("intent://") || uriString.startsWith("soundcloud://")) {
                             try {
                                 val intent = Intent.parseUri(uriString, Intent.URI_INTENT_SCHEME)
                                 if (intent != null) {
-                                    // Set CATEGORY_BROWSABLE to be safe for deep links
-                                    intent.addCategory(Intent.CATEGORY_BROWSABLE)
-                                    // Remove component to allow any app (browser or soundcloud) to handle it
-                                    intent.component = null
+                                    // Try to get a clean web URL from the intent first
+                                    val fallbackUrl = intent.getStringExtra("browser_fallback_url")
+                                    val dataUrl = intent.dataString
                                     
+                                    // Try to launch the app if it's there
                                     val packageManager = context.packageManager
-                                    val info = packageManager.resolveActivity(intent, 0)
-                                    if (info != null) {
+                                    if (intent.`package` != null && packageManager.getLaunchIntentForPackage(intent.`package`!!) != null) {
                                         context.startActivity(intent)
-                                    } else {
-                                        // App not installed, fallback to browser
-                                        val fallbackUrl = intent.getStringExtra("browser_fallback_url")
-                                        val finalUrl = fallbackUrl ?: url
-                                        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(finalUrl))
-                                        context.startActivity(browserIntent)
+                                        return true
                                     }
+                                    
+                                    // Fallback: If it's an intent we can't handle, open the best URL we have in a fresh browser intent
+                                    val webUrl = fallbackUrl ?: dataUrl ?: url
+                                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(webUrl))
+                                    context.startActivity(browserIntent)
+                                    // Go back to the widget if possible to avoid staying on a white page
+                                    if (view?.canGoBack() == true) { view.goBack() }
                                     return true
                                 }
                             } catch (e: Exception) {
-                                // On error, fallback to opening the original link in browser
-                                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                context.startActivity(browserIntent)
+                                android.util.Log.e("SoundCloudPlayer", "Intent parsing failed", e)
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                if (view?.canGoBack() == true) { view.goBack() }
                                 return true
                             }
                         }
                         
-                        // For other links (like "Listen in browser"), let the system handle it if it's not the widget domain
-                        if (!uriString.contains("w.soundcloud.com")) {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, uri))
-                            return true
+                        // 2. Intercept standard HTTP links that are NOT the widget itself
+                        // This catches the "Listen in browser" button which is a standard <a> tag
+                        if (uri.scheme == "http" || uri.scheme == "https") {
+                            if (!uriString.contains("w.soundcloud.com/player")) {
+                                android.util.Log.d("SoundCloudPlayer", "Opening standard link in browser: $uriString")
+                                context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                                // Go back to the widget if possible to avoid staying on a white page
+                                if (view?.canGoBack() == true) { view.goBack() }
+                                return true
+                            }
                         }
                         
                         return false
@@ -97,8 +105,9 @@ fun SoundCloudPlayer(
                 }
                 webChromeClient = WebChromeClient()
                 
-                // Construct the SoundCloud Widget URL
-                val embedUrl = "https://w.soundcloud.com/player/?url=${url}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true"
+                // Construct the SoundCloud Widget URL - using visual=true and show_teaser=false
+                // to remove the problematic "Play on SoundCloud" overlay buttons.
+                val embedUrl = "https://w.soundcloud.com/player/?url=${url}&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true"
                 loadUrl(embedUrl)
             }
         }
