@@ -40,10 +40,15 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
     var title by remember { mutableStateOf("") }
     var link by remember { mutableStateOf("") }
     var showAddDialog by remember { mutableStateOf(false) }
+    var localErrorMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.error.collect { message ->
-            snackbarHostState.showSnackbar(message)
+            if (showAddDialog) {
+                localErrorMessage = message
+            } else {
+                snackbarHostState.showSnackbar(message)
+            }
         }
     }
 
@@ -51,6 +56,7 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
         viewModel.addSuccess.collect {
             title = ""
             link = ""
+            localErrorMessage = null
             showAddDialog = false
         }
     }
@@ -85,6 +91,14 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
                 title = { Text("Add Portfolio Item") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (localErrorMessage != null) {
+                            Text(
+                                text = localErrorMessage!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                        }
                         OutlinedTextField(
                             value = title,
                             onValueChange = { title = it },
