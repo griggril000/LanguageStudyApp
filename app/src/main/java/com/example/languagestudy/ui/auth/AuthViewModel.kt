@@ -180,6 +180,17 @@ class AuthViewModel : ViewModel() {
             auth.signOut()
             _user.value = null
             _isAdmin.value = false
+            
+            // Clear local database tables on logout
+            try {
+                val app = context.applicationContext as com.example.languagestudy.LanguageStudyApplication
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    app.database.clearAllTables()
+                }
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Error clearing database on logout", e)
+            }
+
             val credentialManager = CredentialManager.create(context)
             credentialManager.clearCredentialState(ClearCredentialStateRequest())
         }

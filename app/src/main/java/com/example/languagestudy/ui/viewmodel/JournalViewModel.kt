@@ -12,6 +12,17 @@ class JournalViewModel(private val repository: JournalRepository) : ViewModel() 
     val allEntries: StateFlow<List<JournalEntryEntity>> = repository.allEntries
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    val filteredEntries: StateFlow<List<JournalEntryEntity>> = combine(allEntries, _searchQuery) { entries, query ->
+        if (query.isBlank()) entries
+        else entries.filter { 
+            it.title.contains(query, ignoreCase = true) || 
+            it.content.contains(query, ignoreCase = true)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     private val _error = MutableSharedFlow<String>()
     val error: SharedFlow<String> = _error.asSharedFlow()
 
@@ -33,6 +44,10 @@ class JournalViewModel(private val repository: JournalRepository) : ViewModel() 
         viewModelScope.launch {
             repository.delete(entry)
         }
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 }
 

@@ -64,8 +64,11 @@ class FirestorePortfolioRepository(
     }
 
     override suspend fun updatePortfolioItem(userId: String, item: PortfolioItem) {
-        // Use set with SetOptions.merge() to avoid deleting fields the app doesn't know about
-        getCollection(userId).document(item.id).set(item, SetOptions.merge()).await()
+        if (item.id.isBlank()) return
+        val updates = mapOf(
+            "isTop" to item.isTop
+        )
+        getCollection(userId).document(item.id).update(updates).await()
     }
 
     private fun extractVideoId(url: String): String? {

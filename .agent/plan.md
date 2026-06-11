@@ -27,8 +27,8 @@
     - Implemented real paging/scrolling logic.
     - Added thumbnail extraction for YouTube.
     - Added Portfolio Sharing (Code generation & Public toggle).
-- [ ] **Task 6: Feature Enhancements**
-    - Implement Search Bar in Top Bar (Global Search).
+- [x] **Task 6: Feature Enhancements**
+    - **(done)** Implement Search Bar in Top Bar (Global Search) - Implemented per-page floating search.
     - Add Language filters to Portfolio and Vocab.
     - Implement "Mentor Mode" (View portfolios via code).
     - Implement notifications for study reminders.

@@ -20,6 +20,17 @@ class PortfolioViewModel(
     private val _items = MutableStateFlow<List<PortfolioItem>>(emptyList())
     val items: StateFlow<List<PortfolioItem>> = _items.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    val filteredItems: StateFlow<List<PortfolioItem>> = combine(_items, _searchQuery) { items, query ->
+        if (query.isBlank()) items
+        else items.filter { 
+            it.title.contains(query, ignoreCase = true) || 
+            it.link.contains(query, ignoreCase = true) 
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -34,6 +45,10 @@ class PortfolioViewModel(
     }
 
     fun loadPortfolio() {
+        if (userId.isBlank()) {
+            Log.d("PortfolioVM", "Skipping loadPortfolio for blank userId")
+            return
+        }
         viewModelScope.launch {
             _isLoading.value = true
             repository.getPortfolioItems(userId, limit = 50)
@@ -93,12 +108,25 @@ class PortfolioViewModel(
     }
 
     fun deleteItem(id: String) {
+        if (id.isBlank()) {
+            Log.e("PortfolioVM", "Cannot delete item with empty ID")
+            return
+        }
         viewModelScope.launch {
-            repository.deletePortfolioItem(userId, id)
+            try {
+                repository.deletePortfolioItem(userId, id)
+            } catch (e: Exception) {
+                Log.e("PortfolioVM", "Error deleting item $id", e)
+                _error.emit("Failed to delete item")
+            }
         }
     }
 
     fun toggleFeatured(item: PortfolioItem) {
+        if (item.id.isBlank()) {
+            Log.e("PortfolioVM", "Cannot toggle featured for item with empty ID")
+            return
+        }
         viewModelScope.launch {
             if (!item.isTop) {
                 // If we are trying to feature an item, check the limit
@@ -108,8 +136,17 @@ class PortfolioViewModel(
                     return@launch
                 }
             }
-            repository.updatePortfolioItem(userId, item.copy(isTop = !item.isTop))
+            try {
+                repository.updatePortfolioItem(userId, item.copy(isTop = !item.isTop))
+            } catch (e: Exception) {
+                Log.e("PortfolioVM", "Error toggling featured for item ${item.id}", e)
+                _error.emit("Failed to update item")
+            }
         }
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 }
 

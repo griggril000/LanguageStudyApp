@@ -21,14 +21,19 @@ import com.example.languagestudy.data.local.entity.JournalEntryEntity
 import com.example.languagestudy.data.local.entity.SkillEntity
 import com.example.languagestudy.data.local.entity.VocabEntity
 import com.example.languagestudy.ui.auth.AuthViewModel
+import com.example.languagestudy.ui.components.GlobalSearchBar
 import com.example.languagestudy.ui.viewmodel.*
 
 @Composable
-fun VocabScreen() {
+fun VocabScreen(userId: String) {
     val context = LocalContext.current
     val repository = (context.applicationContext as LanguageStudyApplication).vocabRepository
-    val viewModel: VocabViewModel = viewModel(factory = VocabViewModelFactory(repository))
-    val vocabList by viewModel.allVocab.collectAsState()
+    val viewModel: VocabViewModel = viewModel(
+        key = "vocab_$userId",
+        factory = VocabViewModelFactory(repository)
+    )
+    val vocabList by viewModel.filteredVocab.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var word by remember { mutableStateOf("") }
@@ -45,41 +50,49 @@ fun VocabScreen() {
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = word,
-                    onValueChange = { word = it },
-                    label = { Text("Word") },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
-                )
-                Spacer(Modifier.width(8.dp))
-                OutlinedTextField(
-                    value = translation,
-                    onValueChange = { translation = it },
-                    label = { Text("Translation") },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
-                )
-                IconButton(onClick = {
-                    viewModel.addVocab(word, translation, "General", "en")
-                    if (word.isNotBlank() && translation.isNotBlank()) {
-                        word = ""
-                        translation = ""
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            GlobalSearchBar(
+                query = searchQuery,
+                onQueryChange = { viewModel.setSearchQuery(it) },
+                placeholder = "Search vocabulary..."
+            )
+
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = word,
+                        onValueChange = { word = it },
+                        label = { Text("Word") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    OutlinedTextField(
+                        value = translation,
+                        onValueChange = { translation = it },
+                        label = { Text("Translation") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                    IconButton(onClick = {
+                        viewModel.addVocab(word, translation, "General", "en")
+                        if (word.isNotBlank() && translation.isNotBlank()) {
+                            word = ""
+                            translation = ""
+                        }
+                    }) {
+                        Icon(Icons.Rounded.Add, contentDescription = "Add")
                     }
-                }) {
-                    Icon(Icons.Rounded.Add, contentDescription = "Add")
                 }
-            }
 
-            Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp))
 
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(vocabList) { vocab ->
-                    VocabItem(vocab, onDelete = { viewModel.deleteVocab(vocab) })
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(vocabList) { vocab ->
+                        VocabItem(vocab, onDelete = { viewModel.deleteVocab(vocab) })
+                    }
                 }
             }
         }
@@ -102,11 +115,15 @@ fun VocabItem(vocab: VocabEntity, onDelete: () -> Unit) {
 }
 
 @Composable
-fun SkillsScreen() {
+fun SkillsScreen(userId: String) {
     val context = LocalContext.current
     val repository = (context.applicationContext as LanguageStudyApplication).skillRepository
-    val viewModel: SkillViewModel = viewModel(factory = SkillViewModelFactory(repository))
-    val skillsList by viewModel.allSkills.collectAsState()
+    val viewModel: SkillViewModel = viewModel(
+        key = "skills_$userId",
+        factory = SkillViewModelFactory(repository)
+    )
+    val skillsList by viewModel.filteredSkills.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var skillName by remember { mutableStateOf("") }
@@ -122,31 +139,39 @@ fun SkillsScreen() {
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = skillName,
-                    onValueChange = { skillName = it },
-                    label = { Text("New Skill") },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
-                )
-                IconButton(onClick = {
-                    viewModel.addSkill(skillName, "Beginner")
-                    if (skillName.isNotBlank()) {
-                        skillName = ""
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            GlobalSearchBar(
+                query = searchQuery,
+                onQueryChange = { viewModel.setSearchQuery(it) },
+                placeholder = "Search skills..."
+            )
+
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = skillName,
+                        onValueChange = { skillName = it },
+                        label = { Text("New Skill") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                    IconButton(onClick = {
+                        viewModel.addSkill(skillName, "Beginner")
+                        if (skillName.isNotBlank()) {
+                            skillName = ""
+                        }
+                    }) {
+                        Icon(Icons.Rounded.Add, contentDescription = "Add")
                     }
-                }) {
-                    Icon(Icons.Rounded.Add, contentDescription = "Add")
                 }
-            }
 
-            Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp))
 
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(skillsList) { skill ->
-                    SkillItem(skill, onProgressChange = { viewModel.updateProgress(skill, it) })
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(skillsList) { skill ->
+                        SkillItem(skill, onProgressChange = { viewModel.updateProgress(skill, it) })
+                    }
                 }
             }
         }
@@ -178,11 +203,15 @@ fun SkillItem(skill: SkillEntity, onProgressChange: (Int) -> Unit) {
 }
 
 @Composable
-fun JournalScreen() {
+fun JournalScreen(userId: String) {
     val context = LocalContext.current
     val repository = (context.applicationContext as LanguageStudyApplication).journalRepository
-    val viewModel: JournalViewModel = viewModel(factory = JournalViewModelFactory(repository))
-    val entries by viewModel.allEntries.collectAsState()
+    val viewModel: JournalViewModel = viewModel(
+        key = "journal_$userId",
+        factory = JournalViewModelFactory(repository)
+    )
+    val entries by viewModel.filteredEntries.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var title by remember { mutableStateOf("") }
@@ -199,42 +228,50 @@ fun JournalScreen() {
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Title") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            GlobalSearchBar(
+                query = searchQuery,
+                onQueryChange = { viewModel.setSearchQuery(it) },
+                placeholder = "Search journal..."
             )
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = contentText,
-                onValueChange = { contentText = it },
-                label = { Text("Content") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                minLines = 3
-            )
-            Button(
-                onClick = {
-                    viewModel.addEntry(title, contentText)
-                    if (title.isNotBlank() && contentText.isNotBlank()) {
-                        title = ""
-                        contentText = ""
+
+            Column(modifier = Modifier.padding(16.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Title") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = contentText,
+                    onValueChange = { contentText = it },
+                    label = { Text("Content") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    minLines = 3
+                )
+                Button(
+                    onClick = {
+                        viewModel.addEntry(title, contentText)
+                        if (title.isNotBlank() && contentText.isNotBlank()) {
+                            title = ""
+                            contentText = ""
+                        }
+                    },
+                    modifier = Modifier.align(Alignment.End).padding(top = 8.dp)
+                ) {
+                    Text("Save Entry")
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(entries) { entry ->
+                        JournalItem(entry, onDelete = { viewModel.deleteEntry(entry) })
                     }
-                },
-                modifier = Modifier.align(Alignment.End).padding(top = 8.dp)
-            ) {
-                Text("Save Entry")
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(entries) { entry ->
-                    JournalItem(entry, onDelete = { viewModel.deleteEntry(entry) })
                 }
             }
         }
@@ -283,13 +320,13 @@ fun SettingsScreen(authViewModel: AuthViewModel = viewModel()) {
         }
 
         // Example setting: Dark Mode (aligned with site-data.json theme property)
-        var darkModeEnabled by remember { mutableStateOf(false) }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Dark Mode", modifier = Modifier.weight(1f))
-            Switch(checked = darkModeEnabled, onCheckedChange = { darkModeEnabled = it })
-        }
+//        var darkModeEnabled by remember { mutableStateOf(false) }
+//        Row(
+//            modifier = Modifier.fillMaxWidth(),
+//            verticalAlignment = Alignment.CenterVertically
+//        ) {
+//            Text("Dark Mode", modifier = Modifier.weight(1f))
+//            Switch(checked = darkModeEnabled, onCheckedChange = { darkModeEnabled = it })
+//        }
     }
 }

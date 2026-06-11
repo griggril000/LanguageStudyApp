@@ -12,6 +12,18 @@ class VocabViewModel(private val repository: VocabRepository) : ViewModel() {
     val allVocab: StateFlow<List<VocabEntity>> = repository.allVocab
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    val filteredVocab: StateFlow<List<VocabEntity>> = combine(allVocab, _searchQuery) { vocab, query ->
+        if (query.isBlank()) vocab
+        else vocab.filter { 
+            it.word.contains(query, ignoreCase = true) || 
+            it.translation.contains(query, ignoreCase = true) ||
+            it.category.contains(query, ignoreCase = true)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     private val _error = MutableSharedFlow<String>()
     val error: SharedFlow<String> = _error.asSharedFlow()
 
@@ -33,6 +45,10 @@ class VocabViewModel(private val repository: VocabRepository) : ViewModel() {
         viewModelScope.launch {
             repository.delete(vocab)
         }
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 }
 

@@ -12,6 +12,18 @@ class SkillViewModel(private val repository: SkillRepository) : ViewModel() {
     val allSkills: StateFlow<List<SkillEntity>> = repository.allSkills
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    val filteredSkills: StateFlow<List<SkillEntity>> = combine(allSkills, _searchQuery) { skills, query ->
+        if (query.isBlank()) skills
+        else skills.filter { 
+            it.name.contains(query, ignoreCase = true) || 
+            it.level.contains(query, ignoreCase = true) ||
+            it.status.contains(query, ignoreCase = true)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     private val _error = MutableSharedFlow<String>()
     val error: SharedFlow<String> = _error.asSharedFlow()
 
@@ -33,6 +45,10 @@ class SkillViewModel(private val repository: SkillRepository) : ViewModel() {
         viewModelScope.launch {
             repository.update(skill.copy(progress = progress))
         }
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 }
 

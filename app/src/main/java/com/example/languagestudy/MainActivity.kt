@@ -79,12 +79,15 @@ fun MainScreen(authViewModel: AuthViewModel = viewModel()) {
             }
             entry<NavRoute.Portfolio> { 
                 val userId = currentUser?.uid ?: ""
-                val portfolioVm: PortfolioViewModel = viewModel(factory = PortfolioViewModelFactory(userId))
+                val portfolioVm: PortfolioViewModel = viewModel(
+                    key = "portfolio_$userId",
+                    factory = PortfolioViewModelFactory(userId)
+                )
                 PortfolioScreen(viewModel = portfolioVm) 
             }
-            entry<NavRoute.Vocab> { VocabScreen() }
-            entry<NavRoute.Skills> { SkillsScreen() }
-            entry<NavRoute.Journal> { JournalScreen() }
+            entry<NavRoute.Vocab> { VocabScreen(currentUser?.uid ?: "") }
+            entry<NavRoute.Skills> { SkillsScreen(currentUser?.uid ?: "") }
+            entry<NavRoute.Journal> { JournalScreen(currentUser?.uid ?: "") }
             entry<NavRoute.Admin> { AdminScreen() }
             entry<NavRoute.Settings> { SettingsScreen() }
         }

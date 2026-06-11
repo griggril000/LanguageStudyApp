@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.example.languagestudy.data.model.PortfolioItem
+import com.example.languagestudy.ui.components.GlobalSearchBar
 import com.example.languagestudy.ui.components.SoundCloudPlayer
 import com.example.languagestudy.ui.components.YouTubePlayer
 import com.example.languagestudy.ui.viewmodel.PortfolioViewModel
@@ -33,7 +34,8 @@ import com.example.languagestudy.utils.UrlUtils
 @Composable
 fun PortfolioScreen(viewModel: PortfolioViewModel) {
     val context = LocalContext.current
-    val items by viewModel.items.collectAsState()
+    val items by viewModel.filteredItems.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -139,45 +141,53 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
         }
 
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            if (isLoading && items.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                    contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
-                ) {
-                    val featuredItems = items.filter { it.isTop }
-                    val otherItems = items.filter { !it.isTop }
-                    val canFeatureMore = featuredItems.size < 3
+            Column {
+                GlobalSearchBar(
+                    query = searchQuery,
+                    onQueryChange = { viewModel.setSearchQuery(it) },
+                    placeholder = "Search portfolio..."
+                )
 
-                    if (featuredItems.isNotEmpty()) {
-                        stickyHeader {
-                            HeaderSection("Featured Items (${featuredItems.size}/3)")
-                        }
-                        items(featuredItems, key = { it.id }) { item ->
-                            FeaturedPortfolioItem(
-                                item = item,
-                                onDelete = { viewModel.deleteItem(item.id) },
-                                onUnfeature = { viewModel.toggleFeatured(item) }
-                            )
-                        }
+                if (isLoading && items.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
                     }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
+                    ) {
+                        val featuredItems = items.filter { it.isTop }
+                        val otherItems = items.filter { !it.isTop }
+                        val canFeatureMore = featuredItems.size < 3
 
-                    if (otherItems.isNotEmpty()) {
-                        stickyHeader {
-                            HeaderSection("Other Items")
+                        if (featuredItems.isNotEmpty()) {
+                            stickyHeader {
+                                HeaderSection("Featured Items (${featuredItems.size}/3)")
+                            }
+                            items(featuredItems, key = { it.id }) { item ->
+                                FeaturedPortfolioItem(
+                                    item = item,
+                                    onDelete = { viewModel.deleteItem(item.id) },
+                                    onUnfeature = { viewModel.toggleFeatured(item) }
+                                )
+                            }
                         }
-                        items(otherItems, key = { it.id }) { item ->
-                            StandardPortfolioItem(
-                                item = item,
-                                onPlay = { onPlay(item.link) },
-                                onDelete = { viewModel.deleteItem(item.id) },
-                                onFeature = { viewModel.toggleFeatured(item) },
-                                canFeature = canFeatureMore
-                            )
+
+                        if (otherItems.isNotEmpty()) {
+                            stickyHeader {
+                                HeaderSection("Other Items")
+                            }
+                            items(otherItems, key = { it.id }) { item ->
+                                StandardPortfolioItem(
+                                    item = item,
+                                    onPlay = { onPlay(item.link) },
+                                    onDelete = { viewModel.deleteItem(item.id) },
+                                    onFeature = { viewModel.toggleFeatured(item) },
+                                    canFeature = canFeatureMore
+                                )
+                            }
                         }
                     }
                 }
@@ -275,14 +285,18 @@ fun StandardPortfolioItem(
     canFeature: Boolean
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onPlay() },
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onPlay() }
+            ) {
                 Text(item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(item.link, style = MaterialTheme.typography.bodySmall, maxLines = 1)
             }
