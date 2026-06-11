@@ -16,7 +16,7 @@
     - Room database for Vocab, Skills, and Journal.
     - ViewModels and functional screens for each.
 - [x] **Task 4: Authentication**
-    - Google Login using Jetpack Credential Manager.
+    - **(todo)** Google Login using Jetpack Credential Manager.
     - AuthViewModel with Firebase Auth integration.
     - LoginScreen UI with Email/Password (Login & Sign Up) and Google Login.
     - Conditional navigation logic in `MainActivity`.
@@ -27,9 +27,11 @@
     - Implemented real paging/scrolling logic.
     - Added thumbnail extraction for YouTube.
     - Added Portfolio Sharing (Code generation & Public toggle).
-- [x] **Task 6: Feature Enhancements**
+- [ ] **Task 6: Feature Enhancements**
     - **(done)** Implement Search Bar in Top Bar (Global Search) - Implemented persistent per-page floating search with real-time filtering.
     - Add Language filters to Portfolio and Vocab.
+    - Separate out "OtherScreens.kt"
+    - Add destructive actions warning before performing delete operations.
     - Implement "Mentor Mode" (View portfolios via code).
     - Implement notifications for study reminders.
 - [ ] **Task 7: Final Polishing**
