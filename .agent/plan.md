@@ -42,4 +42,4 @@
 ## Technical Notes
 - **Authentication**: Using `androidx.credentials` (Credential Manager) which is the modern standard for 2026.
 - **Navigation**: Using `androidx.navigation3` which is state-driven.
-- **Data**: Hybrid model - Portfolio (Online/Firebase), Vocab/Skills/Journal (Offline/Room).
+- **Data**: Offline first model - Portfolio (Online/Firebase), Vocab/Skills/Journal (Offline first, stored in Firebase).
