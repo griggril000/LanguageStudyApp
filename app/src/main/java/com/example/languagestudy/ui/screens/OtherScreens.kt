@@ -57,7 +57,7 @@ fun VocabScreen(userId: String) {
                 placeholder = "Search vocabulary..."
             )
 
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
                         value = word,
@@ -146,7 +146,7 @@ fun SkillsScreen(userId: String) {
                 placeholder = "Search skills..."
             )
 
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
                         value = skillName,
@@ -235,7 +235,7 @@ fun JournalScreen(userId: String) {
                 placeholder = "Search journal..."
             )
 
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },

@@ -4,7 +4,7 @@
 
 ### Completed Tasks
 - [x] **Task 1: UI Foundation**
-    - Material 3 theme with vibrant orange/amber scheme.
+    - **(todo)** Material 3 theme with vibrant orange/amber scheme.
     - Navigation 3 adaptive shell (Nav Rail/Bottom Bar).
     - SDK 37 upgrade.
 - [x] **Task 2: Portfolio Section**
@@ -28,7 +28,7 @@
     - Added thumbnail extraction for YouTube.
     - Added Portfolio Sharing (Code generation & Public toggle).
 - [x] **Task 6: Feature Enhancements**
-    - **(done)** Implement Search Bar in Top Bar (Global Search) - Implemented per-page floating search.
+    - **(done)** Implement Search Bar in Top Bar (Global Search) - Implemented persistent per-page floating search with real-time filtering.
     - Add Language filters to Portfolio and Vocab.
     - Implement "Mentor Mode" (View portfolios via code).
     - Implement notifications for study reminders.
