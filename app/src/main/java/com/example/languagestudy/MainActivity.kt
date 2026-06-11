@@ -115,13 +115,6 @@ fun MainScreen(
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
-                            if (pageTitle.isNotBlank()) {
-                                Text(
-                                    " • $pageTitle",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
                         }
                     },
                     actions = {
