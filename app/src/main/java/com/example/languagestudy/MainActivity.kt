@@ -37,6 +37,7 @@ import com.example.languagestudy.ui.screens.*
 import com.example.languagestudy.ui.theme.LanguageStudyTheme
 import com.example.languagestudy.ui.viewmodel.PortfolioViewModel
 import com.example.languagestudy.ui.viewmodel.PortfolioViewModelFactory
+import com.example.languagestudy.ui.viewmodel.SearchViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,7 +55,10 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun MainScreen(authViewModel: AuthViewModel = viewModel()) {
+fun MainScreen(
+    authViewModel: AuthViewModel = viewModel(),
+    searchViewModel: SearchViewModel = viewModel()
+) {
     val context = LocalContext.current
     val currentUser by authViewModel.user.collectAsState()
     val isAdmin by authViewModel.isAdmin.collectAsState()
@@ -83,11 +87,11 @@ fun MainScreen(authViewModel: AuthViewModel = viewModel()) {
                     key = "portfolio_$userId",
                     factory = PortfolioViewModelFactory(userId)
                 )
-                PortfolioScreen(viewModel = portfolioVm) 
+                PortfolioScreen(viewModel = portfolioVm, searchViewModel = searchViewModel) 
             }
-            entry<NavRoute.Vocab> { VocabScreen(currentUser?.uid ?: "") }
-            entry<NavRoute.Skills> { SkillsScreen(currentUser?.uid ?: "") }
-            entry<NavRoute.Journal> { JournalScreen(currentUser?.uid ?: "") }
+            entry<NavRoute.Vocab> { VocabScreen(currentUser?.uid ?: "", searchViewModel = searchViewModel) }
+            entry<NavRoute.Skills> { SkillsScreen(currentUser?.uid ?: "", searchViewModel = searchViewModel) }
+            entry<NavRoute.Journal> { JournalScreen(currentUser?.uid ?: "", searchViewModel = searchViewModel) }
             entry<NavRoute.Admin> { AdminScreen() }
             entry<NavRoute.Settings> { SettingsScreen() }
         }

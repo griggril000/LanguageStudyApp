@@ -22,22 +22,34 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.example.languagestudy.data.model.PortfolioItem
+import com.example.languagestudy.ui.components.EmptyState
 import com.example.languagestudy.ui.components.GlobalSearchBar
+import com.example.languagestudy.ui.components.NoResultsState
 import com.example.languagestudy.ui.components.SoundCloudPlayer
 import com.example.languagestudy.ui.components.YouTubePlayer
 import com.example.languagestudy.ui.viewmodel.PortfolioViewModel
+import com.example.languagestudy.ui.viewmodel.SearchViewModel
 import com.example.languagestudy.utils.UrlUtils
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun PortfolioScreen(viewModel: PortfolioViewModel) {
+fun PortfolioScreen(
+    viewModel: PortfolioViewModel,
+    searchViewModel: SearchViewModel = viewModel()
+) {
     val context = LocalContext.current
     val items by viewModel.filteredItems.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
+    val allItems by viewModel.items.collectAsState()
+    val searchQuery by searchViewModel.query.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(searchQuery) {
+        viewModel.setSearchQuery(searchQuery)
+    }
 
     var title by remember { mutableStateOf("") }
     var link by remember { mutableStateOf("") }
@@ -144,14 +156,18 @@ fun PortfolioScreen(viewModel: PortfolioViewModel) {
             Column {
                 GlobalSearchBar(
                     query = searchQuery,
-                    onQueryChange = { viewModel.setSearchQuery(it) },
+                    onQueryChange = { searchViewModel.setQuery(it) },
                     placeholder = "Search portfolio..."
                 )
 
-                if (isLoading && items.isEmpty()) {
+                if (isLoading && allItems.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
+                } else if (allItems.isEmpty()) {
+                    EmptyState(message = "Your portfolio is empty. Add your first item!")
+                } else if (items.isEmpty() && searchQuery.isNotEmpty()) {
+                    NoResultsState(query = searchQuery)
                 } else {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(16.dp),

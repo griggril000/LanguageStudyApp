@@ -21,11 +21,16 @@ import com.example.languagestudy.data.local.entity.JournalEntryEntity
 import com.example.languagestudy.data.local.entity.SkillEntity
 import com.example.languagestudy.data.local.entity.VocabEntity
 import com.example.languagestudy.ui.auth.AuthViewModel
+import com.example.languagestudy.ui.components.EmptyState
 import com.example.languagestudy.ui.components.GlobalSearchBar
+import com.example.languagestudy.ui.components.NoResultsState
 import com.example.languagestudy.ui.viewmodel.*
 
 @Composable
-fun VocabScreen(userId: String) {
+fun VocabScreen(
+    userId: String,
+    searchViewModel: SearchViewModel = viewModel()
+) {
     val context = LocalContext.current
     val repository = (context.applicationContext as LanguageStudyApplication).vocabRepository
     val viewModel: VocabViewModel = viewModel(
@@ -33,8 +38,13 @@ fun VocabScreen(userId: String) {
         factory = VocabViewModelFactory(repository)
     )
     val vocabList by viewModel.filteredVocab.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
+    val allVocab by viewModel.allVocab.collectAsState()
+    val searchQuery by searchViewModel.query.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(searchQuery) {
+        viewModel.setSearchQuery(searchQuery)
+    }
 
     var word by remember { mutableStateOf("") }
     var translation by remember { mutableStateOf("") }
@@ -53,7 +63,7 @@ fun VocabScreen(userId: String) {
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             GlobalSearchBar(
                 query = searchQuery,
-                onQueryChange = { viewModel.setSearchQuery(it) },
+                onQueryChange = { searchViewModel.setQuery(it) },
                 placeholder = "Search vocabulary..."
             )
 
@@ -89,9 +99,15 @@ fun VocabScreen(userId: String) {
 
                 Spacer(Modifier.height(16.dp))
 
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(vocabList) { vocab ->
-                        VocabItem(vocab, onDelete = { viewModel.deleteVocab(vocab) })
+                if (allVocab.isEmpty()) {
+                    EmptyState(message = "Your vocabulary list is empty. Start adding words!")
+                } else if (vocabList.isEmpty() && searchQuery.isNotEmpty()) {
+                    NoResultsState(query = searchQuery)
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(vocabList) { vocab ->
+                            VocabItem(vocab, onDelete = { viewModel.deleteVocab(vocab) })
+                        }
                     }
                 }
             }
@@ -115,7 +131,10 @@ fun VocabItem(vocab: VocabEntity, onDelete: () -> Unit) {
 }
 
 @Composable
-fun SkillsScreen(userId: String) {
+fun SkillsScreen(
+    userId: String,
+    searchViewModel: SearchViewModel = viewModel()
+) {
     val context = LocalContext.current
     val repository = (context.applicationContext as LanguageStudyApplication).skillRepository
     val viewModel: SkillViewModel = viewModel(
@@ -123,8 +142,13 @@ fun SkillsScreen(userId: String) {
         factory = SkillViewModelFactory(repository)
     )
     val skillsList by viewModel.filteredSkills.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
+    val allSkills by viewModel.allSkills.collectAsState()
+    val searchQuery by searchViewModel.query.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(searchQuery) {
+        viewModel.setSearchQuery(searchQuery)
+    }
 
     var skillName by remember { mutableStateOf("") }
 
@@ -142,7 +166,7 @@ fun SkillsScreen(userId: String) {
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             GlobalSearchBar(
                 query = searchQuery,
-                onQueryChange = { viewModel.setSearchQuery(it) },
+                onQueryChange = { searchViewModel.setQuery(it) },
                 placeholder = "Search skills..."
             )
 
@@ -168,9 +192,15 @@ fun SkillsScreen(userId: String) {
 
                 Spacer(Modifier.height(16.dp))
 
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(skillsList) { skill ->
-                        SkillItem(skill, onProgressChange = { viewModel.updateProgress(skill, it) })
+                if (allSkills.isEmpty()) {
+                    EmptyState(message = "No skills tracked yet. Add a skill to get started!")
+                } else if (skillsList.isEmpty() && searchQuery.isNotEmpty()) {
+                    NoResultsState(query = searchQuery)
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(skillsList) { skill ->
+                            SkillItem(skill, onProgressChange = { viewModel.updateProgress(skill, it) })
+                        }
                     }
                 }
             }
@@ -203,7 +233,10 @@ fun SkillItem(skill: SkillEntity, onProgressChange: (Int) -> Unit) {
 }
 
 @Composable
-fun JournalScreen(userId: String) {
+fun JournalScreen(
+    userId: String,
+    searchViewModel: SearchViewModel = viewModel()
+) {
     val context = LocalContext.current
     val repository = (context.applicationContext as LanguageStudyApplication).journalRepository
     val viewModel: JournalViewModel = viewModel(
@@ -211,8 +244,13 @@ fun JournalScreen(userId: String) {
         factory = JournalViewModelFactory(repository)
     )
     val entries by viewModel.filteredEntries.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
+    val allEntries by viewModel.allEntries.collectAsState()
+    val searchQuery by searchViewModel.query.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(searchQuery) {
+        viewModel.setSearchQuery(searchQuery)
+    }
 
     var title by remember { mutableStateOf("") }
     var contentText by remember { mutableStateOf("") }
@@ -231,7 +269,7 @@ fun JournalScreen(userId: String) {
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             GlobalSearchBar(
                 query = searchQuery,
-                onQueryChange = { viewModel.setSearchQuery(it) },
+                onQueryChange = { searchViewModel.setQuery(it) },
                 placeholder = "Search journal..."
             )
 
@@ -268,9 +306,15 @@ fun JournalScreen(userId: String) {
 
                 Spacer(Modifier.height(16.dp))
 
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(entries) { entry ->
-                        JournalItem(entry, onDelete = { viewModel.deleteEntry(entry) })
+                if (allEntries.isEmpty()) {
+                    EmptyState(message = "Your journal is empty. Record your first study session!")
+                } else if (entries.isEmpty() && searchQuery.isNotEmpty()) {
+                    NoResultsState(query = searchQuery)
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(entries) { entry ->
+                            JournalItem(entry, onDelete = { viewModel.deleteEntry(entry) })
+                        }
                     }
                 }
             }
