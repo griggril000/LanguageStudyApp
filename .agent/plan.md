@@ -43,3 +43,4 @@
 - **Authentication**: Using `androidx.credentials` (Credential Manager) which is the modern standard for 2026.
 - **Navigation**: Using `androidx.navigation3` which is state-driven.
 - **Data**: Offline first model - Portfolio (Online/Firebase), Vocab/Skills/Journal (Offline first, stored in Firebase).
+  - Use data-loader.js for help (reference direct from web version)
