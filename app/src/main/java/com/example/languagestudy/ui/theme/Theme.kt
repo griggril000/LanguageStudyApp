@@ -8,35 +8,74 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
     primary = BrandPrimary,
+    onPrimary = Color.Black,
+    primaryContainer = DarkPrimaryContainer,
+    onPrimaryContainer = DarkOnPrimaryContainer,
     secondary = BrandSecondary,
+    onSecondary = Color.Black,
+    secondaryContainer = DarkSecondaryContainer,
+    onSecondaryContainer = DarkOnSecondaryContainer,
     tertiary = BrandTertiary,
+    onTertiary = Color.Black,
+    tertiaryContainer = DarkTertiaryContainer,
+    onTertiaryContainer = DarkOnTertiaryContainer,
+    error = ErrorRed,
+    onError = Color.White,
+    errorContainer = DarkErrorContainer,
+    onErrorContainer = DarkOnErrorContainer,
     background = DarkBackground,
-    surface = DarkSurface,
     onBackground = DarkOnSurface,
+    surface = DarkSurface,
     onSurface = DarkOnSurface,
-    error = ErrorRed
+    surfaceVariant = DarkSurfaceVariant,
+    onSurfaceVariant = DarkOnSurfaceVariant,
+    outline = DarkOutline,
+    surfaceContainer = DarkSurface,
+    surfaceContainerLow = DarkBackground,
+    surfaceContainerHigh = DarkSurfaceVariant,
+    surfaceContainerHighest = DarkOutline
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = BrandPrimary,
+    onPrimary = Color.White,
+    primaryContainer = LightPrimaryContainer,
+    onPrimaryContainer = LightOnPrimaryContainer,
     secondary = BrandSecondary,
+    onSecondary = Color.White,
+    secondaryContainer = LightSecondaryContainer,
+    onSecondaryContainer = LightOnSecondaryContainer,
     tertiary = BrandTertiary,
+    onTertiary = Color.White,
+    tertiaryContainer = LightTertiaryContainer,
+    onTertiaryContainer = LightOnTertiaryContainer,
+    error = ErrorRed,
+    onError = Color.White,
+    errorContainer = LightErrorContainer,
+    onErrorContainer = LightOnErrorContainer,
     background = LightBackground,
-    surface = LightSurface,
     onBackground = LightOnSurface,
+    surface = LightSurface,
     onSurface = LightOnSurface,
-    error = ErrorRed
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = LightOnSurfaceVariant,
+    outline = LightOutline,
+    surfaceContainer = LightBackground,
+    surfaceContainerLow = LightSurface,
+    surfaceContainerHigh = LightSurfaceVariant,
+    surfaceContainerHighest = LightOutline
 )
 
 @Composable
 fun LanguageStudyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Disable dynamic color to enforce our orange/amber scheme
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

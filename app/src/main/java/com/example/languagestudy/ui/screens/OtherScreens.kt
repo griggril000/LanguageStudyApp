@@ -117,7 +117,10 @@ fun VocabScreen(
 
 @Composable
 fun VocabItem(vocab: VocabEntity, onDelete: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(vocab.word, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -210,7 +213,10 @@ fun SkillsScreen(
 
 @Composable
 fun SkillItem(skill: SkillEntity, onProgressChange: (Int) -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(skill.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text("Level: ${skill.level} | Status: ${skill.status}", style = MaterialTheme.typography.bodySmall)
@@ -324,7 +330,10 @@ fun JournalScreen(
 
 @Composable
 fun JournalItem(entry: JournalEntryEntity, onDelete: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(entry.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
