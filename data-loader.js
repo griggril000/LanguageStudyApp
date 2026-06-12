@@ -1,0 +1,256 @@
+/**
+ * Data Loading & Caching Module
+ * Centralized data loading with caching to reduce Firestore queries
+ */
+
+// Cache for user data
+let dataCache = {
+    vocabularyList: [],
+    skills: [],
+    categories: [],
+    portfolioEntries: [],
+    journalEntries: [],
+    earnedBadges: [],
+    lastLoadTime: null,
+    isCached: false
+};
+
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+// Track in-flight loads to avoid duplicate Firestore requests
+let loadUserDataPromise = null;
+let refreshTimer = null;
+let refreshPromise = null;
+
+/**
+ * Check if cache is still valid
+ * @returns {boolean}
+ */
+function isCacheValid() {
+    if (!dataCache.isCached) return false;
+    const now = Date.now();
+    return (now - dataCache.lastLoadTime) < CACHE_DURATION;
+}
+
+/**
+ * Clear data cache
+ * @returns {void}
+ */
+function clearDataCache() {
+    dataCache = {
+        vocabularyList: [],
+        skills: [],
+        categories: [],
+        portfolioEntries: [],
+        journalEntries: [],
+        earnedBadges: [],
+        lastLoadTime: null,
+        isCached: false
+    };
+}
+
+/**
+ * Load all user data from Firestore with caching
+ * @async
+ * @returns {Promise<void>}
+ */
+async function loadUserData() {
+    if (!currentUser) return;
+
+    // Serve from cache if still valid to avoid extra reads
+    if (isCacheValid()) {
+        vocabularyList = [...dataCache.vocabularyList];
+        skills = [...dataCache.skills];
+        categories = [...dataCache.categories];
+        portfolioEntries = [...dataCache.portfolioEntries];
+        if (typeof journalEntries !== 'undefined') {
+            journalEntries = [...dataCache.journalEntries];
+        }
+        if (Array.isArray(dataCache.earnedBadges)) {
+            earnedBadges = [...dataCache.earnedBadges];
+        }
+
+        updateCategorySelect();
+        renderVocabularyList();
+        renderSkillsList();
+        renderPortfolio();
+        if (typeof renderJournalList === 'function') {
+            renderJournalList();
+        }
+        await renderBadges();
+        await updateAchievementsVisibility();
+        await updateProgressVisibility();
+        renderProgressMetrics();
+        return;
+    }
+
+    if (loadUserDataPromise) return loadUserDataPromise;
+
+    const runLoad = async () => {
+        showLoadingSpinner(true, 'Loading your data...');
+
+        // Load in parallel for better performance
+        await Promise.all([
+            loadCategories(),
+            loadVocabulary(),
+            loadSkills(),
+            loadPortfolio(),
+            loadJournal()
+        ]);
+
+        // Render UI
+        updateCategorySelect();
+        renderVocabularyList();
+        renderSkillsList();
+        renderPortfolio();
+        renderJournalList();
+        await renderBadges();
+        await updateAchievementsVisibility();
+        await updateProgressVisibility();
+        renderProgressMetrics();
+
+        // Show onboarding if first login
+        const settings = await getUserSettingsData();
+        if (!settings || settings.firstLogin !== false) {
+            showOnboarding();
+        }
+
+
+
+        // Mark cache as valid
+        dataCache.isCached = true;
+        dataCache.lastLoadTime = Date.now();
+        dataCache.vocabularyList = [...vocabularyList];
+        dataCache.skills = [...skills];
+        dataCache.categories = [...categories];
+        dataCache.portfolioEntries = [...portfolioEntries];
+        dataCache.journalEntries = typeof journalEntries !== 'undefined' ? [...journalEntries] : [];
+        dataCache.earnedBadges = Array.isArray(earnedBadges) ? [...earnedBadges] : [];
+
+        showLoadingSpinner(false);
+    };
+
+    loadUserDataPromise = runLoad()
+        .catch((error) => {
+            console.error('Error loading user data:', error);
+            showToast('Error loading your data. Please refresh the page.');
+            showLoadingSpinner(false);
+        })
+        .finally(() => {
+            loadUserDataPromise = null;
+        });
+
+    return loadUserDataPromise;
+}
+
+/**
+ * Refresh user data (cache invalidation)
+ * @async
+ * @returns {Promise<void>}
+ */
+async function refreshUserData() {
+    clearDataCache();
+
+    if (refreshPromise) return refreshPromise;
+
+    refreshPromise = new Promise((resolve, reject) => {
+        if (refreshTimer) clearTimeout(refreshTimer);
+
+        // Debounce rapid calls (e.g., multiple status toggles)
+        refreshTimer = setTimeout(() => {
+            refreshTimer = null;
+            loadUserData()
+                .then(resolve)
+                .catch(reject)
+                .finally(() => {
+                    refreshPromise = null;
+                });
+        }, 150);
+    });
+
+    return refreshPromise;
+}
+
+/**
+ * Update category select dropdown
+ * @returns {void}
+ */
+function updateCategorySelect() {
+    const categorySelect = document.getElementById('categorySelect');
+    const deleteCategoryBtn = document.getElementById('deleteCategoryBtn');
+
+    if (!categorySelect) return;
+
+    const currentSelection = categorySelect.value;
+
+    // Ensure 'General' is first
+    const generalIndex = categories.indexOf('General');
+    if (generalIndex > 0) {
+        categories.splice(generalIndex, 1);
+        categories.unshift('General');
+    } else if (generalIndex === -1) {
+        categories.unshift('General');
+    }
+
+    categorySelect.innerHTML = categories
+        .map(cat => `<option value="${cat}">${cat}</option>`)
+        .join('') + '<option value="new">+ New Category</option>';
+
+    // Restore selection or default
+    if (categories.includes(currentSelection) && currentSelection !== 'new') {
+        categorySelect.value = currentSelection;
+    } else {
+        categorySelect.value = 'General';
+    }
+
+    // Update delete button state
+    const protectedCategories = ['General'];
+    if (categorySelect.value === 'new' || protectedCategories.includes(categorySelect.value)) {
+        if (deleteCategoryBtn) deleteCategoryBtn.disabled = true;
+    } else {
+        if (deleteCategoryBtn) deleteCategoryBtn.disabled = false;
+    }
+}
+
+/**
+ * Get statistics across all data
+ * @returns {Object}
+ */
+function getOverallStats() {
+    const vocab = getVocabularyStats();
+    const skillsStats = getSkillsStats();
+
+    return {
+        vocabularyStats: vocab,
+        skillsStats: skillsStats,
+        badgeProgress: getBadgeProgress(),
+        portfolioCount: portfolioEntries.length,
+        journalCount: typeof journalEntries !== 'undefined' ? journalEntries.length : 0,
+        categoryCount: categories.length
+    };
+}
+
+/**
+ * Batch update multiple items (vocab or skills)
+ * @async
+ * @param {Array<Object>} updates - Array of {id, collection, updates}
+ * @returns {Promise<void>}
+ */
+async function batchUpdateItems(updates) {
+    if (!currentUser || updates.length === 0) return;
+
+    try {
+        const batch = db.batch();
+
+        updates.forEach(({ id, collection, data }) => {
+            const docRef = db.collection('users').doc(currentUser.uid).collection(collection).doc(id);
+            batch.update(docRef, data);
+        });
+
+        await batch.commit();
+        await refreshUserData();
+    } catch (error) {
+        console.error('Error batch updating items:', error);
+        throw error;
+    }
+}

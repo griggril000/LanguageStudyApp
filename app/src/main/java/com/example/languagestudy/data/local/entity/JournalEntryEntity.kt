@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "journal_entries")
 data class JournalEntryEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @PrimaryKey val id: String = java.util.UUID.randomUUID().toString(),
     val title: String,
     val content: String,
     val timestamp: Long = System.currentTimeMillis()

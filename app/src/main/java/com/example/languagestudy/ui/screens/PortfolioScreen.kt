@@ -12,11 +12,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.example.languagestudy.data.model.PortfolioItem
+import com.example.languagestudy.ui.components.DeleteConfirmationDialog
 import com.example.languagestudy.ui.components.EmptyState
 import com.example.languagestudy.ui.components.GlobalSearchBar
 import com.example.languagestudy.ui.components.NoResultsState
@@ -34,7 +35,7 @@ import com.example.languagestudy.ui.viewmodel.PortfolioViewModel
 import com.example.languagestudy.ui.viewmodel.SearchViewModel
 import com.example.languagestudy.utils.UrlUtils
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun PortfolioScreen(
     viewModel: PortfolioViewModel,
@@ -53,12 +54,13 @@ fun PortfolioScreen(
 
     var title by remember { mutableStateOf("") }
     var link by remember { mutableStateOf("") }
-    var showAddDialog by remember { mutableStateOf(false) }
+    var showAddSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.error.collect { message ->
-            if (showAddDialog) {
+            if (showAddSheet) {
                 localErrorMessage = message
             } else {
                 snackbarHostState.showSnackbar(message)
@@ -71,7 +73,7 @@ fun PortfolioScreen(
             title = ""
             link = ""
             localErrorMessage = null
-            showAddDialog = false
+            showAddSheet = false
         }
     }
 
@@ -91,65 +93,69 @@ fun PortfolioScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showAddDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+                onClick = { showAddSheet = true },
+                containerColor = Color(0xFFC25A1B),
+                contentColor = Color.White
             ) {
                 Icon(Icons.Rounded.Add, contentDescription = "Add Portfolio Item")
             }
         }
     ) { padding ->
-        if (showAddDialog) {
-            AlertDialog(
-                onDismissRequest = { if (!isLoading) showAddDialog = false },
-                title = { Text("Add Portfolio Item") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (localErrorMessage != null) {
-                            Text(
-                                text = localErrorMessage!!,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                        }
-                        OutlinedTextField(
-                            value = title,
-                            onValueChange = { title = it },
-                            label = { Text("Title") },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = link,
-                            onValueChange = { link = it },
-                            label = { Text("YouTube or SoundCloud Link") },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true
+        if (showAddSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { if (!isLoading) showAddSheet = false },
+                sheetState = sheetState,
+                contentWindowInsets = { WindowInsets.navigationBars }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .padding(bottom = 32.dp)
+                ) {
+                    Text("Add Portfolio Item", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(16.dp))
+                    if (localErrorMessage != null) {
+                        Text(
+                            text = localErrorMessage!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(bottom = 8.dp)
                         )
                     }
-                },
-                confirmButton = {
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        label = { Text("Title") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = link,
+                        onValueChange = { link = it },
+                        label = { Text("YouTube or SoundCloud Link") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                    Spacer(Modifier.height(24.dp))
                     Button(
                         onClick = { viewModel.addItem(title, link) },
                         enabled = !isLoading,
-                        shape = RoundedCornerShape(12.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC25A1B))
                     ) {
                         if (isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
                         } else {
-                            Text("Add")
+                            Text("Add to Portfolio")
                         }
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showAddDialog = false }, enabled = !isLoading) {
-                        Text("Cancel")
-                    }
                 }
-            )
+            }
         }
 
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -162,7 +168,7 @@ fun PortfolioScreen(
 
                 if (isLoading && allItems.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(color = Color(0xFFC25A1B))
                     }
                 } else if (allItems.isEmpty()) {
                     EmptyState(message = "Your portfolio is empty. Add your first item!")
@@ -216,7 +222,7 @@ fun PortfolioScreen(
 fun HeaderSection(title: String) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background // Matches the seamless header
+        color = MaterialTheme.colorScheme.background
     ) {
         Text(
             text = title,
@@ -227,63 +233,111 @@ fun HeaderSection(title: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeaturedPortfolioItem(
     item: PortfolioItem,
     onDelete: () -> Unit,
     onUnfeature: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column {
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = {
+            if (it == SwipeToDismissBoxValue.EndToStart) {
+                showDeleteConfirm = true
+                false
+            } else false
+        }
+    )
+
+    if (showDeleteConfirm) {
+        DeleteConfirmationDialog(
+            onConfirm = onDelete,
+            onDismiss = { showDeleteConfirm = false },
+            title = "Delete Portfolio Item",
+            message = "Remove \"${item.title}\" from your portfolio?"
+        )
+    }
+
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            val color = when (dismissState.dismissDirection) {
+                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                else -> Color.Transparent
+            }
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .background(Color.Black)
+                    .fillMaxSize()
+                    .padding(vertical = 4.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(color),
+                contentAlignment = Alignment.CenterEnd
             ) {
-                if (item.type == "youtube" && item.videoId != null) {
-                    YouTubePlayer(
-                        videoId = item.videoId,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else if (item.type == "soundcloud") {
-                    SoundCloudPlayer(
-                        url = item.link,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    AsyncImage(
-                        model = getThumbnailUrl(item),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                    Icon(
+                        Icons.Rounded.Delete,
+                        contentDescription = "Delete",
+                        modifier = Modifier.padding(end = 24.dp),
+                        tint = MaterialTheme.colorScheme.onErrorContainer
                     )
                 }
             }
-            
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(item.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+        },
+        enableDismissFromStartToEnd = false
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Column {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp)
+                        .background(Color.Black)
                 ) {
-                    OutlinedButton(
-                        onClick = onUnfeature,
-                        shape = RoundedCornerShape(8.dp)
-                    ) { Text("Unfeature") }
-                    TextButton(
-                        onClick = onDelete,
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    if (item.type == "youtube" && item.videoId != null) {
+                        YouTubePlayer(
+                            videoId = item.videoId,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else if (item.type == "soundcloud") {
+                        SoundCloudPlayer(
+                            url = item.link,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        AsyncImage(
+                            model = getThumbnailUrl(item),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+                
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(item.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Delete")
+                        OutlinedButton(
+                            onClick = onUnfeature,
+                            shape = RoundedCornerShape(8.dp)
+                        ) { Text("Unfeature") }
+                        TextButton(
+                            onClick = { showDeleteConfirm = true },
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Delete")
+                            }
                         }
                     }
                 }
@@ -292,6 +346,7 @@ fun FeaturedPortfolioItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StandardPortfolioItem(
     item: PortfolioItem,
@@ -300,45 +355,93 @@ fun StandardPortfolioItem(
     onFeature: () -> Unit,
     canFeature: Boolean
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = {
+            if (it == SwipeToDismissBoxValue.EndToStart) {
+                showDeleteConfirm = true
+                false
+            } else false
+        }
+    )
+
+    if (showDeleteConfirm) {
+        DeleteConfirmationDialog(
+            onConfirm = onDelete,
+            onDismiss = { showDeleteConfirm = false },
+            title = "Delete Portfolio Item",
+            message = "Remove \"${item.title}\" from your portfolio?"
         )
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onPlay() }
-            ) {
-                Text(item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(item.link, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+    }
+
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            val color = when (dismissState.dismissDirection) {
+                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                else -> Color.Transparent
             }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(vertical = 4.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(color),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                    Icon(
+                        Icons.Rounded.Delete,
+                        contentDescription = "Delete",
+                        modifier = Modifier.padding(end = 24.dp),
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        },
+        enableDismissFromStartToEnd = false
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(
-                    onClick = onFeature,
-                    enabled = canFeature
-                ) { 
-                    Text(
-                        "Feature",
-                        color = if (canFeature) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                    ) 
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onPlay() }
+                ) {
+                    Text(item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(item.link, style = MaterialTheme.typography.bodySmall, maxLines = 1, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Rounded.Delete, 
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(20.dp)
-                    )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(
+                        onClick = onFeature,
+                        enabled = canFeature
+                    ) { 
+                        Text(
+                            "Feature",
+                            color = if (canFeature) Color(0xFFC25A1B) else MaterialTheme.colorScheme.outline
+                        ) 
+                    }
+                    IconButton(onClick = { showDeleteConfirm = true }) {
+                        Icon(
+                            Icons.Rounded.Delete, 
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }
@@ -350,8 +453,8 @@ private fun getThumbnailUrl(item: PortfolioItem): String {
     return if (youtubeId != null) {
         "https://img.youtube.com/vi/$youtubeId/maxresdefault.jpg"
     } else if (UrlUtils.isSoundCloudUrl(item.link)) {
-        "https://via.placeholder.com/400x200?text=SoundCloud"
+        "https://placehold.co/400x200?text=SoundCloud"
     } else {
-        "https://via.placeholder.com/400x200?text=Link"
+        "https://placehold.co/400x200?text=Link"
     }
 }

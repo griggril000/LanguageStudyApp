@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class JournalViewModel(private val repository: JournalRepository) : ViewModel() {
+    private var userId: String? = null
+
     val allEntries: StateFlow<List<JournalEntryEntity>> = repository.allEntries
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -26,6 +28,14 @@ class JournalViewModel(private val repository: JournalRepository) : ViewModel() 
     private val _error = MutableSharedFlow<String>()
     val error: SharedFlow<String> = _error.asSharedFlow()
 
+    fun initUserId(id: String) {
+        if (userId == id) return
+        userId = id
+        viewModelScope.launch {
+            repository.startSync(id).collect()
+        }
+    }
+
     fun addEntry(title: String, content: String) {
         if (title.isBlank() || content.isBlank()) {
             viewModelScope.launch { _error.emit("Title and content cannot be empty") }
@@ -33,7 +43,7 @@ class JournalViewModel(private val repository: JournalRepository) : ViewModel() 
         }
         viewModelScope.launch {
             try {
-                repository.insert(JournalEntryEntity(title = title.trim(), content = content.trim()))
+                repository.insert(JournalEntryEntity(title = title.trim(), content = content.trim()), userId)
             } catch (e: Exception) {
                 _error.emit("Failed to save entry: ${e.message}")
             }
@@ -42,7 +52,7 @@ class JournalViewModel(private val repository: JournalRepository) : ViewModel() 
 
     fun deleteEntry(entry: JournalEntryEntity) {
         viewModelScope.launch {
-            repository.delete(entry)
+            repository.delete(entry, userId)
         }
     }
 

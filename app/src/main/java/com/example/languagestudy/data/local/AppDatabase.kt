@@ -15,7 +15,7 @@ import com.example.languagestudy.data.local.entity.VocabEntity
 
 @Database(
     entities = [VocabEntity::class, SkillEntity::class, JournalEntryEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(SkillTypeConverters::class)

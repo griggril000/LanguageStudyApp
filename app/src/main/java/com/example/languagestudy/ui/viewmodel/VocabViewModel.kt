@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class VocabViewModel(private val repository: VocabRepository) : ViewModel() {
+    private var userId: String? = null
+
     val allVocab: StateFlow<List<VocabEntity>> = repository.allVocab
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -27,6 +29,14 @@ class VocabViewModel(private val repository: VocabRepository) : ViewModel() {
     private val _error = MutableSharedFlow<String>()
     val error: SharedFlow<String> = _error.asSharedFlow()
 
+    fun initUserId(id: String) {
+        if (userId == id) return
+        userId = id
+        viewModelScope.launch {
+            repository.startSync(id).collect()
+        }
+    }
+
     fun addVocab(word: String, translation: String, category: String, language: String = "en") {
         if (word.isBlank() || translation.isBlank()) {
             viewModelScope.launch { _error.emit("Word and translation cannot be empty") }
@@ -34,7 +44,7 @@ class VocabViewModel(private val repository: VocabRepository) : ViewModel() {
         }
         viewModelScope.launch {
             try {
-                repository.insert(VocabEntity(word = word.trim(), translation = translation.trim(), category = category, language = language))
+                repository.insert(VocabEntity(word = word.trim(), translation = translation.trim(), category = category, language = language), userId)
             } catch (e: Exception) {
                 _error.emit("Failed to add vocab: ${e.message}")
             }
@@ -43,7 +53,7 @@ class VocabViewModel(private val repository: VocabRepository) : ViewModel() {
 
     fun deleteVocab(vocab: VocabEntity) {
         viewModelScope.launch {
-            repository.delete(vocab)
+            repository.delete(vocab, userId)
         }
     }
 
