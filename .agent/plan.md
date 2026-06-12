@@ -30,7 +30,6 @@
 - [ ] **Task 6: Feature Enhancements**
     - **(done)** Implement Search Bar in Top Bar (Global Search) - Implemented persistent per-page floating search with real-time filtering.
     - Add Language filters to Portfolio and Vocab.
-    - **(done)** Separate out "OtherScreens.kt" into separate files for each screen.
     - **(done)** Add destructive actions warning before performing delete operations.
     - Implement "Mentor Mode" (View portfolios via code).
     - Implement notifications for study reminders.
