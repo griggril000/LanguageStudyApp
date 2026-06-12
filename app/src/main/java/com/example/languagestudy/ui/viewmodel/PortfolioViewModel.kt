@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.languagestudy.data.model.PortfolioItem
 import com.example.languagestudy.data.repository.FirestorePortfolioRepository
 import com.example.languagestudy.data.repository.PortfolioRepository
+import com.example.languagestudy.data.repository.SettingsRepository
 import com.example.languagestudy.utils.UrlUtils
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.*
@@ -14,7 +15,8 @@ import kotlinx.coroutines.launch
 
 class PortfolioViewModel(
     private val userId: String,
-    private val repository: PortfolioRepository = FirestorePortfolioRepository()
+    private val repository: PortfolioRepository = FirestorePortfolioRepository(),
+    private val settingsRepository: SettingsRepository = SettingsRepository()
 ) : ViewModel() {
 
     private val _items = MutableStateFlow<List<PortfolioItem>>(emptyList())
@@ -23,11 +25,13 @@ class PortfolioViewModel(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    val filteredItems: StateFlow<List<PortfolioItem>> = combine(_items, _searchQuery) { items, query ->
-        if (query.isBlank()) items
-        else items.filter { 
-            it.title.contains(query, ignoreCase = true) || 
-            it.link.contains(query, ignoreCase = true) 
+    private val _currentLanguage = MutableStateFlow("")
+    val currentLanguage: StateFlow<String> = _currentLanguage.asStateFlow()
+
+    val filteredItems: StateFlow<List<PortfolioItem>> = combine(_items, _searchQuery, _currentLanguage) { items, query, lang ->
+        items.filter { 
+            (query.isBlank() || it.title.contains(query, ignoreCase = true) || it.link.contains(query, ignoreCase = true)) &&
+            (lang.isBlank() || it.language == lang)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -62,6 +66,11 @@ class PortfolioViewModel(
                 }
                 .collect()
         }
+        viewModelScope.launch {
+            settingsRepository.getUserSettings(userId).collect { settings ->
+                _currentLanguage.value = settings.languageLearning
+            }
+        }
     }
 
     fun addItem(title: String, link: String) {
@@ -95,7 +104,8 @@ class PortfolioViewModel(
                         title = title.trim(), 
                         link = resolvedUrl,
                         type = type,
-                        videoId = youtubeId
+                        videoId = youtubeId,
+                        language = _currentLanguage.value
                     )
                 )
                 _addSuccess.emit(Unit)
@@ -150,11 +160,11 @@ class PortfolioViewModel(
     }
 }
 
-class PortfolioViewModelFactory(private val userId: String) : ViewModelProvider.Factory {
+class PortfolioViewModelFactory(private val userId: String, private val settingsRepository: SettingsRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(PortfolioViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return PortfolioViewModel(userId) as T
+            return PortfolioViewModel(userId, settingsRepository = settingsRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

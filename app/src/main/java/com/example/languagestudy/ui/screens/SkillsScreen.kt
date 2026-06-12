@@ -37,10 +37,10 @@ fun SkillsScreen(
     searchViewModel: SearchViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val repository = (context.applicationContext as LanguageStudyApplication).skillRepository
+    val app = context.applicationContext as LanguageStudyApplication
     val viewModel: SkillViewModel = viewModel(
         key = "skills_$userId",
-        factory = SkillViewModelFactory(repository)
+        factory = SkillViewModelFactory(app.skillRepository, app.settingsRepository)
     )
     val skillsList by viewModel.filteredSkills.collectAsState()
     val allSkills by viewModel.allSkills.collectAsState()
@@ -61,6 +61,10 @@ fun SkillsScreen(
     var skillLanguage by remember { mutableStateOf("") }
     var showAddSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
+
+    LaunchedEffect(selectedLanguage) {
+        skillLanguage = selectedLanguage ?: ""
+    }
 
     LaunchedEffect(Unit) {
         viewModel.error.collect { message ->

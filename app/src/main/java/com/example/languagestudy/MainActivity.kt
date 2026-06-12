@@ -38,6 +38,9 @@ import com.example.languagestudy.ui.theme.LanguageStudyTheme
 import com.example.languagestudy.ui.viewmodel.PortfolioViewModel
 import com.example.languagestudy.ui.viewmodel.PortfolioViewModelFactory
 import com.example.languagestudy.ui.viewmodel.SearchViewModel
+import com.example.languagestudy.ui.viewmodel.SettingsViewModel
+import com.example.languagestudy.ui.viewmodel.SettingsViewModelFactory
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,10 +65,20 @@ fun MainScreen(
     val context = LocalContext.current
     val currentUser by authViewModel.user.collectAsState()
     val isAdmin by authViewModel.isAdmin.collectAsState()
+    val scope = rememberCoroutineScope()
+    
+    val app = context.applicationContext as LanguageStudyApplication
+    val settingsVm: SettingsViewModel = viewModel(
+        key = "settings_${currentUser?.uid}",
+        factory = SettingsViewModelFactory(app.settingsRepository, currentUser?.uid ?: "")
+    )
+    val userSettings by settingsVm.userSettings.collectAsState()
+
     val startRoute = if (currentUser == null) NavRoute.Login else NavRoute.Portfolio
     val backStack = rememberNavBackStack(startRoute as NavKey)
     
     var showMenu by remember { mutableStateOf(false) }
+    var showLangMenu by remember { mutableStateOf(false) }
 
     val adaptiveInfo = currentWindowAdaptiveInfo()
     val useNavRail = adaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
@@ -83,9 +96,10 @@ fun MainScreen(
             }
             entry<NavRoute.Portfolio> { 
                 val userId = currentUser?.uid ?: ""
+                val app = context.applicationContext as LanguageStudyApplication
                 val portfolioVm: PortfolioViewModel = viewModel(
                     key = "portfolio_$userId",
-                    factory = PortfolioViewModelFactory(userId)
+                    factory = PortfolioViewModelFactory(userId, app.settingsRepository)
                 )
                 PortfolioScreen(viewModel = portfolioVm, searchViewModel = searchViewModel) 
             }
@@ -93,7 +107,15 @@ fun MainScreen(
             entry<NavRoute.Skills> { SkillsScreen(currentUser?.uid ?: "", searchViewModel = searchViewModel) }
             entry<NavRoute.Journal> { JournalScreen(currentUser?.uid ?: "", searchViewModel = searchViewModel) }
             entry<NavRoute.Admin> { AdminScreen() }
-            entry<NavRoute.Settings> { SettingsScreen() }
+            entry<NavRoute.Settings> { 
+                val userId = currentUser?.uid ?: ""
+                val app = context.applicationContext as LanguageStudyApplication
+                val settingsVm: SettingsViewModel = viewModel(
+                    key = "settings_$userId",
+                    factory = SettingsViewModelFactory(app.settingsRepository, userId)
+                )
+                SettingsScreen(authViewModel = authViewModel, settingsViewModel = settingsVm) 
+            }
         }
     }
 
@@ -118,6 +140,35 @@ fun MainScreen(
                         }
                     },
                     actions = {
+                        val showSwitcher = userSettings.learnedLanguages.size > 1 && 
+                                         currentRoute != NavRoute.Skills && 
+                                         currentRoute != NavRoute.Journal
+                        
+                        if (showSwitcher) {
+                            Box {
+                                TextButton(onClick = { showLangMenu = true }) {
+                                    Text(
+                                        userSettings.languageLearning.ifBlank { "Select Lang" },
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = showLangMenu,
+                                    onDismissRequest = { showLangMenu = false }
+                                ) {
+                                    userSettings.learnedLanguages.forEach { lang ->
+                                        DropdownMenuItem(
+                                            text = { Text(lang) },
+                                            onClick = {
+                                                settingsVm.setCurrentLanguage(lang)
+                                                showLangMenu = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
                         Box {
                             IconButton(onClick = { showMenu = true }) {
                                 Icon(Icons.Rounded.MoreVert, contentDescription = "More options")

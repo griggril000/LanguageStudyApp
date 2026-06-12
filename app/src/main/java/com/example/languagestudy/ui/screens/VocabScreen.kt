@@ -33,13 +33,14 @@ fun VocabScreen(
     searchViewModel: SearchViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val repository = (context.applicationContext as LanguageStudyApplication).vocabRepository
+    val app = context.applicationContext as LanguageStudyApplication
     val viewModel: VocabViewModel = viewModel(
         key = "vocab_$userId",
-        factory = VocabViewModelFactory(repository)
+        factory = VocabViewModelFactory(app.vocabRepository, app.settingsRepository)
     )
     val vocabList by viewModel.filteredVocab.collectAsState()
     val allVocab by viewModel.allVocab.collectAsState()
+    val currentLanguage by viewModel.currentLanguage.collectAsState()
     val searchQuery by searchViewModel.query.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -54,9 +55,13 @@ fun VocabScreen(
     var word by remember { mutableStateOf("") }
     var translation by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("General") }
-    var language by remember { mutableStateOf("en") }
+    var language by remember { mutableStateOf("") }
     var showAddSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
+
+    LaunchedEffect(currentLanguage) {
+        language = currentLanguage
+    }
 
     LaunchedEffect(Unit) {
         viewModel.error.collect { message ->

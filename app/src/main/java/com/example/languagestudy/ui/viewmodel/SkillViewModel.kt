@@ -5,11 +5,15 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.languagestudy.data.local.entity.SkillEntity
 import com.example.languagestudy.data.local.entity.Subtask
+import com.example.languagestudy.data.repository.SettingsRepository
 import com.example.languagestudy.data.repository.SkillRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-class SkillViewModel(private val repository: SkillRepository) : ViewModel() {
+class SkillViewModel(
+    private val repository: SkillRepository,
+    private val settingsRepository: SettingsRepository
+) : ViewModel() {
     private var userId: String? = null
 
     val allSkills: StateFlow<List<SkillEntity>> = repository.allSkills
@@ -27,7 +31,7 @@ class SkillViewModel(private val repository: SkillRepository) : ViewModel() {
              skill.level.contains(query, ignoreCase = true) ||
              skill.status.contains(query, ignoreCase = true) ||
              skill.language.contains(query, ignoreCase = true)) &&
-            (lang == null || skill.language == lang)
+            (lang == null || lang.isBlank() || skill.language == lang)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -43,6 +47,13 @@ class SkillViewModel(private val repository: SkillRepository) : ViewModel() {
         userId = id
         viewModelScope.launch {
             repository.startSync(id).collect()
+        }
+        viewModelScope.launch {
+            settingsRepository.getUserSettings(id).collect { settings ->
+                if (_selectedLanguage.value == null) {
+                    _selectedLanguage.value = settings.languageLearning
+                }
+            }
         }
     }
 
@@ -140,11 +151,14 @@ class SkillViewModel(private val repository: SkillRepository) : ViewModel() {
     }
 }
 
-class SkillViewModelFactory(private val repository: SkillRepository) : ViewModelProvider.Factory {
+class SkillViewModelFactory(
+    private val repository: SkillRepository,
+    private val settingsRepository: SettingsRepository
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SkillViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return SkillViewModel(repository) as T
+            return SkillViewModel(repository, settingsRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

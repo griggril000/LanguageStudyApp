@@ -8,6 +8,8 @@ import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.GetPasswordOption
+import androidx.credentials.PasswordCredential
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
@@ -51,10 +53,7 @@ class AuthViewModel : ViewModel() {
                 return@launch
             }
             try {
-                // Force a refresh (true) to ensure we have the latest claims
                 val tokenResult = user.getIdToken(true).await()
-                
-                // Allow "true" (String), true (Boolean), or 1 (Integer) for flexibility
                 val adminClaim = tokenResult.claims["admin"]
                 val isAdmin = adminClaim == true || 
                              adminClaim == "true" || 
@@ -90,8 +89,7 @@ class AuthViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             try {
-                // Hardcoding the ID temporarily to rule out resource issues
-                val serverClientId = "47054764584-toogfgpr6rrqu8u23352s0qpk3glpgll.apps.googleusercontent.com"
+                val serverClientId = context.getString(R.string.default_web_client_id)
                 Log.d("AuthViewModel", "Requesting sign-in for client: $serverClientId")
 
                 val credentialManager = CredentialManager.create(context)
@@ -102,25 +100,43 @@ class AuthViewModel : ViewModel() {
                     .setAutoSelectEnabled(false)
                     .build()
 
+                Log.d("AuthViewModel", "GoogleIdOption created with Client ID: $serverClientId")
+
+                val passwordOption = GetPasswordOption()
+
                 val request = GetCredentialRequest.Builder()
                     .addCredentialOption(googleIdOption)
+                    .addCredentialOption(passwordOption)
                     .build()
 
+                Log.d("AuthViewModel", "Calling getCredential...")
                 val result = credentialManager.getCredential(activity, request)
                 val credential = result.credential
+                Log.d("AuthViewModel", "Credential received: ${credential.type}")
 
-                if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                    val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                    val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
-                    
-                    auth.signInWithCredential(firebaseCredential).await()
-                    _user.value = auth.currentUser
-                    checkAdminStatus()
-                } else {
-                    _error.value = "Unexpected credential type"
+                when {
+                    credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL -> {
+                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                        val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+                        auth.signInWithCredential(firebaseCredential).await()
+                        _user.value = auth.currentUser
+                        checkAdminStatus()
+                    }
+                    credential is PasswordCredential -> {
+                        auth.signInWithEmailAndPassword(credential.id, credential.password).await()
+                        _user.value = auth.currentUser
+                        checkAdminStatus()
+                    }
+                    else -> {
+                        _error.value = "Unexpected credential type: ${credential.type}"
+                    }
                 }
             } catch (e: NoCredentialException) {
-                _error.value = "No Google accounts found on this device."
+                Log.e("AuthViewModel", "No credentials available. Troubleshooting steps:\n" +
+                        "1. Ensure a Google account is logged into the device settings.\n" +
+                        "2. Ensure SHA-1 is added to Firebase Console.\n" +
+                        "3. Ensure the downloaded google-services.json includes an Android Client ID.", e)
+                _error.value = "No Google accounts found. Check your device settings and Firebase SHA-1 configuration."
             } catch (e: GetCredentialCancellationException) {
                 _error.value = "Sign in was cancelled."
             } catch (e: GetCredentialException) {
@@ -181,7 +197,6 @@ class AuthViewModel : ViewModel() {
             _user.value = null
             _isAdmin.value = false
             
-            // Clear local database tables on logout
             try {
                 val app = context.applicationContext as com.example.languagestudy.LanguageStudyApplication
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {

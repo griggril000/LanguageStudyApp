@@ -4,11 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.languagestudy.data.local.entity.VocabEntity
+import com.example.languagestudy.data.repository.SettingsRepository
 import com.example.languagestudy.data.repository.VocabRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-class VocabViewModel(private val repository: VocabRepository) : ViewModel() {
+class VocabViewModel(
+    private val repository: VocabRepository,
+    private val settingsRepository: SettingsRepository
+) : ViewModel() {
     private var userId: String? = null
 
     val allVocab: StateFlow<List<VocabEntity>> = repository.allVocab
@@ -17,12 +21,16 @@ class VocabViewModel(private val repository: VocabRepository) : ViewModel() {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    val filteredVocab: StateFlow<List<VocabEntity>> = combine(allVocab, _searchQuery) { vocab, query ->
-        if (query.isBlank()) vocab
-        else vocab.filter { 
-            it.word.contains(query, ignoreCase = true) || 
-            it.translation.contains(query, ignoreCase = true) ||
-            it.category.contains(query, ignoreCase = true)
+    private val _currentLanguage = MutableStateFlow("")
+    val currentLanguage: StateFlow<String> = _currentLanguage.asStateFlow()
+
+    val filteredVocab: StateFlow<List<VocabEntity>> = combine(allVocab, _searchQuery, _currentLanguage) { vocab, query, lang ->
+        vocab.filter { 
+            (query.isBlank() || 
+             it.word.contains(query, ignoreCase = true) || 
+             it.translation.contains(query, ignoreCase = true) ||
+             it.category.contains(query, ignoreCase = true)) &&
+            (lang.isBlank() || it.language == lang)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -34,6 +42,11 @@ class VocabViewModel(private val repository: VocabRepository) : ViewModel() {
         userId = id
         viewModelScope.launch {
             repository.startSync(id).collect()
+        }
+        viewModelScope.launch {
+            settingsRepository.getUserSettings(id).collect { settings ->
+                _currentLanguage.value = settings.languageLearning
+            }
         }
     }
 
@@ -62,11 +75,14 @@ class VocabViewModel(private val repository: VocabRepository) : ViewModel() {
     }
 }
 
-class VocabViewModelFactory(private val repository: VocabRepository) : ViewModelProvider.Factory {
+class VocabViewModelFactory(
+    private val repository: VocabRepository,
+    private val settingsRepository: SettingsRepository
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(VocabViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return VocabViewModel(repository) as T
+            return VocabViewModel(repository, settingsRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

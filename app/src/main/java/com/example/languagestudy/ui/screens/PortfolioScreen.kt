@@ -105,13 +105,14 @@ fun PortfolioScreen(
             ModalBottomSheet(
                 onDismissRequest = { if (!isLoading) showAddSheet = false },
                 sheetState = sheetState,
-                contentWindowInsets = { WindowInsets.navigationBars }
+                contentWindowInsets = { WindowInsets(0, 0, 0, 0) }
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .navigationBarsPadding()
                         .padding(16.dp)
-                        .padding(bottom = 32.dp)
+                        .padding(bottom = 16.dp)
                 ) {
                     Text("Add Portfolio Item", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(16.dp))
