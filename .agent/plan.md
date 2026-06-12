@@ -4,7 +4,7 @@
 
 ### Completed Tasks
 - [x] **Task 1: UI Foundation**
-    - **(todo)** Material 3 theme with vibrant orange/amber scheme.
+    - Material 3 theme with vibrant orange/amber scheme.
     - Navigation 3 adaptive shell (Nav Rail/Bottom Bar).
     - SDK 37 upgrade.
 - [x] **Task 2: Portfolio Section**
@@ -31,7 +31,7 @@
     - **(done)** Implement Search Bar in Top Bar (Global Search) - Implemented persistent per-page floating search with real-time filtering.
     - Add Language filters to Portfolio and Vocab.
     - **(done)** Separate out "OtherScreens.kt" into separate files for each screen.
-    - Add destructive actions warning before performing delete operations.
+    - **(done)** Add destructive actions warning before performing delete operations.
     - Implement "Mentor Mode" (View portfolios via code).
     - Implement notifications for study reminders.
 - [ ] **Task 7: Final Polishing**
