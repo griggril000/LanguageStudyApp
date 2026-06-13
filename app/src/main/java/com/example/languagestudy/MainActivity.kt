@@ -202,16 +202,6 @@ fun MainScreen(
                                         Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
                                     }
                                 )
-                                DropdownMenuItem(
-                                    text = { Text("Logout") },
-                                    onClick = {
-                                        showMenu = false
-                                        authViewModel.signOut(context)
-                                    },
-                                    leadingIcon = {
-                                        Icon(Icons.Rounded.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    }
-                                )
                             }
                         }
                     },
