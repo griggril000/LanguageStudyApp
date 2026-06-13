@@ -27,9 +27,13 @@ class VocabViewModel(
     private val _selectedCategory = MutableStateFlow<String?>(null)
     val selectedCategory: StateFlow<String?> = _selectedCategory.asStateFlow()
 
-    val categories: StateFlow<List<String>> = allVocab.map { list ->
-        list.map { it.category }.distinct().sorted()
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val categories: StateFlow<List<String>> = combine(repository.allCategories, allVocab) { repoCats, vocabList ->
+        val fromRepo = repoCats.map { it.name }
+        val fromVocab = vocabList.map { it.category }
+        val names = (fromRepo + fromVocab).distinct().filter { it != "General" }.sorted().toMutableList()
+        names.add(0, "General")
+        names
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf("General"))
 
     val filteredVocab: StateFlow<List<VocabEntity>> = combine(allVocab, _searchQuery, _currentLanguage, _selectedCategory) { vocab, query, lang, cat ->
         vocab.filter { 
@@ -104,6 +108,23 @@ class VocabViewModel(
 
     fun setSelectedCategory(category: String?) {
         _selectedCategory.value = category
+    }
+
+    fun addCategory(name: String) {
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            repository.addCategory(name.trim(), userId)
+        }
+    }
+
+    fun deleteCategory(name: String) {
+        if (name == "General") return
+        viewModelScope.launch {
+            repository.deleteCategory(name, userId)
+            if (_selectedCategory.value == name) {
+                _selectedCategory.value = null
+            }
+        }
     }
 
     fun seedSampleData() {

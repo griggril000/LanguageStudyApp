@@ -18,6 +18,10 @@ class JournalRepository(private val journalDao: JournalDao) {
     val allEntries: Flow<List<JournalEntryEntity>> = journalDao.getAllEntries()
 
     fun startSync(userId: String): Flow<Unit> = callbackFlow {
+        if (userId.isBlank()) {
+            awaitClose { }
+            return@callbackFlow
+        }
         listenerRegistration?.remove()
         
         val collectionRef = firestore.collection("users").document(userId)
@@ -25,7 +29,8 @@ class JournalRepository(private val journalDao: JournalDao) {
 
         val listener = collectionRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                close(error)
+                // Close normally on error to prevent crash during sign out
+                close()
                 return@addSnapshotListener
             }
 

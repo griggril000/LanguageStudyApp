@@ -31,7 +31,8 @@
 - [ ] **Task 6: Feature Enhancements**
     - [x] Implement persistent per-page floating search with real-time filtering.
     - [x] Add destructive action warnings (Delete confirmation dialogs).
-    - [ ] Add Language filters to Portfolio and Vocab.
+    - [x] Add Language filters to Portfolio and Vocab.
+    - [x] Implement Category CRUD for Vocabulary (Persistent categories, delete cascade).
     - [ ] Implement "Mentor Mode" (View portfolios via shared code).
     - [ ] Implement notifications for study reminders.
 - [ ] **Task 7: Final Polishing**

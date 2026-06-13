@@ -188,9 +188,12 @@ class AuthViewModel : ViewModel() {
 
     fun signOut(context: Context) {
         viewModelScope.launch {
-            auth.signOut()
+            // Clear user state first to trigger UI navigation and stop observers
             _user.value = null
             _isAdmin.value = false
+            
+            // Then sign out of Firebase
+            auth.signOut()
             
             try {
                 val app = context.applicationContext as com.example.languagestudy.LanguageStudyApplication

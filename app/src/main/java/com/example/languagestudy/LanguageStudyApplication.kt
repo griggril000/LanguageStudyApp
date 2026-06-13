@@ -9,7 +9,7 @@ import com.example.languagestudy.data.repository.VocabRepository
 
 class LanguageStudyApplication : Application() {
     val database by lazy { AppDatabase.getDatabase(this) }
-    val vocabRepository by lazy { VocabRepository(database.vocabDao()) }
+    val vocabRepository by lazy { VocabRepository(database.vocabDao(), database.categoryDao()) }
     val skillRepository by lazy { SkillRepository(database.skillDao()) }
     val journalRepository by lazy { JournalRepository(database.journalDao()) }
     val settingsRepository by lazy { SettingsRepository() }

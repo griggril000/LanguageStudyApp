@@ -34,7 +34,8 @@ class FirestorePortfolioRepository(
         val listener = query.addSnapshotListener { snapshot, error ->
             if (error != null) {
                 Log.e("FirestoreRepo", "Error fetching portfolio for user $userId", error)
-                close(error)
+                // Close normally on error to prevent crash during sign out
+                close()
                 return@addSnapshotListener
             }
             if (snapshot != null) {

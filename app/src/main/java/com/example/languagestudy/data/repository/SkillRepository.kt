@@ -24,6 +24,10 @@ class SkillRepository(private val skillDao: SkillDao) {
      * balancing resource usage with near-instant updates from the website.
      */
     fun startSync(userId: String): Flow<Unit> = callbackFlow {
+        if (userId.isBlank()) {
+            awaitClose { }
+            return@callbackFlow
+        }
         listenerRegistration?.remove()
         
         val collectionRef = firestore.collection("users").document(userId)
@@ -31,7 +35,8 @@ class SkillRepository(private val skillDao: SkillDao) {
 
         val listener = collectionRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                close(error)
+                // Close normally on error to prevent crash during sign out
+                close()
                 return@addSnapshotListener
             }
 

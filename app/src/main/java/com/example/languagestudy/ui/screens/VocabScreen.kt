@@ -67,6 +67,10 @@ fun VocabScreen(
     var category by remember { mutableStateOf("General") }
     var language by remember { mutableStateOf("") }
     var showAddSheet by remember { mutableStateOf(false) }
+    var isAddingNewCategory by remember { mutableStateOf(false) }
+    var newCategoryName by remember { mutableStateOf("") }
+    var categoryExpanded by remember { mutableStateOf(false) }
+    var showDeleteCategoryConfirm by remember { mutableStateOf(false) }
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState()
 
@@ -86,6 +90,50 @@ fun VocabScreen(
 
     LaunchedEffect(showAddSheet) {
         if (!showAddSheet) localErrorMessage = null
+    }
+
+    if (isAddingNewCategory) {
+        AlertDialog(
+            onDismissRequest = { isAddingNewCategory = false },
+            title = { Text("New Category") },
+            text = {
+                OutlinedTextField(
+                    value = newCategoryName,
+                    onValueChange = { newCategoryName = it },
+                    label = { Text("Category Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (newCategoryName.isNotBlank()) {
+                            viewModel.addCategory(newCategoryName.trim())
+                            category = newCategoryName.trim()
+                            newCategoryName = ""
+                            isAddingNewCategory = false
+                        }
+                    }
+                ) { Text("Add") }
+            },
+            dismissButton = {
+                TextButton(onClick = { isAddingNewCategory = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showDeleteCategoryConfirm && selectedCategory != null) {
+        DeleteConfirmationDialog(
+            onConfirm = {
+                viewModel.deleteCategory(selectedCategory!!)
+                showDeleteCategoryConfirm = false
+            },
+            onDismiss = { showDeleteCategoryConfirm = false },
+            title = "Delete Category",
+            message = "Are you sure you want to delete \"$selectedCategory\"? All vocabulary in this category will be deleted."
+        )
     }
 
     Scaffold(
@@ -138,14 +186,43 @@ fun VocabScreen(
                         shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(Modifier.height(12.dp))
-                    Row {
-                        OutlinedTextField(
-                            value = category,
-                            onValueChange = { category = it },
-                            label = { Text("Category") },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ExposedDropdownMenuBox(
+                            expanded = categoryExpanded,
+                            onExpandedChange = { categoryExpanded = !categoryExpanded },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            OutlinedTextField(
+                                value = category,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Category") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
+                                modifier = Modifier.menuAnchor(),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            ExposedDropdownMenu(
+                                expanded = categoryExpanded,
+                                onDismissRequest = { categoryExpanded = false }
+                            ) {
+                                categories.forEach { cat ->
+                                    DropdownMenuItem(
+                                        text = { Text(cat) },
+                                        onClick = {
+                                            category = cat
+                                            categoryExpanded = false
+                                        }
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text("+ New Category", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
+                                    onClick = {
+                                        isAddingNewCategory = true
+                                        categoryExpanded = false
+                                    }
+                                )
+                            }
+                        }
                         Spacer(Modifier.width(8.dp))
                         OutlinedTextField(
                             value = language,
@@ -180,44 +257,44 @@ fun VocabScreen(
             )
 
             if (categories.isNotEmpty()) {
-                ScrollableTabRow(
-                    selectedTabIndex = if (selectedCategory == null) 0 else categories.indexOf(selectedCategory) + 1,
-                    edgePadding = 16.dp,
-                    containerColor = Color.Transparent,
-                    divider = {},
-                    indicator = {}
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    FilterChip(
-                        selected = selectedCategory == null,
-                        onClick = { viewModel.setSelectedCategory(null) },
-                        label = { Text("All") },
-                        modifier = Modifier.padding(horizontal = 4.dp),
-                        leadingIcon = if (selectedCategory == null) {
-                            {
-                                Icon(
-                                    Icons.Rounded.RadioButtonChecked,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
-                                )
-                            }
-                        } else null
-                    )
-                    categories.forEach { cat ->
+                    ScrollableTabRow(
+                        modifier = Modifier.weight(1f),
+                        selectedTabIndex = if (selectedCategory == null) 0 else categories.indexOf(selectedCategory) + 1,
+                        edgePadding = 16.dp,
+                        containerColor = Color.Transparent,
+                        divider = {},
+                        indicator = {}
+                    ) {
                         FilterChip(
-                            selected = selectedCategory == cat,
-                            onClick = { viewModel.setSelectedCategory(cat) },
-                            label = { Text(cat) },
-                            modifier = Modifier.padding(horizontal = 4.dp),
-                            leadingIcon = if (selectedCategory == cat) {
-                                {
-                                    Icon(
-                                        Icons.Rounded.RadioButtonChecked,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
-                                    )
-                                }
-                            } else null
+                            selected = selectedCategory == null,
+                            onClick = { viewModel.setSelectedCategory(null) },
+                            label = { Text("All") },
+                            modifier = Modifier.padding(horizontal = 4.dp)
                         )
+                        categories.forEach { cat ->
+                            FilterChip(
+                                selected = selectedCategory == cat,
+                                onClick = { viewModel.setSelectedCategory(cat) },
+                                label = { Text(cat) },
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                        }
+                    }
+                    if (selectedCategory != null && selectedCategory != "General") {
+                        IconButton(
+                            onClick = { showDeleteCategoryConfirm = true },
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Icon(
+                                Icons.Rounded.Delete,
+                                contentDescription = "Delete Category",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }
@@ -225,7 +302,7 @@ fun VocabScreen(
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 if (allVocab.isNotEmpty()) {
                     Text(
-                        text = "${allVocab.size} total words • ${vocabList.size} showing",
+                        text = "${allVocab.size} total words | ${vocabList.size} showing",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 8.dp)

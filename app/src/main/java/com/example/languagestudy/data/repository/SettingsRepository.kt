@@ -22,7 +22,8 @@ class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFire
         val docRef = getSettingsDoc(userId)
         val listener = docRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                close(error)
+                // If we get an error (like PERMISSION_DENIED on logout), just close the flow normally
+                close()
                 return@addSnapshotListener
             }
             if (snapshot != null && snapshot.exists()) {
