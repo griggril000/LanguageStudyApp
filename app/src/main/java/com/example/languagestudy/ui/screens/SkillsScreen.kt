@@ -180,32 +180,14 @@ fun SkillsScreen(
                         selected = selectedLanguage == null,
                         onClick = { viewModel.setSelectedLanguage(null) },
                         label = { Text("All") },
-                        modifier = Modifier.padding(horizontal = 4.dp),
-                        leadingIcon = if (selectedLanguage == null) {
-                            {
-                                Icon(
-                                    imageVector = Icons.Rounded.RadioButtonChecked,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
-                                )
-                            }
-                        } else null
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     )
                     availableLanguages.forEach { lang ->
                         FilterChip(
                             selected = selectedLanguage == lang,
                             onClick = { viewModel.setSelectedLanguage(lang) },
                             label = { Text(lang) },
-                            modifier = Modifier.padding(horizontal = 4.dp),
-                            leadingIcon = if (selectedLanguage == lang) {
-                                {
-                                    Icon(
-                                        imageVector = Icons.Rounded.RadioButtonChecked,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
-                                    )
-                                }
-                            } else null
+                            modifier = Modifier.padding(horizontal = 4.dp)
                         )
                     }
                 }
