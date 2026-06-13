@@ -17,6 +17,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.languagestudy.R
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
@@ -94,19 +95,13 @@ class AuthViewModel : ViewModel() {
 
                 val credentialManager = CredentialManager.create(context)
                 
-                val googleIdOption = GetGoogleIdOption.Builder()
-                    .setFilterByAuthorizedAccounts(false)
-                    .setServerClientId(serverClientId)
-                    .setAutoSelectEnabled(false)
+                val googleIdOption = GetSignInWithGoogleOption.Builder(serverClientId)
                     .build()
 
-                Log.d("AuthViewModel", "GoogleIdOption created with Client ID: $serverClientId")
-
-                val passwordOption = GetPasswordOption()
+                Log.d("AuthViewModel", "GetSignInWithGoogleOption created with Client ID: $serverClientId")
 
                 val request = GetCredentialRequest.Builder()
                     .addCredentialOption(googleIdOption)
-                    .addCredentialOption(passwordOption)
                     .build()
 
                 Log.d("AuthViewModel", "Calling getCredential...")
