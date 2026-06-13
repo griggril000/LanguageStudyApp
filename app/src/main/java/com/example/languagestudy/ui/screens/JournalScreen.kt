@@ -53,22 +53,36 @@ fun JournalScreen(
 
     var title by remember { mutableStateOf("") }
     var contentText by remember { mutableStateOf("") }
-    var showAddSheet by remember { mutableStateOf(false) }
+    var editingEntry by remember { mutableStateOf<JournalEntryEntity?>(null) }
+    var showSheet by remember { mutableStateOf(false) }
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState()
 
+    LaunchedEffect(showSheet) {
+        if (!showSheet) {
+            localErrorMessage = null
+            editingEntry = null
+            title = ""
+            contentText = ""
+        }
+    }
+
+    LaunchedEffect(editingEntry) {
+        editingEntry?.let {
+            title = it.title
+            contentText = it.content
+            showSheet = true
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.error.collect { message ->
-            if (showAddSheet) {
+            if (showSheet) {
                 localErrorMessage = message
             } else {
                 snackbarHostState.showSnackbar(message)
             }
         }
-    }
-
-    LaunchedEffect(showAddSheet) {
-        if (!showAddSheet) localErrorMessage = null
     }
 
     Scaffold(
@@ -77,7 +91,7 @@ fun JournalScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showAddSheet = true },
+                onClick = { showSheet = true },
                 containerColor = Color(0xFFC25A1B),
                 contentColor = Color.White
             ) {
@@ -85,9 +99,9 @@ fun JournalScreen(
             }
         }
     ) { padding ->
-        if (showAddSheet) {
+        if (showSheet) {
             ModalBottomSheet(
-                onDismissRequest = { showAddSheet = false },
+                onDismissRequest = { showSheet = false },
                 sheetState = sheetState,
                 contentWindowInsets = { WindowInsets(0, 0, 0, 0) }
             ) {
@@ -98,7 +112,11 @@ fun JournalScreen(
                         .padding(16.dp)
                         .padding(bottom = 32.dp)
                 ) {
-                    Text("New Journal Entry", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (editingEntry == null) "New Journal Entry" else "Edit Journal Entry",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                     Spacer(Modifier.height(16.dp))
                     if (localErrorMessage != null) {
                         Text(
@@ -127,11 +145,9 @@ fun JournalScreen(
                     Spacer(Modifier.height(24.dp))
                     Button(
                         onClick = {
-                            viewModel.addEntry(title, contentText)
+                            viewModel.saveEntry(editingEntry?.id, title, contentText)
                             if (title.isNotBlank() && contentText.isNotBlank()) {
-                                title = ""
-                                contentText = ""
-                                showAddSheet = false
+                                showSheet = false
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -159,7 +175,11 @@ fun JournalScreen(
                 } else {
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(entries) { entry ->
-                            JournalItem(entry, onDelete = { viewModel.deleteEntry(entry) })
+                            JournalItem(
+                                entry = entry,
+                                onDelete = { viewModel.deleteEntry(entry) },
+                                onClick = { editingEntry = entry }
+                            )
                         }
                     }
                 }
@@ -170,7 +190,11 @@ fun JournalScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun JournalItem(entry: JournalEntryEntity, onDelete: () -> Unit) {
+fun JournalItem(
+    entry: JournalEntryEntity,
+    onDelete: () -> Unit,
+    onClick: () -> Unit
+) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
@@ -218,6 +242,7 @@ fun JournalItem(entry: JournalEntryEntity, onDelete: () -> Unit) {
         enableDismissFromStartToEnd = false
     ) {
         Card(
+            onClick = onClick,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),

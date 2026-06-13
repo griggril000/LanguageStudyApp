@@ -15,6 +15,7 @@
 - [x] **Task 3: Offline Modules**
     - Room database for Vocab, Skills, and Journal.
     - ViewModels and functional screens for each.
+    - **(done)** Make journal entries editable.
 - [x] **Task 4: Authentication**
     - **(todo)** Google Login using Jetpack Credential Manager.
     - AuthViewModel with Firebase Auth integration.

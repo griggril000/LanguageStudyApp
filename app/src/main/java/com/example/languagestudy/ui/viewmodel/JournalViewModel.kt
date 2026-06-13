@@ -36,14 +36,19 @@ class JournalViewModel(private val repository: JournalRepository) : ViewModel() 
         }
     }
 
-    fun addEntry(title: String, content: String) {
+    fun saveEntry(id: String? = null, title: String, content: String) {
         if (title.isBlank() || content.isBlank()) {
             viewModelScope.launch { _error.emit("Title and content cannot be empty") }
             return
         }
         viewModelScope.launch {
             try {
-                repository.insert(JournalEntryEntity(title = title.trim(), content = content.trim()), userId)
+                val entry = if (id != null) {
+                    JournalEntryEntity(id = id, title = title.trim(), content = content.trim())
+                } else {
+                    JournalEntryEntity(title = title.trim(), content = content.trim())
+                }
+                repository.insert(entry, userId)
             } catch (e: Exception) {
                 _error.emit("Failed to save entry: ${e.message}")
             }
