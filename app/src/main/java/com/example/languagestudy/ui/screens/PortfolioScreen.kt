@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.example.languagestudy.data.model.PortfolioItem
+import com.example.languagestudy.ui.components.AppButton
+import com.example.languagestudy.ui.components.AppFAB
 import com.example.languagestudy.ui.components.DeleteConfirmationDialog
 import com.example.languagestudy.ui.components.EmptyState
 import com.example.languagestudy.ui.components.GlobalSearchBar
@@ -92,13 +94,11 @@ fun PortfolioScreen(
             ) 
         },
         floatingActionButton = {
-            FloatingActionButton(
+            AppFAB(
                 onClick = { showAddSheet = true },
-                containerColor = Color(0xFFC25A1B),
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Rounded.Add, contentDescription = "Add Portfolio Item")
-            }
+                icon = Icons.Rounded.Add,
+                contentDescription = "Add Portfolio Item"
+            )
         }
     ) { padding ->
         if (showAddSheet) {
@@ -142,19 +142,12 @@ fun PortfolioScreen(
                         singleLine = true
                     )
                     Spacer(Modifier.height(24.dp))
-                    Button(
+                    AppButton(
                         onClick = { viewModel.addItem(title, link) },
-                        enabled = !isLoading,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC25A1B))
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
-                        } else {
-                            Text("Add to Portfolio")
-                        }
-                    }
+                        loading = isLoading,
+                        text = "Add to Portfolio",
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
@@ -169,7 +162,7 @@ fun PortfolioScreen(
 
                 if (isLoading && allItems.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Color(0xFFC25A1B))
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 } else if (allItems.isEmpty()) {
                     EmptyState(message = "Your portfolio is empty. Add your first item!")
@@ -432,7 +425,7 @@ fun StandardPortfolioItem(
                     ) { 
                         Text(
                             "Feature",
-                            color = if (canFeature) Color(0xFFC25A1B) else MaterialTheme.colorScheme.outline
+                            color = if (canFeature) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                         ) 
                     }
                     IconButton(onClick = { showDeleteConfirm = true }) {

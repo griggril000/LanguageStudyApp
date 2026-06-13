@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.RadioButtonChecked
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,8 +23,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.languagestudy.LanguageStudyApplication
 import com.example.languagestudy.data.local.entity.VocabEntity
-import com.example.languagestudy.ui.components.*
-import com.example.languagestudy.ui.viewmodel.*
+import com.example.languagestudy.ui.components.AppFAB
+import com.example.languagestudy.ui.components.AppButton
+import com.example.languagestudy.ui.components.DeleteConfirmationDialog
+import com.example.languagestudy.ui.components.EmptyState
+import com.example.languagestudy.ui.components.GlobalSearchBar
+import com.example.languagestudy.ui.components.ProgressStatusLegend
+import com.example.languagestudy.ui.components.StatusIcon
+import com.example.languagestudy.ui.viewmodel.SearchViewModel
+import com.example.languagestudy.ui.viewmodel.VocabViewModel
+import com.example.languagestudy.ui.viewmodel.VocabViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,13 +93,11 @@ fun VocabScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(
+            AppFAB(
                 onClick = { showAddSheet = true },
-                containerColor = Color(0xFFC25A1B),
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Rounded.Add, contentDescription = "Add Vocabulary")
-            }
+                icon = Icons.Rounded.Add,
+                contentDescription = "Add Vocabulary"
+            )
         }
     ) { padding ->
         if (showAddSheet) {
@@ -148,7 +156,7 @@ fun VocabScreen(
                         )
                     }
                     Spacer(Modifier.height(24.dp))
-                    Button(
+                    AppButton(
                         onClick = {
                             viewModel.addVocab(word, translation, category, language)
                             if (word.isNotBlank()) {
@@ -157,12 +165,9 @@ fun VocabScreen(
                                 showAddSheet = false
                             }
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC25A1B))
-                    ) {
-                        Text("Add to List")
-                    }
+                        text = "Add to List",
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
@@ -186,14 +191,32 @@ fun VocabScreen(
                         selected = selectedCategory == null,
                         onClick = { viewModel.setSelectedCategory(null) },
                         label = { Text("All") },
-                        modifier = Modifier.padding(horizontal = 4.dp)
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                        leadingIcon = if (selectedCategory == null) {
+                            {
+                                Icon(
+                                    Icons.Rounded.RadioButtonChecked,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                )
+                            }
+                        } else null
                     )
                     categories.forEach { cat ->
                         FilterChip(
                             selected = selectedCategory == cat,
                             onClick = { viewModel.setSelectedCategory(cat) },
                             label = { Text(cat) },
-                            modifier = Modifier.padding(horizontal = 4.dp)
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                            leadingIcon = if (selectedCategory == cat) {
+                                {
+                                    Icon(
+                                        Icons.Rounded.RadioButtonChecked,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                    )
+                                }
+                            } else null
                         )
                     }
                 }

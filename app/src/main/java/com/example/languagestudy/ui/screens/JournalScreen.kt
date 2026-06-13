@@ -20,11 +20,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.languagestudy.LanguageStudyApplication
 import com.example.languagestudy.data.local.entity.JournalEntryEntity
+import com.example.languagestudy.ui.components.AppButton
+import com.example.languagestudy.ui.components.AppFAB
 import com.example.languagestudy.ui.components.DeleteConfirmationDialog
 import com.example.languagestudy.ui.components.EmptyState
 import com.example.languagestudy.ui.components.GlobalSearchBar
 import com.example.languagestudy.ui.components.NoResultsState
-import com.example.languagestudy.ui.viewmodel.*
+import com.example.languagestudy.ui.viewmodel.JournalViewModel
+import com.example.languagestudy.ui.viewmodel.JournalViewModelFactory
+import com.example.languagestudy.ui.viewmodel.SearchViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,13 +94,11 @@ fun JournalScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(
+            AppFAB(
                 onClick = { showSheet = true },
-                containerColor = Color(0xFFC25A1B),
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Rounded.EditNote, contentDescription = "New Entry")
-            }
+                icon = Icons.Rounded.EditNote,
+                contentDescription = "New Entry"
+            )
         }
     ) { padding ->
         if (showSheet) {
@@ -143,19 +145,16 @@ fun JournalScreen(
                         minLines = 5
                     )
                     Spacer(Modifier.height(24.dp))
-                    Button(
+                    AppButton(
                         onClick = {
                             viewModel.saveEntry(editingEntry?.id, title, contentText)
                             if (title.isNotBlank() && contentText.isNotBlank()) {
                                 showSheet = false
                             }
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC25A1B))
-                    ) {
-                        Text("Save Entry")
-                    }
+                        text = "Save Entry",
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }

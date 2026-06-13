@@ -10,6 +10,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.rounded.RadioButtonChecked
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,8 +26,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.languagestudy.LanguageStudyApplication
 import com.example.languagestudy.data.local.entity.SkillEntity
 import com.example.languagestudy.data.local.entity.Subtask
-import com.example.languagestudy.ui.components.*
-import com.example.languagestudy.ui.viewmodel.*
+import com.example.languagestudy.ui.components.AppButton
+import com.example.languagestudy.ui.components.AppFAB
+import com.example.languagestudy.ui.components.DeleteConfirmationDialog
+import com.example.languagestudy.ui.components.EmptyState
+import com.example.languagestudy.ui.components.GlobalSearchBar
+import com.example.languagestudy.ui.components.NoResultsState
+import com.example.languagestudy.ui.components.ProgressStatusLegend
+import com.example.languagestudy.ui.components.StatusIcon
+import com.example.languagestudy.ui.viewmodel.SearchViewModel
+import com.example.languagestudy.ui.viewmodel.SkillViewModel
+import com.example.languagestudy.ui.viewmodel.SkillViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,13 +94,11 @@ fun SkillsScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(
+            AppFAB(
                 onClick = { showAddSheet = true },
-                containerColor = Color(0xFFC25A1B),
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Rounded.Add, contentDescription = "Add Skill")
-            }
+                icon = Icons.Rounded.Add,
+                contentDescription = "Add Skill"
+            )
         }
     ) { padding ->
         if (showAddSheet) {
@@ -137,7 +146,7 @@ fun SkillsScreen(
                         singleLine = true
                     )
                     Spacer(Modifier.height(24.dp))
-                    Button(
+                    AppButton(
                         onClick = {
                             viewModel.addSkill(skillName, skillLanguage)
                             if (skillName.isNotBlank()) {
@@ -145,12 +154,9 @@ fun SkillsScreen(
                                 showAddSheet = false
                             }
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC25A1B))
-                    ) {
-                        Text("Add Skills")
-                    }
+                        text = "Add Skills",
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
@@ -174,14 +180,32 @@ fun SkillsScreen(
                         selected = selectedLanguage == null,
                         onClick = { viewModel.setSelectedLanguage(null) },
                         label = { Text("All") },
-                        modifier = Modifier.padding(horizontal = 4.dp)
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                        leadingIcon = if (selectedLanguage == null) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Rounded.RadioButtonChecked,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                )
+                            }
+                        } else null
                     )
                     availableLanguages.forEach { lang ->
                         FilterChip(
                             selected = selectedLanguage == lang,
                             onClick = { viewModel.setSelectedLanguage(lang) },
                             label = { Text(lang) },
-                            modifier = Modifier.padding(horizontal = 4.dp)
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                            leadingIcon = if (selectedLanguage == lang) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Rounded.RadioButtonChecked,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                    )
+                                }
+                            } else null
                         )
                     }
                 }
@@ -358,7 +382,7 @@ fun SkillItem(
                         Icon(
                             Icons.Rounded.Edit,
                             contentDescription = "Edit",
-                            tint = Color(0xFFC25A1B),
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -379,7 +403,7 @@ fun SkillItem(
                             .fillMaxWidth()
                             .height(6.dp),
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        color = if (skill.progress == 100) Color(0xFF2E7D32) else Color(0xFFC25A1B),
+                        color = if (skill.progress == 100) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
                         strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
                     )
                 }
@@ -421,7 +445,7 @@ fun SkillItem(
                                 Icon(
                                     Icons.Rounded.AddCircle,
                                     contentDescription = "Add",
-                                    tint = Color(0xFFC25A1B)
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }

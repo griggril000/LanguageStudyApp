@@ -37,7 +37,7 @@ fun ProgressStatusLegend() {
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 LegendItem(Icons.Rounded.RadioButtonUnchecked, MaterialTheme.colorScheme.outline, "Not Started")
-                LegendItem(Icons.Rounded.Schedule, Color(0xFFC25A1B), "In Progress")
+                LegendItem(Icons.Rounded.Schedule, MaterialTheme.colorScheme.primary, "In Progress")
                 LegendItem(Icons.Rounded.CheckCircle, Color(0xFF2E7D32), "Proficient")
             }
         }
@@ -57,7 +57,7 @@ fun LegendItem(icon: androidx.compose.ui.graphics.vector.ImageVector, color: Col
 fun StatusIcon(status: String, onClick: () -> Unit, size: Dp = 32.dp) {
     val (icon, color) = when (status) {
         "PROFICIENT" -> Icons.Rounded.CheckCircle to Color(0xFF2E7D32) // Green
-        "IN_PROGRESS" -> Icons.Rounded.Schedule to Color(0xFFC25A1B) // Orange/Amber
+        "IN_PROGRESS" -> Icons.Rounded.Schedule to MaterialTheme.colorScheme.primary // Using theme primary
         else -> Icons.Rounded.RadioButtonUnchecked to MaterialTheme.colorScheme.outline
     }
 

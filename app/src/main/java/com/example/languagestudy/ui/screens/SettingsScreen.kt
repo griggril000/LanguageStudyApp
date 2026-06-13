@@ -106,13 +106,15 @@ fun SettingsScreen(
                             selected = isSelected,
                             onClick = { if (canToggle) settingsViewModel.toggleLanguage(language) },
                             label = { Text(language) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = if (isSelected) Icons.Rounded.CheckBox else Icons.Rounded.CheckBoxOutlineBlank,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
-                                )
-                            }
+                            leadingIcon = if (isSelected) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Done,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                    )
+                                }
+                            } else null
                         )
                     }
                 }
@@ -141,13 +143,15 @@ fun SettingsScreen(
                             selected = isSelected,
                             onClick = { settingsViewModel.setCurrentLanguage(language) },
                             label = { Text(language) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = if (isSelected) Icons.Rounded.RadioButtonChecked else Icons.Rounded.RadioButtonUnchecked,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
-                                )
-                            }
+                            leadingIcon = if (isSelected) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Rounded.RadioButtonChecked,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                    )
+                                }
+                            } else null
                         )
                     }
                 }
