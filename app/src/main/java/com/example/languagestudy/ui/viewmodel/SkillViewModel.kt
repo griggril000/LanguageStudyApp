@@ -91,10 +91,12 @@ class SkillViewModel(
         
         val item = list.removeAt(fromIndex)
         list.add(toIndex, item)
-        
-        // Update priorities for the whole list to ensure they are consistent
+        updateSkillOrder(list)
+    }
+
+    fun updateSkillOrder(newList: List<SkillEntity>) {
         viewModelScope.launch {
-            list.forEachIndexed { index, skill ->
+            newList.forEachIndexed { index, skill ->
                 if (skill.priority != index) {
                     repository.update(skill.copy(priority = index), userId)
                 }

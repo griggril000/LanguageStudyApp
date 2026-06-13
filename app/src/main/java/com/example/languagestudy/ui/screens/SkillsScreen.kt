@@ -25,7 +25,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -71,10 +72,12 @@ fun SkillsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
+    val haptic = LocalHapticFeedback.current
 
     // Local state for drag and drop
     var draggedItemIndex by remember { mutableStateOf<Int?>(null) }
     var draggingOffset by remember { mutableStateOf(0f) }
+    var initialTouchY by remember { mutableStateOf(0f) }
     var localSkillsList by remember { mutableStateOf(skillsList) }
     var autoScrollJob by remember { mutableStateOf<Job?>(null) }
 
@@ -231,7 +234,7 @@ fun SkillsScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .pointerInput(localSkillsList, isDragEnabled) {
+                            .pointerInput(isDragEnabled) {
                                 if (!isDragEnabled) return@pointerInput
                                 detectDragGesturesAfterLongPress(
                                     onDragStart = { offset ->
@@ -240,23 +243,26 @@ fun SkillsScreen(
                                                 offset.y.toInt() in item.offset..(item.offset + item.size)
                                             }?.also {
                                                 draggedItemIndex = it.index
+                                                initialTouchY = offset.y - it.offset
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             }
                                     },
                                     onDrag = { change, dragAmount ->
                                         change.consume()
-                                        draggingOffset += dragAmount.y
-
+                                        
                                         val currentIdx = draggedItemIndex ?: return@detectDragGesturesAfterLongPress
                                         val itemInfo = lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == currentIdx } ?: return@detectDragGesturesAfterLongPress
                                         
+                                        val targetItemTop = change.position.y - initialTouchY
+                                        draggingOffset = targetItemTop - itemInfo.offset
+                                        
                                         val currentItemY = itemInfo.offset + draggingOffset
+                                        val currentItemCenterY = currentItemY + itemInfo.size / 2
                                         
                                         // Check for swap
-                                        val targetItem = lazyListState.layoutInfo.visibleItemsInfo.find { 
+                                        val targetItem = lazyListState.layoutInfo.visibleItemsInfo.find { it ->
                                             it.index != currentIdx &&
-                                            currentItemY.toInt() in it.offset..(it.offset + it.size) &&
-                                            (if (dragAmount.y > 0) currentItemY + itemInfo.size > it.offset + it.size / 2
-                                             else currentItemY < it.offset + it.size / 2)
+                                            currentItemCenterY.toInt() in it.offset..(it.offset + it.size)
                                         }
 
                                         if (targetItem != null) {
@@ -266,9 +272,10 @@ fun SkillsScreen(
                                             newList.add(targetIdx, item)
                                             localSkillsList = newList
                                             
-                                            // Adjust offset to maintain item under finger
-                                            draggingOffset += (itemInfo.offset - targetItem.offset)
                                             draggedItemIndex = targetIdx
+                                            // Re-calculate draggingOffset for the new position in the list
+                                            draggingOffset = targetItemTop - targetItem.offset
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         }
 
                                         // Auto-scroll logic
@@ -276,11 +283,10 @@ fun SkillsScreen(
                                         val viewPortBottom = lazyListState.layoutInfo.viewportEndOffset
                                         if (currentItemY < viewPortTop + 100 && autoScrollJob == null) {
                                             autoScrollJob = coroutineScope.launch {
-                                                while (draggingOffset < 0) {
+                                                while (true) {
                                                     lazyListState.scrollBy(-10f)
                                                     delay(10)
                                                 }
-                                                autoScrollJob = null
                                             }
                                         } else if (currentItemY + itemInfo.size > viewPortBottom - 100 && autoScrollJob == null) {
                                             autoScrollJob = coroutineScope.launch {
@@ -295,12 +301,8 @@ fun SkillsScreen(
                                         }
                                     },
                                     onDragEnd = {
-                                        draggedItemIndex?.let { finalIdx ->
-                                            val itemAtFinal = localSkillsList[finalIdx]
-                                            val originalIdx = skillsList.indexOfFirst { it.id == itemAtFinal.id }
-                                            if (originalIdx != -1 && originalIdx != finalIdx) {
-                                                viewModel.moveSkill(originalIdx, finalIdx)
-                                            }
+                                        if (localSkillsList != skillsList) {
+                                            viewModel.updateSkillOrder(localSkillsList)
                                         }
                                         draggedItemIndex = null
                                         draggingOffset = 0f
@@ -333,7 +335,7 @@ fun SkillsScreen(
                                 onSubtaskDelete = { viewModel.deleteSubtask(skill, it) },
                                 onEditSkill = { name, lang -> viewModel.updateSkill(skill.copy(name = name, language = lang)) },
                                 onEditSubtask = { subtaskId, newText -> viewModel.updateSubtaskText(skill, subtaskId, newText) },
-                                modifier = Modifier
+                                modifier = (if (isDragging) Modifier else Modifier.animateItem())
                                     .graphicsLayer {
                                         translationY = if (isDragging) draggingOffset else 0f
                                         scaleX = scale
@@ -451,7 +453,8 @@ fun SkillItem(
                 }
             }
         },
-        enableDismissFromStartToEnd = false
+        enableDismissFromStartToEnd = false,
+        modifier = modifier
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),

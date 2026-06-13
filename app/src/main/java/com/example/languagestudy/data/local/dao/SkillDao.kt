@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SkillDao {
-    @Query("SELECT * FROM skills")
+    @Query("SELECT * FROM skills ORDER BY priority ASC")
     fun getAllSkills(): Flow<List<SkillEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
