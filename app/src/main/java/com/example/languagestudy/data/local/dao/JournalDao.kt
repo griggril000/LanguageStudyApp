@@ -14,4 +14,7 @@ interface JournalDao {
 
     @Delete
     suspend fun deleteEntry(entry: JournalEntryEntity)
+
+    @Query("DELETE FROM journal_entries WHERE id = :id")
+    suspend fun deleteEntryById(id: String)
 }

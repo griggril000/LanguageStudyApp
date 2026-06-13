@@ -3,6 +3,7 @@ package com.example.languagestudy.data.repository
 import com.example.languagestudy.data.local.dao.SkillDao
 import com.example.languagestudy.data.local.entity.SkillEntity
 import com.example.languagestudy.data.local.entity.Subtask
+import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
@@ -37,36 +38,37 @@ class SkillRepository(private val skillDao: SkillDao) {
             snapshot?.let { querySnapshot ->
                 launch {
                     val now = System.currentTimeMillis()
-                    val remoteSkills = querySnapshot.documents.mapNotNull { doc ->
-                        val data = doc.data ?: return@mapNotNull null
-                        val subtasksData = data["subtasks"] as? List<Map<String, Any>> ?: emptyList()
-                        val subtasks = subtasksData.map { st ->
-                            Subtask(
-                                id = st["id"] as? String ?: "",
-                                text = st["text"] as? String ?: "",
-                                status = (st["status"] as? String ?: "NOT_STARTED").uppercase()
-                            )
-                        }
+                    for (change in querySnapshot.documentChanges) {
+                        val doc = change.document
+                        when (change.type) {
+                            DocumentChange.Type.ADDED,
+                            DocumentChange.Type.MODIFIED -> {
+                                val data = doc.data
+                                val subtasksData = data["subtasks"] as? List<Map<String, Any>> ?: emptyList()
+                                val subtasks = subtasksData.map { st ->
+                                    Subtask(
+                                        id = st["id"] as? String ?: "",
+                                        text = st["text"] as? String ?: "",
+                                        status = (st["status"] as? String ?: "NOT_STARTED").uppercase()
+                                    )
+                                }
 
-                        SkillEntity(
-                            id = doc.id,
-                            name = data["name"] as? String ?: "",
-                            language = data["language"] as? String ?: "",
-                            status = (data["status"] as? String ?: "NOT_STARTED").uppercase(),
-                            priority = (data["priority"] as? Long)?.toInt() ?: 0,
-                            subtasks = subtasks,
-                            lastUpdated = now
-                        )
+                                val skill = SkillEntity(
+                                    id = doc.id,
+                                    name = data["name"] as? String ?: "",
+                                    language = data["language"] as? String ?: "",
+                                    status = (data["status"] as? String ?: "NOT_STARTED").uppercase(),
+                                    priority = (data["priority"] as? Long)?.toInt() ?: 0,
+                                    subtasks = subtasks,
+                                    lastUpdated = now
+                                )
+                                skillDao.insertSkill(skill)
+                            }
+                            DocumentChange.Type.REMOVED -> {
+                                skillDao.deleteSkillById(doc.id)
+                            }
+                        }
                     }
-                    
-                    remoteSkills.forEach { skill ->
-                        skillDao.insertSkill(skill)
-                    }
-                    
-                    // Cleanup local items that were deleted on the web
-                    val remoteIds = remoteSkills.map { it.id }.toSet()
-                    // Note: In a production app, we might want a more sophisticated sync
-                    // but for now, we trust Firestore as the source of truth for IDs.
                 }
             }
             trySend(Unit)

@@ -2,6 +2,7 @@ package com.example.languagestudy.data.repository
 
 import com.example.languagestudy.data.local.dao.JournalDao
 import com.example.languagestudy.data.local.entity.JournalEntryEntity
+import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
@@ -31,18 +32,24 @@ class JournalRepository(private val journalDao: JournalDao) {
             snapshot?.let { querySnapshot ->
                 launch {
                     val now = System.currentTimeMillis()
-                    val remoteEntries = querySnapshot.documents.mapNotNull { doc ->
-                        val data = doc.data ?: return@mapNotNull null
-                        JournalEntryEntity(
-                            id = doc.id,
-                            title = data["title"] as? String ?: "",
-                            content = data["content"] as? String ?: "",
-                            timestamp = (data["timestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time ?: now
-                        )
-                    }
-
-                    remoteEntries.forEach { entry ->
-                        journalDao.insertEntry(entry)
+                    for (change in querySnapshot.documentChanges) {
+                        val doc = change.document
+                        when (change.type) {
+                            DocumentChange.Type.ADDED,
+                            DocumentChange.Type.MODIFIED -> {
+                                val data = doc.data
+                                val entry = JournalEntryEntity(
+                                    id = doc.id,
+                                    title = data["title"] as? String ?: "",
+                                    content = data["content"] as? String ?: "",
+                                    timestamp = (data["timestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time ?: now
+                                )
+                                journalDao.insertEntry(entry)
+                            }
+                            DocumentChange.Type.REMOVED -> {
+                                journalDao.deleteEntryById(doc.id)
+                            }
+                        }
                     }
                 }
             }

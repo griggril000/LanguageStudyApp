@@ -17,4 +17,7 @@ interface SkillDao {
 
     @Delete
     suspend fun deleteSkill(skill: SkillEntity)
+
+    @Query("DELETE FROM skills WHERE id = :id")
+    suspend fun deleteSkillById(id: String)
 }

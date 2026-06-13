@@ -14,4 +14,7 @@ interface VocabDao {
 
     @Delete
     suspend fun deleteVocab(vocab: VocabEntity)
+
+    @Query("DELETE FROM vocabulary WHERE id = :id")
+    suspend fun deleteVocabById(id: String)
 }

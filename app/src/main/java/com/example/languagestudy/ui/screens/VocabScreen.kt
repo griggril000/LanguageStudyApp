@@ -1,6 +1,7 @@
 package com.example.languagestudy.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,10 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.languagestudy.LanguageStudyApplication
 import com.example.languagestudy.data.local.entity.VocabEntity
-import com.example.languagestudy.ui.components.DeleteConfirmationDialog
-import com.example.languagestudy.ui.components.EmptyState
-import com.example.languagestudy.ui.components.GlobalSearchBar
-import com.example.languagestudy.ui.components.NoResultsState
+import com.example.languagestudy.ui.components.*
 import com.example.languagestudy.ui.viewmodel.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,6 +38,8 @@ fun VocabScreen(
     )
     val vocabList by viewModel.filteredVocab.collectAsState()
     val allVocab by viewModel.allVocab.collectAsState()
+    val categories by viewModel.categories.collectAsState()
+    val selectedCategory by viewModel.selectedCategory.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
     val searchQuery by searchViewModel.query.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -57,6 +57,7 @@ fun VocabScreen(
     var category by remember { mutableStateOf("General") }
     var language by remember { mutableStateOf("") }
     var showAddSheet by remember { mutableStateOf(false) }
+    var localErrorMessage by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState()
 
     LaunchedEffect(currentLanguage) {
@@ -65,8 +66,16 @@ fun VocabScreen(
 
     LaunchedEffect(Unit) {
         viewModel.error.collect { message ->
-            snackbarHostState.showSnackbar(message)
+            if (showAddSheet) {
+                localErrorMessage = message
+            } else {
+                snackbarHostState.showSnackbar(message)
+            }
         }
+    }
+
+    LaunchedEffect(showAddSheet) {
+        if (!showAddSheet) localErrorMessage = null
     }
 
     Scaffold(
@@ -97,6 +106,14 @@ fun VocabScreen(
                 ) {
                     Text("Add Vocabulary", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(16.dp))
+                    if (localErrorMessage != null) {
+                        Text(
+                            text = localErrorMessage!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
                     OutlinedTextField(
                         value = word,
                         onValueChange = { word = it },
@@ -134,7 +151,7 @@ fun VocabScreen(
                     Button(
                         onClick = {
                             viewModel.addVocab(word, translation, category, language)
-                            if (word.isNotBlank() && translation.isNotBlank()) {
+                            if (word.isNotBlank()) {
                                 word = ""
                                 translation = ""
                                 showAddSheet = false
@@ -157,17 +174,70 @@ fun VocabScreen(
                 placeholder = "Search vocabulary..."
             )
 
-            Column(modifier = Modifier.padding(16.dp)) {
+            if (categories.isNotEmpty()) {
+                ScrollableTabRow(
+                    selectedTabIndex = if (selectedCategory == null) 0 else categories.indexOf(selectedCategory) + 1,
+                    edgePadding = 16.dp,
+                    containerColor = Color.Transparent,
+                    divider = {},
+                    indicator = {}
+                ) {
+                    FilterChip(
+                        selected = selectedCategory == null,
+                        onClick = { viewModel.setSelectedCategory(null) },
+                        label = { Text("All") },
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                    categories.forEach { cat ->
+                        FilterChip(
+                            selected = selectedCategory == cat,
+                            onClick = { viewModel.setSelectedCategory(cat) },
+                            label = { Text(cat) },
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                if (allVocab.isNotEmpty()) {
+                    Text(
+                        text = "${allVocab.size} total words • ${vocabList.size} showing",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+
                 if (allVocab.isEmpty()) {
-                    EmptyState(message = "Your vocabulary list is empty. Tap + to add words!")
-                } else if (vocabList.isEmpty() && searchQuery.isNotEmpty()) {
-                    NoResultsState(query = searchQuery)
-                } else {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(vocabList) { vocab ->
-                            VocabItem(vocab, onDelete = { viewModel.deleteVocab(vocab) })
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        EmptyState(message = "Your vocabulary list is empty. Tap + to add words!")
+                        Spacer(Modifier.height(16.dp))
+                        TextButton(onClick = { viewModel.seedSampleData() }) {
+                            Text("Seed Sample Data")
                         }
                     }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        items(vocabList, key = { it.id }) { vocab ->
+                            VocabItem(
+                                vocab = vocab, 
+                                onDelete = { viewModel.deleteVocab(vocab) },
+                                onEdit = { w, t, c, l -> 
+                                    viewModel.updateVocab(vocab.copy(word = w, translation = t, category = c, language = l))
+                                },
+                                onStatusCycle = { viewModel.cycleVocabStatus(vocab) }
+                            )
+                        }
+                    }
+                    ProgressStatusLegend()
                 }
             }
         }
@@ -176,8 +246,73 @@ fun VocabScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VocabItem(vocab: VocabEntity, onDelete: () -> Unit) {
+fun VocabItem(
+    vocab: VocabEntity, 
+    onDelete: () -> Unit,
+    onEdit: (String, String, String, String) -> Unit,
+    onStatusCycle: () -> Unit
+) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    
+    var editWord by remember { mutableStateOf(vocab.word) }
+    var editTranslation by remember { mutableStateOf(vocab.translation) }
+    var editCategory by remember { mutableStateOf(vocab.category) }
+    var editLanguage by remember { mutableStateOf(vocab.language) }
+
+    if (showEditDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("Edit Vocabulary") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = editWord,
+                        onValueChange = { editWord = it },
+                        label = { Text("Word") },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = editTranslation,
+                        onValueChange = { editTranslation = it },
+                        label = { Text("Translation") },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row {
+                        OutlinedTextField(
+                            value = editCategory,
+                            onValueChange = { editCategory = it },
+                            label = { Text("Category") },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        OutlinedTextField(
+                            value = editLanguage,
+                            onValueChange = { editLanguage = it },
+                            label = { Text("Lang") },
+                            modifier = Modifier.width(80.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onEdit(editWord, editTranslation, editCategory, editLanguage)
+                    showEditDialog = false
+                }) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
             if (it == SwipeToDismissBoxValue.EndToStart) {
@@ -239,29 +374,43 @@ fun VocabItem(vocab: VocabEntity, onDelete: () -> Unit) {
                 modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                StatusIcon(status = vocab.status, onClick = onStatusCycle, size = 32.dp)
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f).clickable { showEditDialog = true }) {
                     Text(
                         vocab.word,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        textDecoration = if (vocab.status == "PROFICIENT") androidx.compose.ui.text.style.TextDecoration.LineThrough else null
                     )
-                    Text(
-                        vocab.translation,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (vocab.translation.isNotBlank()) {
+                        Text(
+                            vocab.translation,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    modifier = Modifier.padding(start = 8.dp)
-                ) {
-                    Text(
-                        vocab.category,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                Column(horizontalAlignment = Alignment.End) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer
+                    ) {
+                        Text(
+                            vocab.category,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                    if (vocab.language.isNotBlank()) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            vocab.language,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
                 }
             }
         }

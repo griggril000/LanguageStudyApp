@@ -24,10 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.languagestudy.LanguageStudyApplication
 import com.example.languagestudy.data.local.entity.SkillEntity
 import com.example.languagestudy.data.local.entity.Subtask
-import com.example.languagestudy.ui.components.DeleteConfirmationDialog
-import com.example.languagestudy.ui.components.EmptyState
-import com.example.languagestudy.ui.components.GlobalSearchBar
-import com.example.languagestudy.ui.components.NoResultsState
+import com.example.languagestudy.ui.components.*
 import com.example.languagestudy.ui.viewmodel.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,6 +57,7 @@ fun SkillsScreen(
     var skillName by remember { mutableStateOf("") }
     var skillLanguage by remember { mutableStateOf("") }
     var showAddSheet by remember { mutableStateOf(false) }
+    var localErrorMessage by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState()
 
     LaunchedEffect(selectedLanguage) {
@@ -68,8 +66,16 @@ fun SkillsScreen(
 
     LaunchedEffect(Unit) {
         viewModel.error.collect { message ->
-            snackbarHostState.showSnackbar(message)
+            if (showAddSheet) {
+                localErrorMessage = message
+            } else {
+                snackbarHostState.showSnackbar(message)
+            }
         }
+    }
+
+    LaunchedEffect(showAddSheet) {
+        if (!showAddSheet) localErrorMessage = null
     }
 
     Scaffold(
@@ -105,6 +111,14 @@ fun SkillsScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.height(16.dp))
+                    if (localErrorMessage != null) {
+                        Text(
+                            text = localErrorMessage!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
                     OutlinedTextField(
                         value = skillName,
                         onValueChange = { skillName = it },
@@ -204,44 +218,6 @@ fun SkillsScreen(
     }
 }
 
-@Composable
-fun ProgressStatusLegend() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 16.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
-        )
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                "Progress Status Legend:",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                LegendItem(Icons.Rounded.RadioButtonUnchecked, MaterialTheme.colorScheme.outline, "Not Started")
-                LegendItem(Icons.Rounded.Schedule, Color(0xFFC25A1B), "In Progress")
-                LegendItem(Icons.Rounded.CheckCircle, Color(0xFF2E7D32), "Proficient")
-            }
-        }
-    }
-}
-
-@Composable
-fun LegendItem(icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(4.dp))
-        Text(label, style = MaterialTheme.typography.bodySmall)
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -516,15 +492,3 @@ fun SubtaskItem(
     }
 }
 
-@Composable
-fun StatusIcon(status: String, onClick: () -> Unit, size: androidx.compose.ui.unit.Dp = 32.dp) {
-    val (icon, color) = when (status) {
-        "PROFICIENT" -> Icons.Rounded.CheckCircle to Color(0xFF2E7D32) // Green
-        "IN_PROGRESS" -> Icons.Rounded.Schedule to Color(0xFFC25A1B) // Orange/Amber
-        else -> Icons.Rounded.RadioButtonUnchecked to MaterialTheme.colorScheme.outline
-    }
-
-    IconButton(onClick = onClick, modifier = Modifier.size(size)) {
-        Icon(icon, contentDescription = status, tint = color, modifier = Modifier.size(size * 0.75f))
-    }
-}

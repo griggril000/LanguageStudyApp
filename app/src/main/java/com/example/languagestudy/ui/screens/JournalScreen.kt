@@ -54,12 +54,21 @@ fun JournalScreen(
     var title by remember { mutableStateOf("") }
     var contentText by remember { mutableStateOf("") }
     var showAddSheet by remember { mutableStateOf(false) }
+    var localErrorMessage by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState()
 
     LaunchedEffect(Unit) {
         viewModel.error.collect { message ->
-            snackbarHostState.showSnackbar(message)
+            if (showAddSheet) {
+                localErrorMessage = message
+            } else {
+                snackbarHostState.showSnackbar(message)
+            }
         }
+    }
+
+    LaunchedEffect(showAddSheet) {
+        if (!showAddSheet) localErrorMessage = null
     }
 
     Scaffold(
@@ -91,6 +100,14 @@ fun JournalScreen(
                 ) {
                     Text("New Journal Entry", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(16.dp))
+                    if (localErrorMessage != null) {
+                        Text(
+                            text = localErrorMessage!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
                     OutlinedTextField(
                         value = title,
                         onValueChange = { title = it },

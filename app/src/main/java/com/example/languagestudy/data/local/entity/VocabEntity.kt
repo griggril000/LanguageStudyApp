@@ -7,8 +7,9 @@ import androidx.room.PrimaryKey
 data class VocabEntity(
     @PrimaryKey val id: String = java.util.UUID.randomUUID().toString(),
     val word: String,
-    val translation: String,
-    val category: String,
-    val language: String = "en", // Default to English or current study language
+    val translation: String = "",
+    val category: String = "General",
+    val status: String = "NOT_STARTED", // NOT_STARTED, IN_PROGRESS, PROFICIENT
+    val language: String = "en",
     val dateAdded: Long = System.currentTimeMillis()
 )
