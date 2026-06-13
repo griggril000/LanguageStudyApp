@@ -1,11 +1,16 @@
 package com.example.languagestudy.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -18,10 +23,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.languagestudy.LanguageStudyApplication
 import com.example.languagestudy.data.local.entity.SkillEntity
@@ -31,12 +39,16 @@ import com.example.languagestudy.ui.components.AppFAB
 import com.example.languagestudy.ui.components.DeleteConfirmationDialog
 import com.example.languagestudy.ui.components.EmptyState
 import com.example.languagestudy.ui.components.GlobalSearchBar
+import com.example.languagestudy.ui.components.LanguageDropdown
 import com.example.languagestudy.ui.components.NoResultsState
 import com.example.languagestudy.ui.components.ProgressStatusLegend
 import com.example.languagestudy.ui.components.StatusIcon
 import com.example.languagestudy.ui.viewmodel.SearchViewModel
 import com.example.languagestudy.ui.viewmodel.SkillViewModel
 import com.example.languagestudy.ui.viewmodel.SkillViewModelFactory
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,9 +65,24 @@ fun SkillsScreen(
     val skillsList by viewModel.filteredSkills.collectAsState()
     val allSkills by viewModel.allSkills.collectAsState()
     val availableLanguages by viewModel.availableLanguages.collectAsState()
+    val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val selectedLanguage by viewModel.selectedLanguage.collectAsState()
     val searchQuery by searchViewModel.query.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    val lazyListState = rememberLazyListState()
+
+    // Local state for drag and drop
+    var draggedItemIndex by remember { mutableStateOf<Int?>(null) }
+    var draggingOffset by remember { mutableStateOf(0f) }
+    var localSkillsList by remember { mutableStateOf(skillsList) }
+    var autoScrollJob by remember { mutableStateOf<Job?>(null) }
+
+    LaunchedEffect(skillsList) {
+        if (draggedItemIndex == null) {
+            localSkillsList = skillsList
+        }
+    }
 
     LaunchedEffect(userId) {
         viewModel.initUserId(userId)
@@ -137,13 +164,12 @@ fun SkillsScreen(
                         minLines = 3
                     )
                     Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = skillLanguage,
-                        onValueChange = { skillLanguage = it },
-                        label = { Text("Language (optional)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
+                    LanguageDropdown(
+                        selectedLanguage = skillLanguage,
+                        onLanguageSelected = { skillLanguage = it },
+                        availableLanguages = learnedLanguages,
+                        label = "Language (optional)",
+                        includeNone = true
                     )
                     Spacer(Modifier.height(24.dp))
                     AppButton(
@@ -199,20 +225,121 @@ fun SkillsScreen(
                 } else if (skillsList.isEmpty() && searchQuery.isNotEmpty()) {
                     NoResultsState(query = searchQuery)
                 } else {
+                    val isDragEnabled = searchQuery.isBlank() && selectedLanguage == null
                     LazyColumn(
+                        state = lazyListState,
                         verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .pointerInput(localSkillsList, isDragEnabled) {
+                                if (!isDragEnabled) return@pointerInput
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = { offset ->
+                                        lazyListState.layoutInfo.visibleItemsInfo
+                                            .firstOrNull { item ->
+                                                offset.y.toInt() in item.offset..(item.offset + item.size)
+                                            }?.also {
+                                                draggedItemIndex = it.index
+                                            }
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        draggingOffset += dragAmount.y
+
+                                        val currentIdx = draggedItemIndex ?: return@detectDragGesturesAfterLongPress
+                                        val itemInfo = lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == currentIdx } ?: return@detectDragGesturesAfterLongPress
+                                        
+                                        val currentItemY = itemInfo.offset + draggingOffset
+                                        
+                                        // Check for swap
+                                        val targetItem = lazyListState.layoutInfo.visibleItemsInfo.find { 
+                                            it.index != currentIdx &&
+                                            currentItemY.toInt() in it.offset..(it.offset + it.size) &&
+                                            (if (dragAmount.y > 0) currentItemY + itemInfo.size > it.offset + it.size / 2
+                                             else currentItemY < it.offset + it.size / 2)
+                                        }
+
+                                        if (targetItem != null) {
+                                            val targetIdx = targetItem.index
+                                            val newList = localSkillsList.toMutableList()
+                                            val item = newList.removeAt(currentIdx)
+                                            newList.add(targetIdx, item)
+                                            localSkillsList = newList
+                                            
+                                            // Adjust offset to maintain item under finger
+                                            draggingOffset += (itemInfo.offset - targetItem.offset)
+                                            draggedItemIndex = targetIdx
+                                        }
+
+                                        // Auto-scroll logic
+                                        val viewPortTop = 0
+                                        val viewPortBottom = lazyListState.layoutInfo.viewportEndOffset
+                                        if (currentItemY < viewPortTop + 100 && autoScrollJob == null) {
+                                            autoScrollJob = coroutineScope.launch {
+                                                while (draggingOffset < 0) {
+                                                    lazyListState.scrollBy(-10f)
+                                                    delay(10)
+                                                }
+                                                autoScrollJob = null
+                                            }
+                                        } else if (currentItemY + itemInfo.size > viewPortBottom - 100 && autoScrollJob == null) {
+                                            autoScrollJob = coroutineScope.launch {
+                                                while (true) {
+                                                    lazyListState.scrollBy(10f)
+                                                    delay(10)
+                                                }
+                                            }
+                                        } else if (currentItemY.toInt() in (viewPortTop + 100)..(viewPortBottom - 100)) {
+                                            autoScrollJob?.cancel()
+                                            autoScrollJob = null
+                                        }
+                                    },
+                                    onDragEnd = {
+                                        draggedItemIndex?.let { finalIdx ->
+                                            val itemAtFinal = localSkillsList[finalIdx]
+                                            val originalIdx = skillsList.indexOfFirst { it.id == itemAtFinal.id }
+                                            if (originalIdx != -1 && originalIdx != finalIdx) {
+                                                viewModel.moveSkill(originalIdx, finalIdx)
+                                            }
+                                        }
+                                        draggedItemIndex = null
+                                        draggingOffset = 0f
+                                        autoScrollJob?.cancel()
+                                        autoScrollJob = null
+                                    },
+                                    onDragCancel = {
+                                        draggedItemIndex = null
+                                        draggingOffset = 0f
+                                        autoScrollJob?.cancel()
+                                        autoScrollJob = null
+                                        localSkillsList = skillsList
+                                    }
+                                )
+                            }
                     ) {
-                        items(skillsList, key = { it.id }) { skill ->
+                        itemsIndexed(localSkillsList, key = { _, skill -> skill.id }) { index, skill ->
+                            val isDragging = index == draggedItemIndex
+                            val scale by animateFloatAsState(if (isDragging) 1.05f else 1f, label = "")
+                            val elevation by animateFloatAsState(if (isDragging) 8f else 0f, label = "")
+
                             SkillItem(
                                 skill = skill,
+                                learnedLanguages = learnedLanguages,
+                                isDragEnabled = isDragEnabled,
                                 onStatusCycle = { viewModel.cycleSkillStatus(skill) },
                                 onDelete = { viewModel.deleteSkill(skill) },
                                 onAddSubtask = { viewModel.addSubtask(skill, it) },
                                 onSubtaskStatusCycle = { viewModel.updateSubtaskStatus(skill, it) },
                                 onSubtaskDelete = { viewModel.deleteSubtask(skill, it) },
                                 onEditSkill = { name, lang -> viewModel.updateSkill(skill.copy(name = name, language = lang)) },
-                                onEditSubtask = { subtaskId, newText -> viewModel.updateSubtaskText(skill, subtaskId, newText) }
+                                onEditSubtask = { subtaskId, newText -> viewModel.updateSubtaskText(skill, subtaskId, newText) },
+                                modifier = Modifier
+                                    .graphicsLayer {
+                                        translationY = if (isDragging) draggingOffset else 0f
+                                        scaleX = scale
+                                        scaleY = scale
+                                    }
+                                    .zIndex(if (isDragging) 1f else 0f)
                             )
                         }
                     }
@@ -229,13 +356,16 @@ fun SkillsScreen(
 @Composable
 fun SkillItem(
     skill: SkillEntity,
+    learnedLanguages: List<String>,
     onStatusCycle: () -> Unit,
     onDelete: () -> Unit,
     onAddSubtask: (String) -> Unit,
     onSubtaskStatusCycle: (String) -> Unit,
     onSubtaskDelete: (String) -> Unit,
     onEditSkill: (String, String) -> Unit,
-    onEditSubtask: (String, String) -> Unit
+    onEditSubtask: (String, String) -> Unit,
+    modifier: Modifier = Modifier,
+    isDragEnabled: Boolean = true
 ) {
     var expanded by remember { mutableStateOf(false) }
     var subtaskText by remember { mutableStateOf("") }
@@ -266,11 +396,12 @@ fun SkillItem(
                         shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = editLang,
-                        onValueChange = { editLang = it },
-                        label = { Text("Language") },
-                        shape = RoundedCornerShape(12.dp)
+                    LanguageDropdown(
+                        selectedLanguage = editLang,
+                        onLanguageSelected = { editLang = it },
+                        availableLanguages = learnedLanguages,
+                        label = "Language",
+                        includeNone = true
                     )
                 }
             },
@@ -369,12 +500,21 @@ fun SkillItem(
                         )
                     }
 
-                    Icon(
-                        if (expanded) Icons.Rounded.KeyboardArrowDown else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.outline
-                    )
+                    if (isDragEnabled) {
+                        Icon(
+                            Icons.Rounded.DragHandle,
+                            contentDescription = "Drag to reorder",
+                            tint = MaterialTheme.colorScheme.outlineVariant,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Icon(
+                            if (expanded) Icons.Rounded.KeyboardArrowDown else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.outline
+                        )
+                    }
                 }
 
                 if (skill.progress > 0 || skill.status == "IN_PROGRESS") {

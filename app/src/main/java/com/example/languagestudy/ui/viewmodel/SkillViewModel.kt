@@ -25,6 +25,9 @@ class SkillViewModel(
     private val _selectedLanguage = MutableStateFlow<String?>(null)
     val selectedLanguage: StateFlow<String?> = _selectedLanguage.asStateFlow()
 
+    private val _learnedLanguages = MutableStateFlow<List<String>>(emptyList())
+    val learnedLanguages: StateFlow<List<String>> = _learnedLanguages.asStateFlow()
+
     val filteredSkills: StateFlow<List<SkillEntity>> = combine(allSkills, _searchQuery, _selectedLanguage) { skills, query, lang ->
         skills.filter { skill ->
             (query.isBlank() || skill.name.contains(query, ignoreCase = true) || 
@@ -50,6 +53,7 @@ class SkillViewModel(
         }
         viewModelScope.launch {
             settingsRepository.getUserSettings(id).collect { settings ->
+                _learnedLanguages.value = settings.learnedLanguages
                 if (_selectedLanguage.value == null) {
                     _selectedLanguage.value = settings.languageLearning
                 }
@@ -64,14 +68,36 @@ class SkillViewModel(
         }
         
         val skillNames = input.split("\n").filter { it.trim().isNotBlank() }
+        val currentMaxPriority = allSkills.value.maxOfOrNull { it.priority } ?: -1
         
         viewModelScope.launch {
             try {
-                skillNames.forEach { name ->
-                    repository.insert(SkillEntity(name = name.trim(), language = language), userId)
+                skillNames.forEachIndexed { index, name ->
+                    repository.insert(SkillEntity(
+                        name = name.trim(), 
+                        language = language,
+                        priority = currentMaxPriority + 1 + index
+                    ), userId)
                 }
             } catch (e: Exception) {
                 _error.emit("Failed to add skill: ${e.message}")
+            }
+        }
+    }
+
+    fun moveSkill(fromIndex: Int, toIndex: Int) {
+        val list = filteredSkills.value.toMutableList()
+        if (fromIndex !in list.indices || toIndex !in list.indices) return
+        
+        val item = list.removeAt(fromIndex)
+        list.add(toIndex, item)
+        
+        // Update priorities for the whole list to ensure they are consistent
+        viewModelScope.launch {
+            list.forEachIndexed { index, skill ->
+                if (skill.priority != index) {
+                    repository.update(skill.copy(priority = index), userId)
+                }
             }
         }
     }

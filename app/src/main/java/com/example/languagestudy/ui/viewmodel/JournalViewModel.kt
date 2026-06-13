@@ -5,10 +5,14 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.languagestudy.data.local.entity.JournalEntryEntity
 import com.example.languagestudy.data.repository.JournalRepository
+import com.example.languagestudy.data.repository.SettingsRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-class JournalViewModel(private val repository: JournalRepository) : ViewModel() {
+class JournalViewModel(
+    private val repository: JournalRepository,
+    private val settingsRepository: SettingsRepository
+) : ViewModel() {
     private var userId: String? = null
 
     val allEntries: StateFlow<List<JournalEntryEntity>> = repository.allEntries
@@ -16,6 +20,12 @@ class JournalViewModel(private val repository: JournalRepository) : ViewModel() 
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _learnedLanguages = MutableStateFlow<List<String>>(emptyList())
+    val learnedLanguages: StateFlow<List<String>> = _learnedLanguages.asStateFlow()
+
+    private val _currentLanguage = MutableStateFlow("")
+    val currentLanguage: StateFlow<String> = _currentLanguage.asStateFlow()
 
     val filteredEntries: StateFlow<List<JournalEntryEntity>> = combine(allEntries, _searchQuery) { entries, query ->
         if (query.isBlank()) entries
@@ -34,9 +44,15 @@ class JournalViewModel(private val repository: JournalRepository) : ViewModel() 
         viewModelScope.launch {
             repository.startSync(id).collect()
         }
+        viewModelScope.launch {
+            settingsRepository.getUserSettings(id).collect { settings ->
+                _learnedLanguages.value = settings.learnedLanguages
+                _currentLanguage.value = settings.languageLearning
+            }
+        }
     }
 
-    fun saveEntry(id: String? = null, title: String, content: String) {
+    fun saveEntry(id: String? = null, title: String, content: String, language: String = "") {
         if (title.isBlank() || content.isBlank()) {
             viewModelScope.launch { _error.emit("Title and content cannot be empty") }
             return
@@ -44,9 +60,9 @@ class JournalViewModel(private val repository: JournalRepository) : ViewModel() 
         viewModelScope.launch {
             try {
                 val entry = if (id != null) {
-                    JournalEntryEntity(id = id, title = title.trim(), content = content.trim())
+                    JournalEntryEntity(id = id, title = title.trim(), content = content.trim(), language = language)
                 } else {
-                    JournalEntryEntity(title = title.trim(), content = content.trim())
+                    JournalEntryEntity(title = title.trim(), content = content.trim(), language = language)
                 }
                 repository.insert(entry, userId)
             } catch (e: Exception) {
@@ -66,11 +82,14 @@ class JournalViewModel(private val repository: JournalRepository) : ViewModel() 
     }
 }
 
-class JournalViewModelFactory(private val repository: JournalRepository) : ViewModelProvider.Factory {
+class JournalViewModelFactory(
+    private val repository: JournalRepository,
+    private val settingsRepository: SettingsRepository
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(JournalViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return JournalViewModel(repository) as T
+            return JournalViewModel(repository, settingsRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

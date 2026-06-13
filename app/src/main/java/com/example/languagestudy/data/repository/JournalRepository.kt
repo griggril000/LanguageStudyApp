@@ -47,6 +47,7 @@ class JournalRepository(private val journalDao: JournalDao) {
                                     id = doc.id,
                                     title = data["title"] as? String ?: "",
                                     content = data["content"] as? String ?: "",
+                                    language = data["language"] as? String ?: "",
                                     timestamp = (data["timestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time ?: now
                                 )
                                 journalDao.insertEntry(entry)
@@ -85,6 +86,7 @@ class JournalRepository(private val journalDao: JournalDao) {
         val entryData = mapOf(
             "title" to entry.title,
             "content" to entry.content,
+            "language" to entry.language,
             "timestamp" to com.google.firebase.Timestamp(java.util.Date(entry.timestamp))
         )
 

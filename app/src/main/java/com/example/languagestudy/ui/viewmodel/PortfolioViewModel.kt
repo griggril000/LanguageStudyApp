@@ -28,6 +28,9 @@ class PortfolioViewModel(
     private val _currentLanguage = MutableStateFlow("")
     val currentLanguage: StateFlow<String> = _currentLanguage.asStateFlow()
 
+    private val _learnedLanguages = MutableStateFlow<List<String>>(emptyList())
+    val learnedLanguages: StateFlow<List<String>> = _learnedLanguages.asStateFlow()
+
     val filteredItems: StateFlow<List<PortfolioItem>> = combine(_items, _searchQuery, _currentLanguage) { items, query, lang ->
         items.filter { 
             (query.isBlank() || it.title.contains(query, ignoreCase = true) || it.link.contains(query, ignoreCase = true)) &&
@@ -68,12 +71,13 @@ class PortfolioViewModel(
         }
         viewModelScope.launch {
             settingsRepository.getUserSettings(userId).collect { settings ->
+                _learnedLanguages.value = settings.learnedLanguages
                 _currentLanguage.value = settings.languageLearning
             }
         }
     }
 
-    fun addItem(title: String, link: String) {
+    fun addItem(title: String, link: String, language: String? = null) {
         if (title.isBlank()) {
             viewModelScope.launch { _error.emit("Title cannot be empty") }
             return
@@ -105,7 +109,7 @@ class PortfolioViewModel(
                         link = resolvedUrl,
                         type = type,
                         videoId = youtubeId,
-                        language = _currentLanguage.value
+                        language = language ?: _currentLanguage.value
                     )
                 )
                 _addSuccess.emit(Unit)

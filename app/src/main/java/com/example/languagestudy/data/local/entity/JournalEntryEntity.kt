@@ -8,5 +8,6 @@ data class JournalEntryEntity(
     @PrimaryKey val id: String = java.util.UUID.randomUUID().toString(),
     val title: String,
     val content: String,
+    val language: String = "",
     val timestamp: Long = System.currentTimeMillis()
 )

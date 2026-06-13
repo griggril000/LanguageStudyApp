@@ -28,6 +28,8 @@ import com.example.languagestudy.ui.components.AppButton
 import com.example.languagestudy.ui.components.DeleteConfirmationDialog
 import com.example.languagestudy.ui.components.EmptyState
 import com.example.languagestudy.ui.components.GlobalSearchBar
+import com.example.languagestudy.ui.components.LanguageDropdown
+import com.example.languagestudy.ui.components.NoResultsState
 import com.example.languagestudy.ui.components.ProgressStatusLegend
 import com.example.languagestudy.ui.components.StatusIcon
 import com.example.languagestudy.ui.viewmodel.SearchViewModel
@@ -51,6 +53,7 @@ fun VocabScreen(
     val categories by viewModel.categories.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
+    val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val searchQuery by searchViewModel.query.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -186,52 +189,56 @@ fun VocabScreen(
                         shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(Modifier.height(12.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        ExposedDropdownMenuBox(
+                    ExposedDropdownMenuBox(
+                        expanded = categoryExpanded,
+                        onExpandedChange = { categoryExpanded = !categoryExpanded },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = category,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Category") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
+                            modifier = Modifier
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                                .fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        ExposedDropdownMenu(
                             expanded = categoryExpanded,
-                            onExpandedChange = { categoryExpanded = !categoryExpanded },
-                            modifier = Modifier.weight(1f)
+                            onDismissRequest = { categoryExpanded = false }
                         ) {
-                            OutlinedTextField(
-                                value = category,
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Category") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
-                                modifier = Modifier.menuAnchor(),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            ExposedDropdownMenu(
-                                expanded = categoryExpanded,
-                                onDismissRequest = { categoryExpanded = false }
-                            ) {
-                                categories.forEach { cat ->
-                                    DropdownMenuItem(
-                                        text = { Text(cat) },
-                                        onClick = {
-                                            category = cat
-                                            categoryExpanded = false
-                                        }
-                                    )
-                                }
+                            categories.forEach { cat ->
                                 DropdownMenuItem(
-                                    text = { Text("+ New Category", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
+                                    text = { Text(cat) },
                                     onClick = {
-                                        isAddingNewCategory = true
+                                        category = cat
                                         categoryExpanded = false
                                     }
                                 )
                             }
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        "+ New Category",
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                },
+                                onClick = {
+                                    isAddingNewCategory = true
+                                    categoryExpanded = false
+                                }
+                            )
                         }
-                        Spacer(Modifier.width(8.dp))
-                        OutlinedTextField(
-                            value = language,
-                            onValueChange = { language = it },
-                            label = { Text("Lang") },
-                            modifier = Modifier.width(80.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        )
                     }
+                    Spacer(Modifier.height(12.dp))
+                    LanguageDropdown(
+                        selectedLanguage = language,
+                        onLanguageSelected = { language = it },
+                        availableLanguages = learnedLanguages
+                    )
                     Spacer(Modifier.height(24.dp))
                     AppButton(
                         onClick = {
@@ -329,6 +336,7 @@ fun VocabScreen(
                         items(vocabList, key = { it.id }) { vocab ->
                             VocabItem(
                                 vocab = vocab, 
+                                learnedLanguages = learnedLanguages,
                                 onDelete = { viewModel.deleteVocab(vocab) },
                                 onEdit = { w, t, c, l -> 
                                     viewModel.updateVocab(vocab.copy(word = w, translation = t, category = c, language = l))
@@ -348,6 +356,7 @@ fun VocabScreen(
 @Composable
 fun VocabItem(
     vocab: VocabEntity, 
+    learnedLanguages: List<String>,
     onDelete: () -> Unit,
     onEdit: (String, String, String, String) -> Unit,
     onStatusCycle: () -> Unit
@@ -382,23 +391,11 @@ fun VocabItem(
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(8.dp))
-                    Row {
-                        OutlinedTextField(
-                            value = editCategory,
-                            onValueChange = { editCategory = it },
-                            label = { Text("Category") },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        OutlinedTextField(
-                            value = editLanguage,
-                            onValueChange = { editLanguage = it },
-                            label = { Text("Lang") },
-                            modifier = Modifier.width(80.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                    }
+                    LanguageDropdown(
+                        selectedLanguage = editLanguage,
+                        onLanguageSelected = { editLanguage = it },
+                        availableLanguages = learnedLanguages
+                    )
                 }
             },
             confirmButton = {

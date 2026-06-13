@@ -24,6 +24,9 @@ class VocabViewModel(
     private val _currentLanguage = MutableStateFlow("")
     val currentLanguage: StateFlow<String> = _currentLanguage.asStateFlow()
 
+    private val _learnedLanguages = MutableStateFlow<List<String>>(emptyList())
+    val learnedLanguages: StateFlow<List<String>> = _learnedLanguages.asStateFlow()
+
     private val _selectedCategory = MutableStateFlow<String?>(null)
     val selectedCategory: StateFlow<String?> = _selectedCategory.asStateFlow()
 
@@ -57,6 +60,7 @@ class VocabViewModel(
         }
         viewModelScope.launch {
             settingsRepository.getUserSettings(id).collect { settings ->
+                _learnedLanguages.value = settings.learnedLanguages
                 _currentLanguage.value = settings.languageLearning
             }
         }

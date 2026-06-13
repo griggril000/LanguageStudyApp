@@ -25,6 +25,7 @@ import com.example.languagestudy.ui.components.AppFAB
 import com.example.languagestudy.ui.components.DeleteConfirmationDialog
 import com.example.languagestudy.ui.components.EmptyState
 import com.example.languagestudy.ui.components.GlobalSearchBar
+import com.example.languagestudy.ui.components.LanguageDropdown
 import com.example.languagestudy.ui.components.NoResultsState
 import com.example.languagestudy.ui.viewmodel.JournalViewModel
 import com.example.languagestudy.ui.viewmodel.JournalViewModelFactory
@@ -37,14 +38,17 @@ fun JournalScreen(
     searchViewModel: SearchViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val repository = (context.applicationContext as LanguageStudyApplication).journalRepository
+    val app = context.applicationContext as LanguageStudyApplication
+    val repository = app.journalRepository
     val viewModel: JournalViewModel = viewModel(
         key = "journal_$userId",
-        factory = JournalViewModelFactory(repository)
+        factory = JournalViewModelFactory(repository, app.settingsRepository)
     )
     val entries by viewModel.filteredEntries.collectAsState()
     val allEntries by viewModel.allEntries.collectAsState()
     val searchQuery by searchViewModel.query.collectAsState()
+    val learnedLanguages by viewModel.learnedLanguages.collectAsState()
+    val currentLanguage by viewModel.currentLanguage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(userId) {
@@ -57,6 +61,7 @@ fun JournalScreen(
 
     var title by remember { mutableStateOf("") }
     var contentText by remember { mutableStateOf("") }
+    var language by remember { mutableStateOf("") }
     var editingEntry by remember { mutableStateOf<JournalEntryEntity?>(null) }
     var showSheet by remember { mutableStateOf(false) }
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
@@ -68,6 +73,7 @@ fun JournalScreen(
             editingEntry = null
             title = ""
             contentText = ""
+            language = currentLanguage
         }
     }
 
@@ -75,6 +81,7 @@ fun JournalScreen(
         editingEntry?.let {
             title = it.title
             contentText = it.content
+            language = it.language
             showSheet = true
         }
     }
@@ -144,10 +151,18 @@ fun JournalScreen(
                         shape = RoundedCornerShape(12.dp),
                         minLines = 5
                     )
+                    Spacer(Modifier.height(12.dp))
+                    LanguageDropdown(
+                        selectedLanguage = language,
+                        onLanguageSelected = { language = it },
+                        availableLanguages = learnedLanguages,
+                        label = "Language (optional)",
+                        includeNone = true
+                    )
                     Spacer(Modifier.height(24.dp))
                     AppButton(
                         onClick = {
-                            viewModel.saveEntry(editingEntry?.id, title, contentText)
+                            viewModel.saveEntry(editingEntry?.id, title, contentText, language)
                             if (title.isNotBlank() && contentText.isNotBlank()) {
                                 showSheet = false
                             }
@@ -264,12 +279,31 @@ fun JournalItem(
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(8.dp))
-                val date = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault()).format(java.util.Date(entry.timestamp))
-                Text(
-                    date,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val date = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault()).format(java.util.Date(entry.timestamp))
+                    Text(
+                        date,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                    if (entry.language.isNotBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer
+                        ) {
+                            Text(
+                                entry.language,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                }
             }
         }
     }

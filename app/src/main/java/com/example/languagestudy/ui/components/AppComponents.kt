@@ -3,7 +3,7 @@ package com.example.languagestudy.ui.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -78,5 +78,61 @@ fun SectionHeader(
             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LanguageDropdown(
+    selectedLanguage: String,
+    onLanguageSelected: (String) -> Unit,
+    availableLanguages: List<String>,
+    modifier: Modifier = Modifier,
+    label: String = "Language",
+    includeNone: Boolean = false
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = selectedLanguage.ifBlank { if (includeNone) "None" else "" },
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            if (includeNone) {
+                DropdownMenuItem(
+                    text = { Text("None") },
+                    onClick = {
+                        onLanguageSelected("")
+                        expanded = false
+                    }
+                )
+            }
+            availableLanguages.forEach { language ->
+                DropdownMenuItem(
+                    text = { Text(language) },
+                    onClick = {
+                        onLanguageSelected(language)
+                        expanded = false
+                    }
+                )
+            }
+        }
     }
 }

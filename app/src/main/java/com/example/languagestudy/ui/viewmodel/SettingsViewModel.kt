@@ -64,6 +64,29 @@ class SettingsViewModel(private val repository: SettingsRepository, private val 
             repository.updateUserSettings(userId, mapOf("languageLearning" to language))
         }
     }
+
+    fun togglePublic(isPublic: Boolean) {
+        viewModelScope.launch {
+            val updates = mutableMapOf<String, Any>("isPublic" to isPublic)
+            if (isPublic && userSettings.value.shareCode.isBlank()) {
+                updates["shareCode"] = generateRandomCode()
+            }
+            repository.updateUserSettings(userId, updates)
+        }
+    }
+
+    fun regenerateShareCode() {
+        viewModelScope.launch {
+            repository.updateUserSettings(userId, mapOf("shareCode" to generateRandomCode()))
+        }
+    }
+
+    private fun generateRandomCode(): String {
+        val chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        return (1..5)
+            .map { chars.random() }
+            .joinToString("")
+    }
 }
 
 class SettingsViewModelFactory(private val repository: SettingsRepository, private val userId: String) : ViewModelProvider.Factory {

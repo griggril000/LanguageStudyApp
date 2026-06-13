@@ -30,6 +30,7 @@ import com.example.languagestudy.ui.components.AppFAB
 import com.example.languagestudy.ui.components.DeleteConfirmationDialog
 import com.example.languagestudy.ui.components.EmptyState
 import com.example.languagestudy.ui.components.GlobalSearchBar
+import com.example.languagestudy.ui.components.LanguageDropdown
 import com.example.languagestudy.ui.components.NoResultsState
 import com.example.languagestudy.ui.components.SoundCloudPlayer
 import com.example.languagestudy.ui.components.YouTubePlayer
@@ -47,6 +48,8 @@ fun PortfolioScreen(
     val items by viewModel.filteredItems.collectAsState()
     val allItems by viewModel.items.collectAsState()
     val searchQuery by searchViewModel.query.collectAsState()
+    val currentLanguage by viewModel.currentLanguage.collectAsState()
+    val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -56,9 +59,14 @@ fun PortfolioScreen(
 
     var title by remember { mutableStateOf("") }
     var link by remember { mutableStateOf("") }
+    var itemLanguage by remember { mutableStateOf("") }
     var showAddSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(currentLanguage) {
+        itemLanguage = currentLanguage
+    }
 
     LaunchedEffect(Unit) {
         viewModel.error.collect { message ->
@@ -141,9 +149,16 @@ fun PortfolioScreen(
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true
                     )
+                    Spacer(Modifier.height(12.dp))
+                    LanguageDropdown(
+                        selectedLanguage = itemLanguage,
+                        onLanguageSelected = { itemLanguage = it },
+                        availableLanguages = learnedLanguages,
+                        label = "Language"
+                    )
                     Spacer(Modifier.height(24.dp))
                     AppButton(
-                        onClick = { viewModel.addItem(title, link) },
+                        onClick = { viewModel.addItem(title, link, itemLanguage) },
                         loading = isLoading,
                         text = "Add to Portfolio",
                         modifier = Modifier.fillMaxWidth()

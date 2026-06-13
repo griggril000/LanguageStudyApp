@@ -29,7 +29,9 @@ class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFire
             if (snapshot != null && snapshot.exists()) {
                 val learnedLanguages = snapshot.get("learnedLanguages") as? List<String> ?: emptyList()
                 val languageLearning = snapshot.getString("languageLearning") ?: ""
-                trySend(UserSettings(learnedLanguages, languageLearning))
+                val shareCode = snapshot.getString("shareCode") ?: ""
+                val isPublic = snapshot.getBoolean("isPublic") ?: false
+                trySend(UserSettings(learnedLanguages, languageLearning, shareCode, isPublic))
             } else {
                 trySend(UserSettings())
             }

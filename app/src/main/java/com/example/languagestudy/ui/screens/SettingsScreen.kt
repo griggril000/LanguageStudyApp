@@ -26,6 +26,11 @@ import com.example.languagestudy.ui.auth.AuthViewModel
 import com.example.languagestudy.ui.components.SectionHeader
 import com.example.languagestudy.ui.viewmodel.SettingsViewModel
 
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Refresh
+// ... (existing imports)
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
@@ -45,7 +50,7 @@ fun SettingsScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // User Info Card
+        // ... (User Info Card)
         if (currentUser != null) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
