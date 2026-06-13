@@ -85,7 +85,7 @@ class PortfolioViewModel(
         
         val sanitizedUrl = UrlUtils.sanitizeHttpUrl(link)
         if (sanitizedUrl == null) {
-            viewModelScope.launch { _error.emit("Please enter a valid YouTube or SoundCloud link") }
+            viewModelScope.launch { _error.emit("Please enter a valid link") }
             return
         }
 
@@ -115,6 +115,55 @@ class PortfolioViewModel(
                 _addSuccess.emit(Unit)
             } catch (e: Exception) {
                 _error.emit("Failed to add item: ${e.message}")
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun updateItem(id: String, title: String, link: String, language: String? = null) {
+        if (title.isBlank()) {
+            viewModelScope.launch { _error.emit("Title cannot be empty") }
+            return
+        }
+
+        val sanitizedUrl = UrlUtils.sanitizeHttpUrl(link)
+        if (sanitizedUrl == null) {
+            viewModelScope.launch { _error.emit("Please enter a valid link") }
+            return
+        }
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val resolvedUrl = UrlUtils.resolveCanonicalUrl(sanitizedUrl)
+                val type = UrlUtils.getPortfolioType(resolvedUrl)
+                
+                if (type == null) {
+                    _error.emit("Only YouTube and SoundCloud links are supported")
+                    return@launch
+                }
+
+                val youtubeId = UrlUtils.getYouTubeId(resolvedUrl)
+
+                val existingItem = _items.value.find { it.id == id }
+                
+                repository.updatePortfolioItem(
+                    userId,
+                    PortfolioItem(
+                        id = id,
+                        title = title.trim(),
+                        link = resolvedUrl,
+                        type = type,
+                        videoId = youtubeId,
+                        language = language ?: _currentLanguage.value,
+                        isTop = existingItem?.isTop ?: false,
+                        isPrivate = existingItem?.isPrivate ?: false
+                    )
+                )
+                _addSuccess.emit(Unit)
+            } catch (e: Exception) {
+                _error.emit("Failed to update item: ${e.message}")
             } finally {
                 _isLoading.value = false
             }

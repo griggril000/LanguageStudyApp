@@ -8,15 +8,12 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.*
-import androidx.compose.material.icons.rounded.RadioButtonChecked
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -247,7 +245,7 @@ fun SkillsScreen(
                                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             }
                                     },
-                                    onDrag = { change, dragAmount ->
+                                    onDrag = { change, _ ->
                                         change.consume()
                                         
                                         val currentIdx = draggedItemIndex ?: return@detectDragGesturesAfterLongPress
@@ -319,10 +317,9 @@ fun SkillsScreen(
                                 )
                             }
                     ) {
-                        itemsIndexed(localSkillsList, key = { _, skill -> skill.id }) { index, skill ->
+                        itemsIndexed(localSkillsList, key = { _, skill: SkillEntity -> skill.id }) { index: Int, skill: SkillEntity ->
                             val isDragging = index == draggedItemIndex
-                            val scale by animateFloatAsState(if (isDragging) 1.05f else 1f, label = "")
-                            val elevation by animateFloatAsState(if (isDragging) 8f else 0f, label = "")
+                            val scale by animateFloatAsState(if (isDragging) 1.05f else 1f, label = "drag_scale")
 
                             SkillItem(
                                 skill = skill,
@@ -640,4 +637,3 @@ fun SubtaskItem(
         }
     }
 }
-

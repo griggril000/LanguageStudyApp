@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -61,11 +62,32 @@ fun PortfolioScreen(
     var link by remember { mutableStateOf("") }
     var itemLanguage by remember { mutableStateOf("") }
     var showAddSheet by remember { mutableStateOf(false) }
+    var editingItem by remember { mutableStateOf<PortfolioItem?>(null) }
     val sheetState = rememberModalBottomSheetState()
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
 
+    LaunchedEffect(editingItem) {
+        if (editingItem != null) {
+            title = editingItem!!.title
+            link = editingItem!!.link
+            itemLanguage = editingItem!!.language
+            showAddSheet = true
+        }
+    }
+
+    LaunchedEffect(showAddSheet) {
+        if (!showAddSheet) {
+            editingItem = null
+            title = ""
+            link = ""
+            localErrorMessage = null
+        }
+    }
+
     LaunchedEffect(currentLanguage) {
-        itemLanguage = currentLanguage
+        if (editingItem == null) {
+            itemLanguage = currentLanguage
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -84,6 +106,7 @@ fun PortfolioScreen(
             link = ""
             localErrorMessage = null
             showAddSheet = false
+            editingItem = null
         }
     }
 
@@ -122,7 +145,11 @@ fun PortfolioScreen(
                         .padding(16.dp)
                         .padding(bottom = 16.dp)
                 ) {
-                    Text("Add Portfolio Item", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (editingItem == null) "Add Portfolio Item" else "Edit Portfolio Item",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                     Spacer(Modifier.height(16.dp))
                     if (localErrorMessage != null) {
                         Text(
@@ -158,9 +185,15 @@ fun PortfolioScreen(
                     )
                     Spacer(Modifier.height(24.dp))
                     AppButton(
-                        onClick = { viewModel.addItem(title, link, itemLanguage) },
+                        onClick = {
+                            if (editingItem == null) {
+                                viewModel.addItem(title, link, itemLanguage)
+                            } else {
+                                viewModel.updateItem(editingItem!!.id, title, link, itemLanguage)
+                            }
+                        },
                         loading = isLoading,
-                        text = "Add to Portfolio",
+                        text = if (editingItem == null) "Add to Portfolio" else "Save Changes",
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -200,6 +233,7 @@ fun PortfolioScreen(
                             items(featuredItems, key = { it.id }) { item ->
                                 FeaturedPortfolioItem(
                                     item = item,
+                                    onEdit = { editingItem = item },
                                     onDelete = { viewModel.deleteItem(item.id) },
                                     onUnfeature = { viewModel.toggleFeatured(item) }
                                 )
@@ -214,6 +248,7 @@ fun PortfolioScreen(
                                 StandardPortfolioItem(
                                     item = item,
                                     onPlay = { onPlay(item.link) },
+                                    onEdit = { editingItem = item },
                                     onDelete = { viewModel.deleteItem(item.id) },
                                     onFeature = { viewModel.toggleFeatured(item) },
                                     canFeature = canFeatureMore
@@ -246,6 +281,7 @@ fun HeaderSection(title: String) {
 @Composable
 fun FeaturedPortfolioItem(
     item: PortfolioItem,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
     onUnfeature: () -> Unit
 ) {
@@ -338,6 +374,11 @@ fun FeaturedPortfolioItem(
                             onClick = onUnfeature,
                             shape = RoundedCornerShape(8.dp)
                         ) { Text("Unfeature") }
+                        
+                        IconButton(onClick = onEdit) {
+                            Icon(Icons.Rounded.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary)
+                        }
+
                         TextButton(
                             onClick = { showDeleteConfirm = true },
                             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
@@ -360,6 +401,7 @@ fun FeaturedPortfolioItem(
 fun StandardPortfolioItem(
     item: PortfolioItem,
     onPlay: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
     onFeature: () -> Unit,
     canFeature: Boolean
@@ -442,6 +484,14 @@ fun StandardPortfolioItem(
                             "Feature",
                             color = if (canFeature) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                         ) 
+                    }
+                    IconButton(onClick = onEdit) {
+                        Icon(
+                            Icons.Rounded.Edit,
+                            contentDescription = "Edit",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                     IconButton(onClick = { showDeleteConfirm = true }) {
                         Icon(

@@ -33,6 +33,7 @@
     - [x] Add destructive action warnings (Delete confirmation dialogs).
     - [x] Add Language filters to Portfolio and Vocab.
     - [x] Implement Category CRUD for Vocabulary (Persistent categories, delete cascade).
+    - [x] Add edit ability to portfolio items.
     - [ ] Implement "Mentor Mode" (View portfolios via shared code).
     - [ ] Implement notifications for study reminders.
 - [ ] **Task 7: Final Polishing**

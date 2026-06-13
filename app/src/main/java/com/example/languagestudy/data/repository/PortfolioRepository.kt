@@ -66,8 +66,14 @@ class FirestorePortfolioRepository(
 
     override suspend fun updatePortfolioItem(userId: String, item: PortfolioItem) {
         if (item.id.isBlank()) return
-        val updates = mapOf(
-            "isTop" to item.isTop
+        val updates = mutableMapOf<String, Any?>(
+            "title" to item.title,
+            "link" to item.link,
+            "isTop" to item.isTop,
+            "isPrivate" to item.isPrivate,
+            "language" to item.language,
+            "type" to item.type,
+            "videoId" to item.videoId
         )
         getCollection(userId).document(item.id).update(updates).await()
     }
