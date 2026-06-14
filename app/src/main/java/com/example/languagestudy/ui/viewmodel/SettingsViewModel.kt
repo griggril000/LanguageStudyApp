@@ -113,7 +113,9 @@ class SettingsViewModel(
     fun setResourceLanguage(language: String) {
         _resourceLanguage.value = language
         viewModelScope.launch {
-            _resources.value = repository.getLanguageResources(language)
+            repository.getLanguageResources(language).collect { 
+                _resources.value = it
+            }
         }
     }
 

@@ -61,21 +61,31 @@ class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFire
         return snapshot.documents.mapNotNull { it.id }.filter { it.isNotBlank() }.sorted()
     }
 
-    suspend fun getLanguageResources(language: String): List<LanguageResource> {
-        if (language.isBlank()) return emptyList()
-        try {
-            val doc = firestore.collection("languageLinks").document(language).get().await()
-            if (!doc.exists()) return emptyList()
-            
-            val links = doc.get("links") as? List<Map<String, String>> ?: return emptyList()
-            return links.map { 
-                LanguageResource(
-                    name = it["name"] ?: "",
-                    url = it["url"] ?: ""
-                )
-            }
-        } catch (e: Exception) {
-            return emptyList()
+    fun getLanguageResources(language: String): Flow<List<LanguageResource>> = callbackFlow {
+        if (language.isBlank()) {
+            trySend(emptyList())
+            awaitClose { }
+            return@callbackFlow
         }
+        val docRef = firestore.collection("languageLinks").document(language)
+        val listener = docRef.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close()
+                return@addSnapshotListener
+            }
+            if (snapshot != null && snapshot.exists()) {
+                val links = snapshot.get("links") as? List<Map<String, String>> ?: emptyList()
+                val resourceList = links.map { 
+                    LanguageResource(
+                        name = it["name"] ?: "",
+                        url = it["url"] ?: ""
+                    )
+                }
+                trySend(resourceList)
+            } else {
+                trySend(emptyList())
+            }
+        }
+        awaitClose { listener.remove() }
     }
 }
