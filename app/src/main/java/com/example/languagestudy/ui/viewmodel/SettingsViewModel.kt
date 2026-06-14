@@ -35,8 +35,12 @@ class SettingsViewModel(
     val errorMessages = _errorMessages.asSharedFlow()
 
     private val actionCooldowns = mutableMapOf<String, Long>()
+    private val actionHistory = mutableListOf<Long>()
+    
     private val DEFAULT_COOLDOWN_MS = 1500L
     private val QUICK_COOLDOWN_MS = 600L
+    private val MAX_PER_HOUR = 30
+    private val MAX_PER_DAY = 100
 
     init {
         loadAvailableLanguages()
@@ -67,9 +71,10 @@ class SettingsViewModel(
 
     private fun checkRateLimit(action: String, cooldown: Long = DEFAULT_COOLDOWN_MS): Boolean {
         val now = System.currentTimeMillis()
+        
+        // 1. Check specific action cooldown (tapping spam)
         val last = actionCooldowns[action] ?: 0L
         if (now - last < cooldown) {
-            // Only show snackbar for the longer cooldowns to avoid annoying the user
             if (cooldown >= DEFAULT_COOLDOWN_MS) {
                 viewModelScope.launch {
                     _errorMessages.emit("Please wait a moment before making more changes.")
@@ -77,7 +82,31 @@ class SettingsViewModel(
             }
             return false
         }
+
+        // 2. Check aggregate limits (per hour/day)
+        val oneHourAgo = now - 3600000L
+        val oneDayAgo = now - 86400000L
+        
+        // Clean up old history
+        actionHistory.removeAll { it < oneDayAgo }
+        
+        val hourlyCount = actionHistory.count { it > oneHourAgo }
+        if (hourlyCount >= MAX_PER_HOUR) {
+            viewModelScope.launch {
+                _errorMessages.emit("Hourly limit reached for settings changes. Try again later.")
+            }
+            return false
+        }
+        
+        if (actionHistory.size >= MAX_PER_DAY) {
+            viewModelScope.launch {
+                _errorMessages.emit("Daily limit reached for settings changes.")
+            }
+            return false
+        }
+
         actionCooldowns[action] = now
+        actionHistory.add(now)
         return true
     }
 

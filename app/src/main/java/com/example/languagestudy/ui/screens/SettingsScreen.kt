@@ -1,5 +1,7 @@
 package com.example.languagestudy.ui.screens
 
+import android.content.ClipData
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -11,14 +13,13 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -33,8 +34,9 @@ fun SettingsScreen(
     settingsViewModel: SettingsViewModel
 ) {
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val uriHandler = LocalUriHandler.current
+    val scope = rememberCoroutineScope()
     val currentUser by authViewModel.user.collectAsState()
     val isMentorMode by authViewModel.isMentorMode.collectAsState()
     val userSettings by settingsViewModel.userSettings.collectAsState()
@@ -197,9 +199,15 @@ fun SettingsScreen(
                             )
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 OutlinedButton(
-                                    onClick = { mentorCode?.let { clipboardManager.setText(AnnotatedString(it)) } },
+                                    onClick = {
+                                        mentorCode?.let { code ->
+                                            scope.launch {
+                                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Mentor Code", code)))
+                                            }
+                                        }
+                                    },
                                     shape = RoundedCornerShape(8.dp),
-                                    enabled = userSettings.mentorCodeEnabled
+                                    enabled = true
                                 ) {
                                     Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
@@ -209,7 +217,7 @@ fun SettingsScreen(
                                     OutlinedButton(
                                         onClick = { settingsViewModel.regenerateMentorCode() },
                                         shape = RoundedCornerShape(8.dp),
-                                        enabled = userSettings.mentorCodeEnabled
+                                        enabled = true
                                     ) {
                                         Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(8.dp))
@@ -233,11 +241,20 @@ fun SettingsScreen(
                         )
                         levels.forEach { (level, description) ->
                             val isSelected = userSettings.mentorAccessLevel == level
-                            val radioEnabled = !isMentorMode && userSettings.mentorCodeEnabled
-                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            val radioEnabled = !isMentorMode
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable(
+                                        enabled = radioEnabled,
+                                        onClick = { settingsViewModel.setMentorAccessLevel(level) }
+                                    )
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 RadioButton(
                                     selected = isSelected,
-                                    onClick = { if (radioEnabled) settingsViewModel.setMentorAccessLevel(level) },
+                                    onClick = null, // Handled by Row's clickable
                                     enabled = radioEnabled
                                 )
                                 Column(modifier = Modifier.padding(start = 8.dp)) {
@@ -286,7 +303,6 @@ fun SettingsScreen(
                 var inputCode by remember { mutableStateOf("") }
                 var isValidating by remember { mutableStateOf(false) }
                 var errorMessage by remember { mutableStateOf<String?>(null) }
-                val scope = rememberCoroutineScope()
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -326,7 +342,7 @@ fun SettingsScreen(
                                         } else {
                                             errorMessage = "Invalid or disabled code"
                                         }
-                                    } catch (e: Exception) {
+                                    } catch (_: Exception) {
                                         errorMessage = "Error validating code"
                                     } finally {
                                         isValidating = false
