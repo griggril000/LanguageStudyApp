@@ -35,7 +35,9 @@ import com.example.languagestudy.ui.viewmodel.SearchViewModel
 @Composable
 fun JournalScreen(
     userId: String,
-    searchViewModel: SearchViewModel = viewModel()
+    searchViewModel: SearchViewModel = viewModel(),
+    isMentorMode: Boolean = false,
+    mentorAccessLevel: String = "view"
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as LanguageStudyApplication
@@ -50,6 +52,8 @@ fun JournalScreen(
     val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val canEditContent = !isMentorMode || mentorAccessLevel == "full"
 
     LaunchedEffect(userId) {
         viewModel.initUserId(userId)
@@ -101,11 +105,13 @@ fun JournalScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            AppFAB(
-                onClick = { showSheet = true },
-                icon = Icons.Rounded.EditNote,
-                contentDescription = "New Entry"
-            )
+            if (canEditContent) {
+                AppFAB(
+                    onClick = { showSheet = true },
+                    icon = Icons.Rounded.EditNote,
+                    contentDescription = "New Entry"
+                )
+            }
         }
     ) { padding ->
         if (showSheet) {
@@ -183,7 +189,8 @@ fun JournalScreen(
 
             Column(modifier = Modifier.padding(16.dp)) {
                 if (allEntries.isEmpty()) {
-                    EmptyState(message = "Your journal is empty. Tap the icon to write your first entry!")
+                    val emptyMessage = if (isMentorMode) "This student's journal is empty." else "Your journal is empty. Tap the icon to write your first entry!"
+                    EmptyState(message = emptyMessage)
                 } else if (entries.isEmpty() && searchQuery.isNotEmpty()) {
                     NoResultsState(query = searchQuery)
                 } else {
@@ -191,8 +198,9 @@ fun JournalScreen(
                         items(entries) { entry ->
                             JournalItem(
                                 entry = entry,
+                                canEdit = canEditContent,
                                 onDelete = { viewModel.deleteEntry(entry) },
-                                onClick = { editingEntry = entry }
+                                onClick = { if (canEditContent) editingEntry = entry }
                             )
                         }
                     }
@@ -206,6 +214,7 @@ fun JournalScreen(
 @Composable
 fun JournalItem(
     entry: JournalEntryEntity,
+    canEdit: Boolean,
     onDelete: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -230,6 +239,8 @@ fun JournalItem(
 
     SwipeToDismissBox(
         state = dismissState,
+        enableDismissFromStartToEnd = false,
+        enableDismissFromEndToStart = canEdit,
         backgroundContent = {
             val color = when (dismissState.dismissDirection) {
                 SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
@@ -252,8 +263,7 @@ fun JournalItem(
                     )
                 }
             }
-        },
-        enableDismissFromStartToEnd = false
+        }
     ) {
         Card(
             onClick = onClick,

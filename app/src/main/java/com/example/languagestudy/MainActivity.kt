@@ -98,11 +98,37 @@ fun MainScreen(
                     key = "portfolio_$userId",
                     factory = PortfolioViewModelFactory(userId, app.settingsRepository)
                 )
-                PortfolioScreen(viewModel = portfolioVm, searchViewModel = searchViewModel) 
+                PortfolioScreen(
+                    viewModel = portfolioVm, 
+                    searchViewModel = searchViewModel,
+                    isMentorMode = isMentorMode,
+                    mentorAccessLevel = userSettings.mentorAccessLevel
+                ) 
             }
-            entry<NavRoute.Vocab> { VocabScreen(effectiveUserId, searchViewModel = searchViewModel) }
-            entry<NavRoute.Skills> { SkillsScreen(effectiveUserId, searchViewModel = searchViewModel) }
-            entry<NavRoute.Journal> { JournalScreen(effectiveUserId, searchViewModel = searchViewModel) }
+            entry<NavRoute.Vocab> { 
+                VocabScreen(
+                    userId = effectiveUserId, 
+                    searchViewModel = searchViewModel,
+                    isMentorMode = isMentorMode,
+                    mentorAccessLevel = userSettings.mentorAccessLevel
+                ) 
+            }
+            entry<NavRoute.Skills> { 
+                SkillsScreen(
+                    userId = effectiveUserId, 
+                    searchViewModel = searchViewModel,
+                    isMentorMode = isMentorMode,
+                    mentorAccessLevel = userSettings.mentorAccessLevel
+                ) 
+            }
+            entry<NavRoute.Journal> { 
+                JournalScreen(
+                    userId = effectiveUserId, 
+                    searchViewModel = searchViewModel,
+                    isMentorMode = isMentorMode,
+                    mentorAccessLevel = userSettings.mentorAccessLevel
+                ) 
+            }
             entry<NavRoute.Admin> { AdminScreen() }
             entry<NavRoute.Settings> { 
                 SettingsScreen(authViewModel = authViewModel, settingsViewModel = settingsVm) 

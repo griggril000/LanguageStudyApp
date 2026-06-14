@@ -43,7 +43,9 @@ import com.example.languagestudy.utils.UrlUtils
 @Composable
 fun PortfolioScreen(
     viewModel: PortfolioViewModel,
-    searchViewModel: SearchViewModel = viewModel()
+    searchViewModel: SearchViewModel = viewModel(),
+    isMentorMode: Boolean = false,
+    mentorAccessLevel: String = "view"
 ) {
     val context = LocalContext.current
     val items by viewModel.filteredItems.collectAsState()
@@ -53,6 +55,11 @@ fun PortfolioScreen(
     val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val canEditContent = !isMentorMode || mentorAccessLevel == "full"
+    // Portfolio doesn't have statuses, so canChangeStatus isn't really applicable here
+    // But let's assume "status" allows featuring/unfeaturing
+    val canChangeStatus = !isMentorMode || mentorAccessLevel == "status" || mentorAccessLevel == "full"
 
     LaunchedEffect(searchQuery) {
         viewModel.setSearchQuery(searchQuery)
@@ -125,11 +132,13 @@ fun PortfolioScreen(
             ) 
         },
         floatingActionButton = {
-            AppFAB(
-                onClick = { showAddSheet = true },
-                icon = Icons.Rounded.Add,
-                contentDescription = "Add Portfolio Item"
-            )
+            if (canEditContent) {
+                AppFAB(
+                    onClick = { showAddSheet = true },
+                    icon = Icons.Rounded.Add,
+                    contentDescription = "Add Portfolio Item"
+                )
+            }
         }
     ) { padding ->
         if (showAddSheet) {
@@ -213,7 +222,8 @@ fun PortfolioScreen(
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 } else if (allItems.isEmpty()) {
-                    EmptyState(message = "Your portfolio is empty. Add your first item!")
+                    val emptyMessage = if (isMentorMode) "This student's portfolio is empty." else "Your portfolio is empty. Add your first item!"
+                    EmptyState(message = emptyMessage)
                 } else if (items.isEmpty() && searchQuery.isNotEmpty()) {
                     NoResultsState(query = searchQuery)
                 } else {
@@ -233,6 +243,8 @@ fun PortfolioScreen(
                             items(featuredItems, key = { it.id }) { item ->
                                 FeaturedPortfolioItem(
                                     item = item,
+                                    canEdit = canEditContent,
+                                    canChangeStatus = canChangeStatus,
                                     onEdit = { editingItem = item },
                                     onDelete = { viewModel.deleteItem(item.id) },
                                     onUnfeature = { viewModel.toggleFeatured(item) }
@@ -247,6 +259,8 @@ fun PortfolioScreen(
                             items(otherItems, key = { it.id }) { item ->
                                 StandardPortfolioItem(
                                     item = item,
+                                    canEdit = canEditContent,
+                                    canChangeStatus = canChangeStatus,
                                     onPlay = { onPlay(item.link) },
                                     onEdit = { editingItem = item },
                                     onDelete = { viewModel.deleteItem(item.id) },
@@ -281,6 +295,8 @@ fun HeaderSection(title: String) {
 @Composable
 fun FeaturedPortfolioItem(
     item: PortfolioItem,
+    canEdit: Boolean,
+    canChangeStatus: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onUnfeature: () -> Unit
@@ -306,6 +322,8 @@ fun FeaturedPortfolioItem(
 
     SwipeToDismissBox(
         state = dismissState,
+        enableDismissFromStartToEnd = false,
+        enableDismissFromEndToStart = canEdit,
         backgroundContent = {
             val color = when (dismissState.dismissDirection) {
                 SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
@@ -328,8 +346,7 @@ fun FeaturedPortfolioItem(
                     )
                 }
             }
-        },
-        enableDismissFromStartToEnd = false
+        }
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -370,23 +387,27 @@ fun FeaturedPortfolioItem(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedButton(
-                            onClick = onUnfeature,
-                            shape = RoundedCornerShape(8.dp)
-                        ) { Text("Unfeature") }
-                        
-                        IconButton(onClick = onEdit) {
-                            Icon(Icons.Rounded.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary)
+                        if (canChangeStatus) {
+                            OutlinedButton(
+                                onClick = onUnfeature,
+                                shape = RoundedCornerShape(8.dp)
+                            ) { Text("Unfeature") }
                         }
+                        
+                        if (canEdit) {
+                            IconButton(onClick = onEdit) {
+                                Icon(Icons.Rounded.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary)
+                            }
 
-                        TextButton(
-                            onClick = { showDeleteConfirm = true },
-                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("Delete")
+                            TextButton(
+                                onClick = { showDeleteConfirm = true },
+                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Delete")
+                                }
                             }
                         }
                     }
@@ -400,6 +421,8 @@ fun FeaturedPortfolioItem(
 @Composable
 fun StandardPortfolioItem(
     item: PortfolioItem,
+    canEdit: Boolean,
+    canChangeStatus: Boolean,
     onPlay: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -427,6 +450,8 @@ fun StandardPortfolioItem(
 
     SwipeToDismissBox(
         state = dismissState,
+        enableDismissFromStartToEnd = false,
+        enableDismissFromEndToStart = canEdit,
         backgroundContent = {
             val color = when (dismissState.dismissDirection) {
                 SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
@@ -449,8 +474,7 @@ fun StandardPortfolioItem(
                     )
                 }
             }
-        },
-        enableDismissFromStartToEnd = false
+        }
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -476,30 +500,34 @@ fun StandardPortfolioItem(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(
-                        onClick = onFeature,
-                        enabled = canFeature
-                    ) { 
-                        Text(
-                            "Feature",
-                            color = if (canFeature) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                        ) 
+                    if (canChangeStatus) {
+                        TextButton(
+                            onClick = onFeature,
+                            enabled = canFeature
+                        ) { 
+                            Text(
+                                "Feature",
+                                color = if (canFeature) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                            ) 
+                        }
                     }
-                    IconButton(onClick = onEdit) {
-                        Icon(
-                            Icons.Rounded.Edit,
-                            contentDescription = "Edit",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    IconButton(onClick = { showDeleteConfirm = true }) {
-                        Icon(
-                            Icons.Rounded.Delete, 
-                            contentDescription = "Delete",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp)
-                        )
+                    if (canEdit) {
+                        IconButton(onClick = onEdit) {
+                            Icon(
+                                Icons.Rounded.Edit,
+                                contentDescription = "Edit",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        IconButton(onClick = { showDeleteConfirm = true }) {
+                            Icon(
+                                Icons.Rounded.Delete, 
+                                contentDescription = "Delete",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }

@@ -53,7 +53,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun SkillsScreen(
     userId: String,
-    searchViewModel: SearchViewModel = viewModel()
+    searchViewModel: SearchViewModel = viewModel(),
+    isMentorMode: Boolean = false,
+    mentorAccessLevel: String = "view"
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as LanguageStudyApplication
@@ -71,6 +73,10 @@ fun SkillsScreen(
     val coroutineScope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
     val haptic = LocalHapticFeedback.current
+
+    val canEditContent = !isMentorMode || mentorAccessLevel == "full"
+    val canChangeStatus = !isMentorMode || mentorAccessLevel == "status" || mentorAccessLevel == "full"
+    val isDragEnabled = searchQuery.isBlank() && selectedLanguage == null && !isMentorMode
 
     // Local state for drag and drop
     var draggedItemIndex by remember { mutableStateOf<Int?>(null) }
@@ -221,12 +227,25 @@ fun SkillsScreen(
             }
 
             Column(modifier = Modifier.padding(16.dp)) {
+                if (allSkills.isNotEmpty()) {
+                    Text(
+                        text = "${allSkills.size} total skills | ${skillsList.size} showing",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
                 if (allSkills.isEmpty()) {
-                    EmptyState(message = "No skills tracked yet. Tap + to add one!")
-                } else if (skillsList.isEmpty() && searchQuery.isNotEmpty()) {
-                    NoResultsState(query = searchQuery)
+                    val emptyMessage = if (isMentorMode) "This student hasn't tracked any skills yet." else "No skills tracked yet. Tap + to add one!"
+                    EmptyState(message = emptyMessage)
+                } else if (skillsList.isEmpty()) {
+                    if (searchQuery.isNotEmpty()) {
+                        NoResultsState(query = searchQuery)
+                    } else {
+                        EmptyState(message = "No skills found for ${selectedLanguage ?: "this language"}")
+                    }
                 } else {
-                    val isDragEnabled = searchQuery.isBlank() && selectedLanguage == null
                     LazyColumn(
                         state = lazyListState,
                         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -325,6 +344,8 @@ fun SkillsScreen(
                                 skill = skill,
                                 learnedLanguages = learnedLanguages,
                                 isDragEnabled = isDragEnabled,
+                                canEdit = canEditContent,
+                                canChangeStatus = canChangeStatus,
                                 onStatusCycle = { viewModel.cycleSkillStatus(skill) },
                                 onDelete = { viewModel.deleteSkill(skill) },
                                 onAddSubtask = { viewModel.addSubtask(skill, it) },
@@ -356,6 +377,9 @@ fun SkillsScreen(
 fun SkillItem(
     skill: SkillEntity,
     learnedLanguages: List<String>,
+    isDragEnabled: Boolean,
+    canEdit: Boolean,
+    canChangeStatus: Boolean,
     onStatusCycle: () -> Unit,
     onDelete: () -> Unit,
     onAddSubtask: (String) -> Unit,
@@ -363,8 +387,7 @@ fun SkillItem(
     onSubtaskDelete: (String) -> Unit,
     onEditSkill: (String, String) -> Unit,
     onEditSubtask: (String, String) -> Unit,
-    modifier: Modifier = Modifier,
-    isDragEnabled: Boolean = true
+    modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
     var subtaskText by remember { mutableStateOf("") }
@@ -451,6 +474,7 @@ fun SkillItem(
             }
         },
         enableDismissFromStartToEnd = false,
+        enableDismissFromEndToStart = canEdit,
         modifier = modifier
     ) {
         Card(
@@ -467,7 +491,11 @@ fun SkillItem(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    StatusIcon(status = skill.status, onClick = onStatusCycle, size = 32.dp)
+                    StatusIcon(
+                        status = skill.status, 
+                        onClick = if (canChangeStatus) onStatusCycle else ({}), 
+                        size = 32.dp
+                    )
 
                     Spacer(Modifier.width(12.dp))
 
@@ -491,13 +519,15 @@ fun SkillItem(
                         }
                     }
 
-                    IconButton(onClick = { showEditDialog = true }) {
-                        Icon(
-                            Icons.Rounded.Edit,
-                            contentDescription = "Edit",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
+                    if (canEdit) {
+                        IconButton(onClick = { showEditDialog = true }) {
+                            Icon(
+                                Icons.Rounded.Edit,
+                                contentDescription = "Edit",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
 
                     if (isDragEnabled) {
@@ -540,35 +570,39 @@ fun SkillItem(
                         skill.subtasks.forEach { subtask ->
                             SubtaskItem(
                                 subtask = subtask,
+                                canEdit = canEdit,
+                                canChangeStatus = canChangeStatus,
                                 onStatusCycle = { onSubtaskStatusCycle(subtask.id) },
                                 onDelete = { onSubtaskDelete(subtask.id) },
                                 onEdit = { onEditSubtask(subtask.id, it) }
                             )
                         }
 
-                        Spacer(Modifier.height(12.dp))
+                        if (canEdit) {
+                            Spacer(Modifier.height(12.dp))
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedTextField(
-                                value = subtaskText,
-                                onValueChange = { subtaskText = it },
-                                placeholder = { Text("Add subtask...") },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp),
-                                singleLine = true,
-                                textStyle = MaterialTheme.typography.bodyMedium
-                            )
-                            IconButton(onClick = {
-                                if (subtaskText.isNotBlank()) {
-                                    onAddSubtask(subtaskText)
-                                    subtaskText = ""
-                                }
-                            }) {
-                                Icon(
-                                    Icons.Rounded.AddCircle,
-                                    contentDescription = "Add",
-                                    tint = MaterialTheme.colorScheme.primary
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                OutlinedTextField(
+                                    value = subtaskText,
+                                    onValueChange = { subtaskText = it },
+                                    placeholder = { Text("Add subtask...") },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    singleLine = true,
+                                    textStyle = MaterialTheme.typography.bodyMedium
                                 )
+                                IconButton(onClick = {
+                                    if (subtaskText.isNotBlank()) {
+                                        onAddSubtask(subtaskText)
+                                        subtaskText = ""
+                                    }
+                                }) {
+                                    Icon(
+                                        Icons.Rounded.AddCircle,
+                                        contentDescription = "Add",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                         }
                     }
@@ -581,6 +615,8 @@ fun SkillItem(
 @Composable
 fun SubtaskItem(
     subtask: Subtask,
+    canEdit: Boolean,
+    canChangeStatus: Boolean,
     onStatusCycle: () -> Unit,
     onDelete: () -> Unit,
     onEdit: (String) -> Unit
@@ -621,19 +657,27 @@ fun SubtaskItem(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
     ) {
-        StatusIcon(status = subtask.status, onClick = onStatusCycle, size = 24.dp)
+        StatusIcon(
+            status = subtask.status, 
+            onClick = if (canChangeStatus) onStatusCycle else ({}), 
+            size = 24.dp
+        )
         
         Spacer(Modifier.width(8.dp))
         
         Text(
             subtask.text,
             style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f).clickable { showEditDialog = true },
+            modifier = Modifier
+                .weight(1f)
+                .then(if (canEdit) Modifier.clickable { showEditDialog = true } else Modifier),
             textDecoration = if (subtask.status == "PROFICIENT") TextDecoration.LineThrough else null
         )
 
-        IconButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Rounded.Close, contentDescription = "Delete Subtask", modifier = Modifier.size(16.dp))
+        if (canEdit) {
+            IconButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Rounded.Close, contentDescription = "Delete Subtask", modifier = Modifier.size(16.dp))
+            }
         }
     }
 }

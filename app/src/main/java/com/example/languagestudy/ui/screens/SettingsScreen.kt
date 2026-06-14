@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -165,9 +166,7 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                
-                // Only show code card if enabled, or if we want it to be visible but disabled
-                // Actually, let's always show the code card if it's enabled or in mentor mode
+                // Only show code card and access level if enabled, or if in mentor mode
                 if (userSettings.mentorCodeEnabled || isMentorMode) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -206,40 +205,133 @@ fun SettingsScreen(
                             }
                         }
                     }
-                }
 
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "Mentor Access Level",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    )
-                    val levels = listOf(
-                        "view" to "Read Only: View your data but cannot make changes.",
-                        "status" to "Status Updates: Change learning statuses (no content edits).",
-                        "full" to "Edit All: Add, edit, and delete vocabulary, skills, and portfolio."
-                    )
-                    levels.forEach { (level, description) ->
-                        val isSelected = userSettings.mentorAccessLevel == level
-                        val radioEnabled = !isMentorMode && userSettings.mentorCodeEnabled
-                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = { if (radioEnabled) settingsViewModel.setMentorAccessLevel(level) },
-                                enabled = radioEnabled
-                            )
-                            Column(modifier = Modifier.padding(start = 8.dp)) {
-                                Text(
-                                    level.replaceFirstChar { it.uppercase() },
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (!radioEnabled && !isSelected) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onSurface
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "Mentor Access Level",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        )
+                        val levels = listOf(
+                            "view" to "Read Only: View your data but cannot make changes.",
+                            "status" to "Status Updates: Change learning statuses (no content edits).",
+                            "full" to "Edit All: Add, edit, and delete vocabulary, skills, and portfolio."
+                        )
+                        levels.forEach { (level, description) ->
+                            val isSelected = userSettings.mentorAccessLevel == level
+                            val radioEnabled = !isMentorMode && userSettings.mentorCodeEnabled
+                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = { if (radioEnabled) settingsViewModel.setMentorAccessLevel(level) },
+                                    enabled = radioEnabled
                                 )
-                                Text(
-                                    description,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = if (!radioEnabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Column(modifier = Modifier.padding(start = 8.dp)) {
+                                    Text(
+                                        level.replaceFirstChar { it.uppercase() },
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (!radioEnabled && !isSelected) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (!radioEnabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider()
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            SectionHeader(title = "Mentor Mode", icon = Icons.Default.School)
+            if (isMentorMode) {
+                Text(
+                    "You are currently viewing another user's progress. Your actions may be limited based on their permission settings.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Button(
+                    onClick = { authViewModel.exitMentorMode() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                ) {
+                    Text("Exit Mentor Mode")
+                }
+            } else {
+                Text(
+                    "Enter a student's share code to view their progress and help them learn.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                var inputCode by remember { mutableStateOf("") }
+                var isValidating by remember { mutableStateOf(false) }
+                var errorMessage by remember { mutableStateOf<String?>(null) }
+                val scope = rememberCoroutineScope()
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = inputCode,
+                        onValueChange = {
+                            if (it.length <= 5) {
+                                inputCode = it.uppercase()
+                                errorMessage = null
+                            }
+                        },
+                        label = { Text("Share Code") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        isError = errorMessage != null,
+                        supportingText = errorMessage?.let { { Text(it) } }
+                    )
+
+                    Button(
+                        onClick = {
+                            if (inputCode.length == 5) {
+                                scope.launch {
+                                    isValidating = true
+                                    errorMessage = null
+                                    try {
+                                        val ownerUid = settingsViewModel.validateCode(inputCode)
+                                        if (ownerUid != null) {
+                                            if (ownerUid == currentUser?.uid) {
+                                                errorMessage = "Cannot mentor yourself"
+                                            } else {
+                                                authViewModel.enterMentorMode(ownerUid, inputCode)
+                                            }
+                                        } else {
+                                            errorMessage = "Invalid or disabled code"
+                                        }
+                                    } catch (e: Exception) {
+                                        errorMessage = "Error validating code"
+                                    } finally {
+                                        isValidating = false
+                                    }
+                                }
+                            }
+                        },
+                        enabled = inputCode.length == 5 && !isValidating,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.height(56.dp).align(Alignment.Top)
+                    ) {
+                        if (isValidating) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Text("Join")
                         }
                     }
                 }

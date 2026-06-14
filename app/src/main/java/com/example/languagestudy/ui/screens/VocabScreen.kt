@@ -40,7 +40,9 @@ import com.example.languagestudy.ui.viewmodel.VocabViewModelFactory
 @Composable
 fun VocabScreen(
     userId: String,
-    searchViewModel: SearchViewModel = viewModel()
+    searchViewModel: SearchViewModel = viewModel(),
+    isMentorMode: Boolean = false,
+    mentorAccessLevel: String = "view"
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as LanguageStudyApplication
@@ -56,6 +58,9 @@ fun VocabScreen(
     val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val searchQuery by searchViewModel.query.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val canEditContent = !isMentorMode || mentorAccessLevel == "full"
+    val canChangeStatus = !isMentorMode || mentorAccessLevel == "status" || mentorAccessLevel == "full"
 
     LaunchedEffect(userId) {
         viewModel.initUserId(userId)
@@ -144,11 +149,13 @@ fun VocabScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            AppFAB(
-                onClick = { showAddSheet = true },
-                icon = Icons.Rounded.Add,
-                contentDescription = "Add Vocabulary"
-            )
+            if (canEditContent) {
+                AppFAB(
+                    onClick = { showAddSheet = true },
+                    icon = Icons.Rounded.Add,
+                    contentDescription = "Add Vocabulary"
+                )
+            }
         }
     ) { padding ->
         if (showAddSheet) {
@@ -291,7 +298,7 @@ fun VocabScreen(
                             )
                         }
                     }
-                    if (selectedCategory != null && selectedCategory != "General") {
+                    if (selectedCategory != null && selectedCategory != "General" && canEditContent) {
                         IconButton(
                             onClick = { showDeleteCategoryConfirm = true },
                             modifier = Modifier.padding(end = 8.dp)
@@ -322,10 +329,13 @@ fun VocabScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        EmptyState(message = "Your vocabulary list is empty. Tap + to add words!")
-                        Spacer(Modifier.height(16.dp))
-                        TextButton(onClick = { viewModel.seedSampleData() }) {
-                            Text("Seed Sample Data")
+                        val emptyMessage = if (isMentorMode) "This student hasn't added any vocabulary yet." else "Your vocabulary list is empty. Tap + to add words!"
+                        EmptyState(message = emptyMessage)
+                        if (!isMentorMode) {
+                            Spacer(Modifier.height(16.dp))
+                            TextButton(onClick = { viewModel.seedSampleData() }) {
+                                Text("Seed Sample Data")
+                            }
                         }
                     }
                 } else {
@@ -337,6 +347,8 @@ fun VocabScreen(
                             VocabItem(
                                 vocab = vocab, 
                                 learnedLanguages = learnedLanguages,
+                                canEdit = canEditContent,
+                                canChangeStatus = canChangeStatus,
                                 onDelete = { viewModel.deleteVocab(vocab) },
                                 onEdit = { w, t, c, l -> 
                                     viewModel.updateVocab(vocab.copy(word = w, translation = t, category = c, language = l))
@@ -357,6 +369,8 @@ fun VocabScreen(
 fun VocabItem(
     vocab: VocabEntity, 
     learnedLanguages: List<String>,
+    canEdit: Boolean,
+    canChangeStatus: Boolean,
     onDelete: () -> Unit,
     onEdit: (String, String, String, String) -> Unit,
     onStatusCycle: () -> Unit
@@ -433,6 +447,8 @@ fun VocabItem(
 
     SwipeToDismissBox(
         state = dismissState,
+        enableDismissFromStartToEnd = false,
+        enableDismissFromEndToStart = canEdit,
         backgroundContent = {
             val color = when (dismissState.dismissDirection) {
                 SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
@@ -455,8 +471,7 @@ fun VocabItem(
                     )
                 }
             }
-        },
-        enableDismissFromStartToEnd = false
+        }
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -471,9 +486,17 @@ fun VocabItem(
                 modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                StatusIcon(status = vocab.status, onClick = onStatusCycle, size = 32.dp)
+                StatusIcon(
+                    status = vocab.status, 
+                    onClick = if (canChangeStatus) onStatusCycle else ({}), 
+                    size = 32.dp
+                )
                 Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f).clickable { showEditDialog = true }) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .then(if (canEdit) Modifier.clickable { showEditDialog = true } else Modifier)
+                ) {
                     Text(
                         vocab.word,
                         style = MaterialTheme.typography.titleMedium,

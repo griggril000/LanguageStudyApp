@@ -99,6 +99,10 @@ class SettingsViewModel(
         }
     }
 
+    suspend fun validateCode(code: String): String? {
+        return mentorRepository.validateMentorCode(code)
+    }
+
     fun toggleLanguage(language: String) {
         if (userId.isBlank()) return
         val currentSettings = userSettings.value
