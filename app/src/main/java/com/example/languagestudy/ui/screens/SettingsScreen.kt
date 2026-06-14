@@ -11,11 +11,13 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -32,20 +34,32 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
+    val uriHandler = LocalUriHandler.current
     val currentUser by authViewModel.user.collectAsState()
     val isMentorMode by authViewModel.isMentorMode.collectAsState()
     val userSettings by settingsViewModel.userSettings.collectAsState()
     val availableLanguages by settingsViewModel.availableLanguages.collectAsState()
     val mentorCode by settingsViewModel.mentorCode.collectAsState()
     val scrollState = rememberScrollState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
+    LaunchedEffect(Unit) {
+        settingsViewModel.errorMessages.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(scrollState)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
         if (currentUser != null) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -344,5 +358,17 @@ fun SettingsScreen(
             Spacer(Modifier.width(8.dp))
             Text("Sign Out")
         }
+
+        TextButton(
+            onClick = { uriHandler.openUri("https://www.flaticon.com/free-icons/globe") },
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Text(
+                text = "Globe icons created by Techno Icons - Flaticon",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
+}
 }

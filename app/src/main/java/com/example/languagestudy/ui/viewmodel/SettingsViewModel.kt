@@ -31,6 +31,13 @@ class SettingsViewModel(
     private val _resourceLanguage = MutableStateFlow("")
     val resourceLanguage: StateFlow<String> = _resourceLanguage.asStateFlow()
 
+    private val _errorMessages = MutableSharedFlow<String>()
+    val errorMessages = _errorMessages.asSharedFlow()
+
+    private val actionCooldowns = mutableMapOf<String, Long>()
+    private val DEFAULT_COOLDOWN_MS = 1000L
+    private val QUICK_COOLDOWN_MS = 300L
+
     init {
         loadAvailableLanguages()
         loadMentorCode()
@@ -58,6 +65,22 @@ class SettingsViewModel(
         }
     }
 
+    private fun checkRateLimit(action: String, cooldown: Long = DEFAULT_COOLDOWN_MS): Boolean {
+        val now = System.currentTimeMillis()
+        val last = actionCooldowns[action] ?: 0L
+        if (now - last < cooldown) {
+            // Only show snackbar for the longer cooldowns to avoid annoying the user
+            if (cooldown >= DEFAULT_COOLDOWN_MS) {
+                viewModelScope.launch {
+                    _errorMessages.emit("Please wait a moment before making more changes.")
+                }
+            }
+            return false
+        }
+        actionCooldowns[action] = now
+        return true
+    }
+
     fun setResourceLanguage(language: String) {
         _resourceLanguage.value = language
         viewModelScope.launch {
@@ -66,7 +89,7 @@ class SettingsViewModel(
     }
 
     fun toggleMentorCode(enabled: Boolean) {
-        if (userId.isBlank()) return
+        if (userId.isBlank() || !checkRateLimit("mentor_code_toggle")) return
         viewModelScope.launch {
             val updates = mutableMapOf<String, Any>("mentorCodeEnabled" to enabled)
             if (enabled && _mentorCode.value == null) {
@@ -82,7 +105,7 @@ class SettingsViewModel(
     }
 
     fun regenerateMentorCode() {
-        if (userId.isBlank()) return
+        if (userId.isBlank() || !checkRateLimit("mentor_code_regenerate", 2000L)) return
         viewModelScope.launch {
             _mentorCode.value?.let { oldCode ->
                 mentorRepository.deleteMentorCode(oldCode)
@@ -93,7 +116,7 @@ class SettingsViewModel(
     }
 
     fun setMentorAccessLevel(level: String) {
-        if (userId.isBlank()) return
+        if (userId.isBlank() || !checkRateLimit("mentor_access_level", QUICK_COOLDOWN_MS)) return
         viewModelScope.launch {
             repository.updateUserSettings(userId, mapOf("mentorAccessLevel" to level))
         }
@@ -104,7 +127,7 @@ class SettingsViewModel(
     }
 
     fun toggleLanguage(language: String) {
-        if (userId.isBlank()) return
+        if (userId.isBlank() || !checkRateLimit("toggle_language", QUICK_COOLDOWN_MS)) return
         val currentSettings = userSettings.value
         val isSelected = currentSettings.learnedLanguages.contains(language)
         
@@ -130,7 +153,7 @@ class SettingsViewModel(
     }
 
     fun setCurrentLanguage(language: String) {
-        if (userId.isBlank()) return
+        if (userId.isBlank() || !checkRateLimit("set_current_language", QUICK_COOLDOWN_MS)) return
         viewModelScope.launch {
             repository.updateUserSettings(userId, mapOf("languageLearning" to language))
         }
