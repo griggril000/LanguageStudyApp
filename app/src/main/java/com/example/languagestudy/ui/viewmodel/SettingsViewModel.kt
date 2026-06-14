@@ -35,8 +35,8 @@ class SettingsViewModel(
     val errorMessages = _errorMessages.asSharedFlow()
 
     private val actionCooldowns = mutableMapOf<String, Long>()
-    private val DEFAULT_COOLDOWN_MS = 1000L
-    private val QUICK_COOLDOWN_MS = 300L
+    private val DEFAULT_COOLDOWN_MS = 1500L
+    private val QUICK_COOLDOWN_MS = 600L
 
     init {
         loadAvailableLanguages()
@@ -105,7 +105,7 @@ class SettingsViewModel(
     }
 
     fun regenerateMentorCode() {
-        if (userId.isBlank() || !checkRateLimit("mentor_code_regenerate", 2000L)) return
+        if (userId.isBlank() || !checkRateLimit("mentor_code_regenerate", 3000L)) return
         viewModelScope.launch {
             _mentorCode.value?.let { oldCode ->
                 mentorRepository.deleteMentorCode(oldCode)
