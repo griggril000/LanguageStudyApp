@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:47054764584:android:bf6860481276efd161131d",
         "android_client_info": {
-          "package_name": "com.example.languagestudy"
+          "package_name": "io.github.languagestudy"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "47054764584-pcg7alq36nvrvbl7f75phpkhkkk4960p.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.languagestudy",
+            "package_name": "io.github.languagestudy",
             "certificate_hash": "cede17ab66c05fafdf57fb6c6de295a0605fe62a"
           }
         },

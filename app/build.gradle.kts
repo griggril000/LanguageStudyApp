@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.languagestudy"
+    namespace = "io.github.languagestudy"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.example.languagestudy"
+        applicationId = "io.github.languagestudy"
         minSdk = 24
         targetSdk = 37
         versionCode = 1
