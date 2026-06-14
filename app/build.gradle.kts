@@ -89,8 +89,6 @@ dependencies {
     implementation(libs.youtube.player)
     implementation(libs.play.services.location)
     implementation(libs.retrofit)
-    implementation(libs.androidx.glance.appwidget)
-    implementation(libs.androidx.glance.material3)
     testImplementation(libs.androidx.core)
     testImplementation(libs.androidx.junit)
     testImplementation(libs.junit)
