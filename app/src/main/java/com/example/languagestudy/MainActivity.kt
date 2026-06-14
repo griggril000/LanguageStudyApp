@@ -1,5 +1,6 @@
 package com.example.languagestudy
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -38,18 +39,32 @@ import com.example.languagestudy.ui.viewmodel.PortfolioViewModelFactory
 import com.example.languagestudy.ui.viewmodel.SearchViewModel
 import com.example.languagestudy.ui.viewmodel.SettingsViewModel
 import com.example.languagestudy.ui.viewmodel.SettingsViewModelFactory
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private val intentFlow = MutableSharedFlow<Intent>(extraBufferCapacity = 1)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         enableEdgeToEdge()
         setContent {
             LanguageStudyTheme {
-                MainScreen()
+                MainScreen(intentFlow = intentFlow)
             }
         }
+        val currentIntent = intent
+        if (currentIntent != null) {
+            intentFlow.tryEmit(currentIntent)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intentFlow.tryEmit(intent)
     }
 }
 
@@ -57,7 +72,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen(
     authViewModel: AuthViewModel = viewModel(),
-    searchViewModel: SearchViewModel = viewModel()
+    searchViewModel: SearchViewModel = viewModel(),
+    intentFlow: Flow<Intent> = emptyFlow()
 ) {
     val context = LocalContext.current
     val currentUser by authViewModel.user.collectAsState()
@@ -74,6 +90,29 @@ fun MainScreen(
 
     val startRoute = if (currentUser == null) NavRoute.Login else NavRoute.Portfolio
     val backStack = rememberNavBackStack(startRoute as NavKey)
+    
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(currentUser) {
+        if (currentUser != null) {
+            intentFlow.collect { intent ->
+                if (intent.action == Intent.ACTION_VIEW) {
+                    val data = intent.data
+                    if (data?.host == "language-study.github.io" && (data.path == "/index.html" || data.path == "/")) {
+                        val code = data.getQueryParameter("mentor")
+                        if (code != null && code.length == 5) {
+                            val ownerUid = settingsVm.validateCode(code)
+                            if (ownerUid != null && ownerUid != currentUser?.uid) {
+                                authViewModel.enterMentorMode(ownerUid, code)
+                                backStack.clear()
+                                backStack.add(NavRoute.Portfolio)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     
     var showMenu by remember { mutableStateOf(false) }
     var showLangMenu by remember { mutableStateOf(false) }
