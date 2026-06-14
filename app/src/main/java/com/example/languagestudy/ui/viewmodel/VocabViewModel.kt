@@ -110,6 +110,10 @@ class VocabViewModel(
         _searchQuery.value = query
     }
 
+    fun setCurrentLanguage(language: String) {
+        _currentLanguage.value = language
+    }
+
     fun setSelectedCategory(category: String?) {
         _selectedCategory.value = category
     }

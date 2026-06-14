@@ -57,10 +57,17 @@ fun VocabScreen(
     val currentLanguage by viewModel.currentLanguage.collectAsState()
     val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val searchQuery by searchViewModel.query.collectAsState()
+    val languageOverride by searchViewModel.selectedLanguage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
     val canChangeStatus = !isMentorMode || mentorAccessLevel == "status" || mentorAccessLevel == "full"
+
+    LaunchedEffect(languageOverride) {
+        if (languageOverride != null) {
+            viewModel.setCurrentLanguage(languageOverride!!)
+        }
+    }
 
     LaunchedEffect(userId) {
         viewModel.initUserId(userId)
@@ -337,6 +344,19 @@ fun VocabScreen(
                                 Text("Seed Sample Data")
                             }
                         }
+                    }
+                } else if (vocabList.isEmpty()) {
+                    val currentLang = languageOverride ?: currentLanguage
+                    val message = if (searchQuery.isNotEmpty()) {
+                        "No results for \"$searchQuery\""
+                    } else if (currentLang.isNotBlank()) {
+                        if (isMentorMode) "This student hasn't added any vocabulary for $currentLang yet."
+                        else "You haven't added any vocabulary for $currentLang yet."
+                    } else {
+                        "No items found for the current filters."
+                    }
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        EmptyState(message = message)
                     }
                 } else {
                     LazyColumn(

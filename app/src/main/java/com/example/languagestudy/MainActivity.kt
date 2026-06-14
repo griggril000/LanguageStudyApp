@@ -169,20 +169,23 @@ fun MainScreen(
                     },
                     actions = {
                         if (isMentorMode) {
-                            TextButton(onClick = { authViewModel.exitMentorMode() }) {
+                            TextButton(onClick = { 
+                                authViewModel.exitMentorMode()
+                                searchViewModel.setSelectedLanguage(null)
+                            }) {
                                 Text("Exit")
                             }
                         }
                         
-                        val showSwitcher = userSettings.learnedLanguages.isNotEmpty() &&
-                                         currentRoute != NavRoute.Skills && 
-                                         currentRoute != NavRoute.Journal
+                        val showSwitcher = userSettings.learnedLanguages.isNotEmpty()
                         
                         if (showSwitcher) {
+                            val languageOverride by searchViewModel.selectedLanguage.collectAsState()
+                            val displayLanguage = languageOverride ?: userSettings.languageLearning
                             Box {
                                 TextButton(onClick = { showLangMenu = true }) {
                                     Text(
-                                        userSettings.languageLearning.ifBlank { "Select Lang" },
+                                        displayLanguage.ifBlank { "Select Lang" },
                                         color = MaterialTheme.colorScheme.primary,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -195,7 +198,13 @@ fun MainScreen(
                                         DropdownMenuItem(
                                             text = { Text(lang) },
                                             onClick = {
-                                                settingsVm.setCurrentLanguage(lang)
+                                                if (isMentorMode) {
+                                                    searchViewModel.setSelectedLanguage(lang)
+                                                } else {
+                                                    settingsVm.setCurrentLanguage(lang)
+                                                    // Also clear override when setting persistent language
+                                                    searchViewModel.setSelectedLanguage(null)
+                                                }
                                                 showLangMenu = false
                                             }
                                         )

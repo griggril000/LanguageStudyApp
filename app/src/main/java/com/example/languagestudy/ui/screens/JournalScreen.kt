@@ -49,11 +49,18 @@ fun JournalScreen(
     val entries by viewModel.filteredEntries.collectAsState()
     val allEntries by viewModel.allEntries.collectAsState()
     val searchQuery by searchViewModel.query.collectAsState()
+    val languageOverride by searchViewModel.selectedLanguage.collectAsState()
     val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
+
+    LaunchedEffect(languageOverride) {
+        if (languageOverride != null) {
+            viewModel.setCurrentLanguage(languageOverride!!)
+        }
+    }
 
     LaunchedEffect(userId) {
         viewModel.initUserId(userId)

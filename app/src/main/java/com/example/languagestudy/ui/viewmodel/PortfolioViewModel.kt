@@ -211,6 +211,10 @@ class PortfolioViewModel(
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
     }
+
+    fun setCurrentLanguage(language: String) {
+        _currentLanguage.value = language
+    }
 }
 
 class PortfolioViewModelFactory(private val userId: String, private val settingsRepository: SettingsRepository) : ViewModelProvider.Factory {

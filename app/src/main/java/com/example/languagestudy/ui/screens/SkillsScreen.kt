@@ -69,6 +69,7 @@ fun SkillsScreen(
     val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val selectedLanguage by viewModel.selectedLanguage.collectAsState()
     val searchQuery by searchViewModel.query.collectAsState()
+    val languageOverride by searchViewModel.selectedLanguage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
@@ -77,6 +78,12 @@ fun SkillsScreen(
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
     val canChangeStatus = !isMentorMode || mentorAccessLevel == "status" || mentorAccessLevel == "full"
     val isDragEnabled = searchQuery.isBlank() && selectedLanguage == null && !isMentorMode
+
+    LaunchedEffect(languageOverride) {
+        if (languageOverride != null) {
+            viewModel.setSelectedLanguage(languageOverride)
+        }
+    }
 
     // Local state for drag and drop
     var draggedItemIndex by remember { mutableStateOf<Int?>(null) }
@@ -240,10 +247,17 @@ fun SkillsScreen(
                     val emptyMessage = if (isMentorMode) "This student hasn't tracked any skills yet." else "No skills tracked yet. Tap + to add one!"
                     EmptyState(message = emptyMessage)
                 } else if (skillsList.isEmpty()) {
-                    if (searchQuery.isNotEmpty()) {
-                        NoResultsState(query = searchQuery)
+                    val currentLang = languageOverride ?: selectedLanguage
+                    val message = if (searchQuery.isNotEmpty()) {
+                        "No results for \"$searchQuery\""
+                    } else if (currentLang != null && currentLang.isNotBlank()) {
+                        if (isMentorMode) "This student hasn't tracked any skills for $currentLang yet."
+                        else "You haven't tracked any skills for $currentLang yet."
                     } else {
-                        EmptyState(message = "No skills found for ${selectedLanguage ?: "this language"}")
+                        "No skills found for the current filters."
+                    }
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        EmptyState(message = message)
                     }
                 } else {
                     LazyColumn(

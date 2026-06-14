@@ -80,6 +80,10 @@ class JournalViewModel(
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
     }
+
+    fun setCurrentLanguage(language: String) {
+        _currentLanguage.value = language
+    }
 }
 
 class JournalViewModelFactory(

@@ -51,6 +51,7 @@ fun PortfolioScreen(
     val items by viewModel.filteredItems.collectAsState()
     val allItems by viewModel.items.collectAsState()
     val searchQuery by searchViewModel.query.collectAsState()
+    val languageOverride by searchViewModel.selectedLanguage.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
     val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -60,6 +61,12 @@ fun PortfolioScreen(
     // Portfolio doesn't have statuses, so canChangeStatus isn't really applicable here
     // But let's assume "status" allows featuring/unfeaturing
     val canChangeStatus = !isMentorMode || mentorAccessLevel == "status" || mentorAccessLevel == "full"
+
+    LaunchedEffect(languageOverride) {
+        if (languageOverride != null) {
+            viewModel.setCurrentLanguage(languageOverride!!)
+        }
+    }
 
     LaunchedEffect(searchQuery) {
         viewModel.setSearchQuery(searchQuery)
@@ -224,8 +231,19 @@ fun PortfolioScreen(
                 } else if (allItems.isEmpty()) {
                     val emptyMessage = if (isMentorMode) "This student's portfolio is empty." else "Your portfolio is empty. Add your first item!"
                     EmptyState(message = emptyMessage)
-                } else if (items.isEmpty() && searchQuery.isNotEmpty()) {
-                    NoResultsState(query = searchQuery)
+                } else if (items.isEmpty()) {
+                    val currentLang = languageOverride ?: currentLanguage
+                    val message = if (searchQuery.isNotEmpty()) {
+                        "No results for \"$searchQuery\""
+                    } else if (currentLang.isNotBlank()) {
+                        if (isMentorMode) "This student hasn't added any portfolio items for $currentLang yet."
+                        else "You haven't added any portfolio items for $currentLang yet."
+                    } else {
+                        "No items found for the current filters."
+                    }
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        EmptyState(message = message)
+                    }
                 } else {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
