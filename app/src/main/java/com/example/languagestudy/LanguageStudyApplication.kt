@@ -11,4 +11,5 @@ class LanguageStudyApplication : Application() {
     val journalRepository by lazy { JournalRepository(database.journalDao()) }
     val settingsRepository by lazy { SettingsRepository() }
     val mentorRepository by lazy { MentorRepository() }
+    val adminRepository by lazy { AdminRepository() }
 }

@@ -31,14 +31,11 @@ import com.example.languagestudy.navigation.NavRoute
 import com.example.languagestudy.navigation.icon
 import com.example.languagestudy.navigation.label
 import com.example.languagestudy.ui.auth.AuthViewModel
+import com.example.languagestudy.ui.auth.AuthViewModelFactory
 import com.example.languagestudy.ui.auth.LoginScreen
 import com.example.languagestudy.ui.screens.*
 import com.example.languagestudy.ui.theme.LanguageStudyTheme
-import com.example.languagestudy.ui.viewmodel.PortfolioViewModel
-import com.example.languagestudy.ui.viewmodel.PortfolioViewModelFactory
-import com.example.languagestudy.ui.viewmodel.SearchViewModel
-import com.example.languagestudy.ui.viewmodel.SettingsViewModel
-import com.example.languagestudy.ui.viewmodel.SettingsViewModelFactory
+import com.example.languagestudy.ui.viewmodel.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.emptyFlow
@@ -71,17 +68,21 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MainScreen(
-    authViewModel: AuthViewModel = viewModel(),
-    searchViewModel: SearchViewModel = viewModel(),
     intentFlow: Flow<Intent> = emptyFlow()
 ) {
     val context = LocalContext.current
+    val app = context.applicationContext as LanguageStudyApplication
+
+    val authViewModel: AuthViewModel = viewModel(
+        factory = AuthViewModelFactory(app.adminRepository)
+    )
+    val searchViewModel: SearchViewModel = viewModel()
+
     val currentUser by authViewModel.user.collectAsState()
     val isAdmin by authViewModel.isAdmin.collectAsState()
     val isMentorMode by authViewModel.isMentorMode.collectAsState()
     val effectiveUserId by authViewModel.effectiveUserId.collectAsState()
     
-    val app = context.applicationContext as LanguageStudyApplication
     val settingsVm: SettingsViewModel = viewModel(
         key = "settings_$effectiveUserId",
         factory = SettingsViewModelFactory(app.settingsRepository, app.mentorRepository, effectiveUserId)
@@ -168,7 +169,13 @@ fun MainScreen(
                     mentorAccessLevel = userSettings.mentorAccessLevel
                 ) 
             }
-            entry<NavRoute.Admin> { AdminScreen() }
+            entry<NavRoute.Admin> {
+                val adminVm: AdminViewModel = viewModel(
+                    factory = AdminViewModelFactory(app.adminRepository, app.settingsRepository)
+                )
+                adminVm.initUserId(effectiveUserId)
+                AdminScreen(viewModel = adminVm)
+            }
             entry<NavRoute.Settings> { 
                 SettingsScreen(authViewModel = authViewModel, settingsViewModel = settingsVm) 
             }

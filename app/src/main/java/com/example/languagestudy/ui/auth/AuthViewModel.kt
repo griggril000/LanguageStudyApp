@@ -14,7 +14,9 @@ import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.ViewModelProvider
 import com.example.languagestudy.R
+import com.example.languagestudy.data.repository.AdminRepository
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
@@ -23,7 +25,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-class AuthViewModel : ViewModel() {
+class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() {
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
     private val _user = MutableStateFlow(auth.currentUser)
@@ -65,11 +67,15 @@ class AuthViewModel : ViewModel() {
             try {
                 val tokenResult = user.getIdToken(true).await()
                 val adminClaim = tokenResult.claims["admin"]
-                val isAdmin = adminClaim == true || 
+                var isAdmin = adminClaim == true || 
                              adminClaim == "true" || 
                              adminClaim == 1 || 
                              adminClaim == 1L ||
                              (adminClaim as? Number)?.toInt() == 1
+
+                if (!isAdmin) {
+                    isAdmin = adminRepository.checkAdminDoc(user.uid)
+                }
 
                 _isAdmin.value = isAdmin
             } catch (e: Exception) {
@@ -182,5 +188,15 @@ class AuthViewModel : ViewModel() {
             val credentialManager = CredentialManager.create(context)
             credentialManager.clearCredentialState(ClearCredentialStateRequest())
         }
+    }
+}
+
+class AuthViewModelFactory(private val adminRepository: AdminRepository) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return AuthViewModel(adminRepository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
