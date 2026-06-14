@@ -12,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.languagestudy.ui.theme.SuccessGreen
 
 @Composable
 fun LoginScreen(
@@ -86,6 +87,24 @@ fun LoginScreen(
                     shape = RoundedCornerShape(12.dp)
                 )
 
+                if (!isSignUp) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
+                        TextButton(
+                            onClick = { viewModel.resetPassword(email) },
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text(
+                                "Forgot Password?",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+
                 Button(
                     onClick = { 
                         if (isSignUp) {
@@ -128,9 +147,10 @@ fun LoginScreen(
                 }
 
                 if (error != null) {
+                    val isSuccess = error?.contains("sent", ignoreCase = true) == true
                     Text(
                         text = error!!,
-                        color = MaterialTheme.colorScheme.error,
+                        color = if (isSuccess) SuccessGreen else MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }

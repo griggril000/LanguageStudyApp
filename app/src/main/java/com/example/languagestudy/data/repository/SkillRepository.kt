@@ -62,6 +62,7 @@ class SkillRepository(private val skillDao: SkillDao) {
                                     id = doc.id,
                                     name = data["name"] as? String ?: "",
                                     language = data["language"] as? String ?: "",
+                                    progress = (data["progress"] as? Long)?.toInt() ?: 0,
                                     status = (data["status"] as? String ?: "NOT_STARTED").uppercase(),
                                     priority = (data["priority"] as? Long)?.toInt() ?: 0,
                                     subtasks = subtasks,
@@ -111,6 +112,7 @@ class SkillRepository(private val skillDao: SkillDao) {
             "name" to skill.name,
             "language" to skill.language,
             "status" to skill.status.lowercase(),
+            "progress" to skill.progress,
             "priority" to skill.priority,
             "subtasks" to skill.subtasks.map { st ->
                 mapOf(

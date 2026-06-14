@@ -54,14 +54,19 @@ fun LegendItem(icon: androidx.compose.ui.graphics.vector.ImageVector, color: Col
 }
 
 @Composable
-fun StatusIcon(status: String, onClick: () -> Unit, size: Dp = 32.dp) {
+fun StatusIcon(
+    status: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    size: Dp = 32.dp
+) {
     val (icon, color) = when (status) {
         "PROFICIENT" -> Icons.Rounded.CheckCircle to Color(0xFF2E7D32) // Green
         "IN_PROGRESS" -> Icons.Rounded.Schedule to MaterialTheme.colorScheme.primary // Using theme primary
         else -> Icons.Rounded.RadioButtonUnchecked to MaterialTheme.colorScheme.outline
     }
 
-    IconButton(onClick = onClick, modifier = Modifier.size(size)) {
+    IconButton(onClick = onClick, modifier = modifier.size(size)) {
         Icon(icon, contentDescription = status, tint = color, modifier = Modifier.size(size * 0.75f))
     }
 }

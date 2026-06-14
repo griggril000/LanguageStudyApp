@@ -409,6 +409,7 @@ fun SkillItem(
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var editName by remember { mutableStateOf(skill.name) }
     var editLang by remember { mutableStateOf(skill.language) }
+    var hintVersion by remember { mutableStateOf(0) }
 
     if (showDeleteConfirm) {
         DeleteConfirmationDialog(
@@ -507,7 +508,14 @@ fun SkillItem(
                 ) {
                     StatusIcon(
                         status = skill.status, 
-                        onClick = if (canChangeStatus) onStatusCycle else ({}), 
+                        onClick = {
+                            if (skill.subtasks.isNotEmpty()) {
+                                expanded = true
+                                hintVersion++
+                            } else if (canChangeStatus) {
+                                onStatusCycle()
+                            }
+                        }, 
                         size = 32.dp
                     )
 
@@ -561,15 +569,21 @@ fun SkillItem(
                     }
                 }
 
-                if (skill.progress > 0 || skill.status == "IN_PROGRESS") {
+                val displayProgress = if (skill.subtasks.isEmpty()) {
+                    if (skill.status == "NOT_STARTED") 0f else 1f
+                } else {
+                    skill.progress / 100f
+                }
+
+                if (displayProgress > 0 || skill.status == "IN_PROGRESS") {
                     Spacer(Modifier.height(8.dp))
                     LinearProgressIndicator(
-                        progress = { skill.progress / 100f },
+                        progress = { displayProgress },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(6.dp),
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        color = if (skill.progress == 100) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
+                        color = if (skill.status == "PROFICIENT") Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary,
                         strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
                     )
                 }
@@ -586,6 +600,7 @@ fun SkillItem(
                                 subtask = subtask,
                                 canEdit = canEdit,
                                 canChangeStatus = canChangeStatus,
+                                hintVersion = hintVersion,
                                 onStatusCycle = { onSubtaskStatusCycle(subtask.id) },
                                 onDelete = { onSubtaskDelete(subtask.id) },
                                 onEdit = { onEditSubtask(subtask.id, it) }
@@ -631,6 +646,7 @@ fun SubtaskItem(
     subtask: Subtask,
     canEdit: Boolean,
     canChangeStatus: Boolean,
+    hintVersion: Int = 0,
     onStatusCycle: () -> Unit,
     onDelete: () -> Unit,
     onEdit: (String) -> Unit
@@ -638,6 +654,22 @@ fun SubtaskItem(
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var editText by remember { mutableStateOf(subtask.text) }
+
+    val scale = remember { androidx.compose.animation.core.Animatable(1f) }
+
+    LaunchedEffect(hintVersion) {
+        if (hintVersion > 0) {
+            // Sequential animation for a "pulse" effect
+            scale.animateTo(
+                1.3f, 
+                animationSpec = androidx.compose.animation.core.spring(
+                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                    stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+                )
+            )
+            scale.animateTo(1f)
+        }
+    }
 
     if (showDeleteConfirm) {
         DeleteConfirmationDialog(
@@ -674,7 +706,11 @@ fun SubtaskItem(
         StatusIcon(
             status = subtask.status, 
             onClick = if (canChangeStatus) onStatusCycle else ({}), 
-            size = 24.dp
+            size = 24.dp,
+            modifier = Modifier.graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+            }
         )
         
         Spacer(Modifier.width(8.dp))

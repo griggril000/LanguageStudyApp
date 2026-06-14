@@ -105,16 +105,30 @@ class SkillViewModel(
     }
 
     fun updateSkill(skill: SkillEntity) {
-        val calculatedProgress = if (skill.subtasks.isEmpty()) {
-            if (skill.status == "PROFICIENT") 100 else if (skill.status == "IN_PROGRESS") 50 else 0
+        val (calculatedProgress, calculatedStatus) = if (skill.subtasks.isEmpty()) {
+            when (skill.status) {
+                "PROFICIENT" -> 100 to "PROFICIENT"
+                "IN_PROGRESS" -> 100 to "IN_PROGRESS"
+                else -> 0 to "NOT_STARTED"
+            }
         } else {
+            val total = skill.subtasks.size
             val proficientCount = skill.subtasks.count { it.status == "PROFICIENT" }
-            (proficientCount * 100) / skill.subtasks.size
+            val inProgressCount = skill.subtasks.count { it.status == "IN_PROGRESS" }
+            
+            val progress = (proficientCount * 100) / total
+            val status = when {
+                proficientCount == total -> "PROFICIENT"
+                proficientCount > 0 || inProgressCount > 0 -> "IN_PROGRESS"
+                else -> "NOT_STARTED"
+            }
+            progress to status
         }
         
         viewModelScope.launch {
             repository.update(skill.copy(
                 progress = calculatedProgress,
+                status = calculatedStatus,
                 lastUpdated = System.currentTimeMillis()
             ), userId)
         }
@@ -133,7 +147,18 @@ class SkillViewModel(
             "PROFICIENT" -> "NOT_STARTED"
             else -> "NOT_STARTED"
         }
-        updateSkill(skill.copy(status = nextStatus))
+        
+        val updatedSubtasks = if (skill.subtasks.isNotEmpty()) {
+            when (nextStatus) {
+                "PROFICIENT" -> skill.subtasks.map { it.copy(status = "PROFICIENT") }
+                "NOT_STARTED" -> skill.subtasks.map { it.copy(status = "NOT_STARTED") }
+                else -> skill.subtasks
+            }
+        } else {
+            skill.subtasks
+        }
+        
+        updateSkill(skill.copy(status = nextStatus, subtasks = updatedSubtasks))
     }
 
     fun addSubtask(skill: SkillEntity, text: String) {

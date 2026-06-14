@@ -169,6 +169,25 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
         }
     }
 
+    fun resetPassword(email: String) {
+        if (email.isBlank()) {
+            _error.value = "Please enter your email to reset password"
+            return
+        }
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                auth.sendPasswordResetEmail(email).await()
+                _error.value = "Password reset email sent"
+            } catch (e: Exception) {
+                _error.value = "Reset failed: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun signOut(context: Context) {
         viewModelScope.launch {
             exitMentorMode()
