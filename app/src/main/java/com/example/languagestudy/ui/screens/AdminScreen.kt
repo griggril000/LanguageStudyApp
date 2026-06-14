@@ -262,10 +262,15 @@ fun AddLinkSection(onAdd: (String, String) -> Unit, isLoading: Boolean) {
             )
             AppButton(
                 onClick = {
+                    val formattedUrl = if (url.startsWith("http://") || url.startsWith("https://")) url.trim() else "https://${url.trim()}"
+                    val isValid = formattedUrl.contains(".") && !formattedUrl.contains(" ")
+                    
                     if (name.isBlank()) {
                         nameError = "Name is required"
                     } else if (url.isBlank()) {
                         urlError = "URL is required"
+                    } else if (!isValid) {
+                        urlError = "Invalid URL (e.g. example.com)"
                     } else {
                         onAdd(name, url)
                         name = ""
@@ -343,10 +348,15 @@ fun EditableLinkRow(
                     }, enabled = !isLoading) { Text("Cancel") }
                     Button(
                         onClick = {
+                            val formattedUrl = if (url.startsWith("http://") || url.startsWith("https://")) url.trim() else "https://${url.trim()}"
+                            val isValid = formattedUrl.contains(".") && !formattedUrl.contains(" ")
+
                             if (name.isBlank()) {
                                 nameError = "Name is required"
                             } else if (url.isBlank()) {
                                 urlError = "URL is required"
+                            } else if (!isValid) {
+                                urlError = "Invalid URL"
                             } else {
                                 onSave(name, url)
                                 isEditing = false
