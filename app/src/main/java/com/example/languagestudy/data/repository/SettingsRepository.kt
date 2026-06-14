@@ -1,5 +1,6 @@
 package com.example.languagestudy.data.repository
 
+import com.example.languagestudy.data.model.LanguageResource
 import com.example.languagestudy.data.model.UserSettings
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -22,7 +23,6 @@ class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFire
         val docRef = getSettingsDoc(userId)
         val listener = docRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                // If we get an error (like PERMISSION_DENIED on logout), just close the flow normally
                 close()
                 return@addSnapshotListener
             }
@@ -31,7 +31,19 @@ class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFire
                 val languageLearning = snapshot.getString("languageLearning") ?: ""
                 val shareCode = snapshot.getString("shareCode") ?: ""
                 val isPublic = snapshot.getBoolean("isPublic") ?: false
-                trySend(UserSettings(learnedLanguages, languageLearning, shareCode, isPublic))
+                val mentorCodeEnabled = snapshot.getBoolean("mentorCodeEnabled") ?: false
+                val mentorAccessLevel = snapshot.getString("mentorAccessLevel") ?: "view"
+                val mentorQuickReviewEnabled = snapshot.getBoolean("mentorQuickReviewEnabled") ?: false
+                
+                trySend(UserSettings(
+                    learnedLanguages = learnedLanguages,
+                    languageLearning = languageLearning,
+                    shareCode = shareCode,
+                    isPublic = isPublic,
+                    mentorCodeEnabled = mentorCodeEnabled,
+                    mentorAccessLevel = mentorAccessLevel,
+                    mentorQuickReviewEnabled = mentorQuickReviewEnabled
+                ))
             } else {
                 trySend(UserSettings())
             }
@@ -47,5 +59,23 @@ class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFire
     suspend fun getAvailableLanguages(): List<String> {
         val snapshot = firestore.collection("languageLinks").get().await()
         return snapshot.documents.mapNotNull { it.id }.filter { it.isNotBlank() }.sorted()
+    }
+
+    suspend fun getLanguageResources(language: String): List<LanguageResource> {
+        if (language.isBlank()) return emptyList()
+        try {
+            val doc = firestore.collection("languageLinks").document(language).get().await()
+            if (!doc.exists()) return emptyList()
+            
+            val links = doc.get("links") as? List<Map<String, String>> ?: return emptyList()
+            return links.map { 
+                LanguageResource(
+                    name = it["name"] ?: "",
+                    url = it["url"] ?: ""
+                )
+            }
+        } catch (e: Exception) {
+            return emptyList()
+        }
     }
 }

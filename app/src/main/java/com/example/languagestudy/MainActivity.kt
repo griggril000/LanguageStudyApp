@@ -7,12 +7,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AdminPanelSettings
-import androidx.compose.material.icons.rounded.Logout
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.*
@@ -20,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -45,7 +43,6 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Keep the screen on during testing
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         enableEdgeToEdge()
         setContent {
@@ -65,12 +62,13 @@ fun MainScreen(
     val context = LocalContext.current
     val currentUser by authViewModel.user.collectAsState()
     val isAdmin by authViewModel.isAdmin.collectAsState()
-    val scope = rememberCoroutineScope()
+    val isMentorMode by authViewModel.isMentorMode.collectAsState()
+    val effectiveUserId by authViewModel.effectiveUserId.collectAsState()
     
     val app = context.applicationContext as LanguageStudyApplication
     val settingsVm: SettingsViewModel = viewModel(
-        key = "settings_${currentUser?.uid}",
-        factory = SettingsViewModelFactory(app.settingsRepository, currentUser?.uid ?: "")
+        key = "settings_$effectiveUserId",
+        factory = SettingsViewModelFactory(app.settingsRepository, app.mentorRepository, effectiveUserId)
     )
     val userSettings by settingsVm.userSettings.collectAsState()
 
@@ -79,14 +77,14 @@ fun MainScreen(
     
     var showMenu by remember { mutableStateOf(false) }
     var showLangMenu by remember { mutableStateOf(false) }
+    var showResources by remember { mutableStateOf(false) }
 
     val adaptiveInfo = currentWindowAdaptiveInfo()
     val useNavRail = adaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
 
     val currentRoute = backStack.lastOrNull() as? NavRoute
-    val pageTitle = currentRoute?.label ?: ""
 
-    val provider = remember(currentUser) {
+    val provider = remember(currentUser, effectiveUserId) {
         entryProvider<NavKey> {
             entry<NavRoute.Login> { 
                 LoginScreen(onLoginSuccess = {
@@ -95,25 +93,18 @@ fun MainScreen(
                 }) 
             }
             entry<NavRoute.Portfolio> { 
-                val userId = currentUser?.uid ?: ""
-                val app = context.applicationContext as LanguageStudyApplication
+                val userId = effectiveUserId
                 val portfolioVm: PortfolioViewModel = viewModel(
                     key = "portfolio_$userId",
                     factory = PortfolioViewModelFactory(userId, app.settingsRepository)
                 )
                 PortfolioScreen(viewModel = portfolioVm, searchViewModel = searchViewModel) 
             }
-            entry<NavRoute.Vocab> { VocabScreen(currentUser?.uid ?: "", searchViewModel = searchViewModel) }
-            entry<NavRoute.Skills> { SkillsScreen(currentUser?.uid ?: "", searchViewModel = searchViewModel) }
-            entry<NavRoute.Journal> { JournalScreen(currentUser?.uid ?: "", searchViewModel = searchViewModel) }
+            entry<NavRoute.Vocab> { VocabScreen(effectiveUserId, searchViewModel = searchViewModel) }
+            entry<NavRoute.Skills> { SkillsScreen(effectiveUserId, searchViewModel = searchViewModel) }
+            entry<NavRoute.Journal> { JournalScreen(effectiveUserId, searchViewModel = searchViewModel) }
             entry<NavRoute.Admin> { AdminScreen() }
             entry<NavRoute.Settings> { 
-                val userId = currentUser?.uid ?: ""
-                val app = context.applicationContext as LanguageStudyApplication
-                val settingsVm: SettingsViewModel = viewModel(
-                    key = "settings_$userId",
-                    factory = SettingsViewModelFactory(app.settingsRepository, userId)
-                )
                 SettingsScreen(authViewModel = authViewModel, settingsViewModel = settingsVm) 
             }
         }
@@ -126,20 +117,37 @@ fun MainScreen(
         }
     }
 
+    if (showResources) {
+        LanguageResourcesDialog(
+            viewModel = settingsVm,
+            onDismiss = { showResources = false }
+        )
+    }
+
     Scaffold(
         topBar = {
             if (currentUser != null) {
                 TopAppBar(
                     title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column {
                             Text(
-                                "Language Study",
+                                if (isMentorMode) "Mentor View" else "Language Study",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
+                            if (isMentorMode) {
+                                val mentorCode by authViewModel.mentorCode.collectAsState()
+                                Text("Code: $mentorCode", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                            }
                         }
                     },
                     actions = {
+                        if (isMentorMode) {
+                            TextButton(onClick = { authViewModel.exitMentorMode() }) {
+                                Text("Exit")
+                            }
+                        }
+                        
                         val showSwitcher = userSettings.learnedLanguages.size > 1 && 
                                          currentRoute != NavRoute.Skills && 
                                          currentRoute != NavRoute.Journal
@@ -177,6 +185,14 @@ fun MainScreen(
                                 expanded = showMenu,
                                 onDismissRequest = { showMenu = false }
                             ) {
+                                DropdownMenuItem(
+                                    text = { Text("Study Resources") },
+                                    onClick = {
+                                        showMenu = false
+                                        showResources = true
+                                    },
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Rounded.MenuBook, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                                )
                                 if (isAdmin) {
                                     DropdownMenuItem(
                                         text = { Text("Admin") },
@@ -185,12 +201,9 @@ fun MainScreen(
                                             backStack.clear()
                                             backStack.add(NavRoute.Admin)
                                         },
-                                        leadingIcon = {
-                                            Icon(androidx.compose.material.icons.Icons.Rounded.AdminPanelSettings, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        }
+                                        leadingIcon = { Icon(Icons.Rounded.AdminPanelSettings, contentDescription = null, modifier = Modifier.size(18.dp)) }
                                     )
                                 }
-
                                 DropdownMenuItem(
                                     text = { Text("Settings") },
                                     onClick = {
@@ -198,16 +211,12 @@ fun MainScreen(
                                         backStack.clear()
                                         backStack.add(NavRoute.Settings)
                                     },
-                                    leadingIcon = {
-                                        Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    }
+                                    leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp)) }
                                 )
                             }
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background
-                    )
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
                 )
             }
         },
@@ -231,11 +240,7 @@ fun MainScreen(
             }
         }
     ) { innerPadding ->
-        Row(
-            Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
+        Row(Modifier.fillMaxSize().padding(innerPadding)) {
             if (useNavRail && currentUser != null) {
                 NavigationRail(
                     containerColor = MaterialTheme.colorScheme.surface,
@@ -256,7 +261,6 @@ fun MainScreen(
                     }
                 }
             }
-            
             NavDisplay(
                 backStack = backStack,
                 onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
@@ -267,18 +271,84 @@ fun MainScreen(
     }
 }
 
-@androidx.compose.ui.tooling.preview.Preview(showBackground = true, widthDp = 800, heightDp = 600)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreenWidePreview() {
-    LanguageStudyTheme {
-        MainScreen()
-    }
-}
+fun LanguageResourcesDialog(
+    viewModel: SettingsViewModel,
+    onDismiss: () -> Unit
+) {
+    val userSettings by viewModel.userSettings.collectAsState()
+    val resources by viewModel.resources.collectAsState()
+    val resourceLanguage by viewModel.resourceLanguage.collectAsState()
+    val uriHandler = LocalUriHandler.current
 
-@androidx.compose.ui.tooling.preview.Preview(showBackground = true, widthDp = 360, heightDp = 640)
-@Composable
-fun MainScreenCompactPreview() {
-    LanguageStudyTheme {
-        MainScreen()
-    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Rounded.MenuBook, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Text("Study Resources")
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                // Language Selector
+                var expanded by remember { mutableStateOf(false) }
+                Box {
+                    OutlinedCard(
+                        onClick = { expanded = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(resourceLanguage.ifBlank { "Select Language" }, fontWeight = FontWeight.Bold)
+                            Icon(Icons.Rounded.ArrowDropDown, contentDescription = null)
+                        }
+                    }
+                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        userSettings.learnedLanguages.forEach { lang ->
+                            DropdownMenuItem(
+                                text = { Text(lang) },
+                                onClick = {
+                                    viewModel.setResourceLanguage(lang)
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                if (resources.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp), contentAlignment = Alignment.Center) {
+                        Text("No resources found for $resourceLanguage", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        resources.forEach { resource ->
+                            Card(
+                                onClick = { uriHandler.openUri(resource.url) },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(Icons.Rounded.Link, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                                    Text(resource.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        }
+    )
 }

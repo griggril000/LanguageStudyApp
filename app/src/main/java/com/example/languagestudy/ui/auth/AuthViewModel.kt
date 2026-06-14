@@ -8,7 +8,6 @@ import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import androidx.credentials.GetPasswordOption
 import androidx.credentials.PasswordCredential
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
@@ -16,14 +15,11 @@ import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.languagestudy.R
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -32,6 +28,19 @@ class AuthViewModel : ViewModel() {
 
     private val _user = MutableStateFlow(auth.currentUser)
     val user: StateFlow<com.google.firebase.auth.FirebaseUser?> = _user.asStateFlow()
+
+    private val _mentorUid = MutableStateFlow<String?>(null)
+    val mentorUid: StateFlow<String?> = _mentorUid.asStateFlow()
+
+    private val _mentorCode = MutableStateFlow<String?>(null)
+    val mentorCode: StateFlow<String?> = _mentorCode.asStateFlow()
+
+    val isMentorMode: StateFlow<Boolean> = _mentorUid.map { it != null }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val effectiveUserId: StateFlow<String> = combine(user, _mentorUid) { currentUser, mentor ->
+        mentor ?: currentUser?.uid ?: ""
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), auth.currentUser?.uid ?: "")
 
     private val _isAdmin = MutableStateFlow(false)
     val isAdmin: StateFlow<Boolean> = _isAdmin.asStateFlow()
@@ -70,6 +79,16 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    fun enterMentorMode(ownerUid: String, code: String) {
+        _mentorUid.value = ownerUid
+        _mentorCode.value = code
+    }
+
+    fun exitMentorMode() {
+        _mentorUid.value = null
+        _mentorCode.value = null
+    }
+
     private fun Context.findActivity(): Activity? {
         var context = this
         while (context is ContextWrapper) {
@@ -80,66 +99,32 @@ class AuthViewModel : ViewModel() {
     }
 
     fun signInWithGoogle(context: Context) {
-        val activity = context.findActivity()
-        if (activity == null) {
-            _error.value = "Activity not found"
-            return
-        }
-
+        val activity = context.findActivity() ?: return
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
                 val serverClientId = context.getString(R.string.default_web_client_id)
-                Log.d("AuthViewModel", "Requesting sign-in for client: $serverClientId")
-
                 val credentialManager = CredentialManager.create(context)
-                
-                val googleIdOption = GetSignInWithGoogleOption.Builder(serverClientId)
-                    .build()
-
-                Log.d("AuthViewModel", "GetSignInWithGoogleOption created with Client ID: $serverClientId")
-
-                val request = GetCredentialRequest.Builder()
-                    .addCredentialOption(googleIdOption)
-                    .build()
-
-                Log.d("AuthViewModel", "Calling getCredential...")
+                val googleIdOption = GetSignInWithGoogleOption.Builder(serverClientId).build()
+                val request = GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
                 val result = credentialManager.getCredential(activity, request)
                 val credential = result.credential
-                Log.d("AuthViewModel", "Credential received: ${credential.type}")
 
-                when {
-                    credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL -> {
-                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                        val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
-                        auth.signInWithCredential(firebaseCredential).await()
-                        _user.value = auth.currentUser
-                        checkAdminStatus()
-                    }
-                    credential is PasswordCredential -> {
-                        auth.signInWithEmailAndPassword(credential.id, credential.password).await()
-                        _user.value = auth.currentUser
-                        checkAdminStatus()
-                    }
-                    else -> {
-                        _error.value = "Unexpected credential type: ${credential.type}"
-                    }
+                if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                    val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                    val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+                    auth.signInWithCredential(firebaseCredential).await()
+                    _user.value = auth.currentUser
+                    checkAdminStatus()
+                } else if (credential is PasswordCredential) {
+                    auth.signInWithEmailAndPassword(credential.id, credential.password).await()
+                    _user.value = auth.currentUser
+                    checkAdminStatus()
                 }
-            } catch (e: NoCredentialException) {
-                Log.e("AuthViewModel", "No credentials available. Troubleshooting steps:\n" +
-                        "1. Ensure a Google account is logged into the device settings.\n" +
-                        "2. Ensure SHA-1 is added to Firebase Console.\n" +
-                        "3. Ensure the downloaded google-services.json includes an Android Client ID.", e)
-                _error.value = "No Google accounts found. Check your device settings and Firebase SHA-1 configuration."
-            } catch (e: GetCredentialCancellationException) {
-                _error.value = "Sign in was cancelled."
-            } catch (e: GetCredentialException) {
-                Log.e("AuthViewModel", "Credential Manager Error", e)
-                _error.value = "Sign in failed: ${e.message}"
             } catch (e: Exception) {
-                Log.e("AuthViewModel", "Unknown Auth Error", e)
-                _error.value = "An error occurred: ${e.message}"
+                Log.e("AuthViewModel", "Sign in failed", e)
+                _error.value = "Sign in failed: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -147,10 +132,6 @@ class AuthViewModel : ViewModel() {
     }
 
     fun signInWithEmail(email: String, password: String) {
-        if (email.isBlank() || password.isBlank()) {
-            _error.value = "Email and password cannot be empty"
-            return
-        }
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
@@ -167,10 +148,6 @@ class AuthViewModel : ViewModel() {
     }
 
     fun signUpWithEmail(email: String, password: String) {
-        if (email.isBlank() || password.isBlank()) {
-            _error.value = "Email and password cannot be empty"
-            return
-        }
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
@@ -188,11 +165,9 @@ class AuthViewModel : ViewModel() {
 
     fun signOut(context: Context) {
         viewModelScope.launch {
-            // Clear user state first to trigger UI navigation and stop observers
+            exitMentorMode()
             _user.value = null
             _isAdmin.value = false
-            
-            // Then sign out of Firebase
             auth.signOut()
             
             try {
@@ -201,7 +176,7 @@ class AuthViewModel : ViewModel() {
                     app.database.clearAllTables()
                 }
             } catch (e: Exception) {
-                Log.e("AuthViewModel", "Error clearing database on logout", e)
+                Log.e("AuthViewModel", "Error clearing database", e)
             }
 
             val credentialManager = CredentialManager.create(context)
