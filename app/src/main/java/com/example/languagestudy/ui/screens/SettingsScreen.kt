@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -87,7 +88,7 @@ fun SettingsScreen(
                         FilterChip(
                             selected = isSelected,
                             onClick = { if (canToggle) settingsViewModel.toggleLanguage(language) },
-                            enabled = !isMentorMode || isSelected,
+                            enabled = canToggle || isSelected,
                             label = { Text(language) },
                             leadingIcon = if (isSelected) {
                                 { Icon(imageVector = Icons.Rounded.Done, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
@@ -98,7 +99,7 @@ fun SettingsScreen(
             }
         }
 
-        if (userSettings.learnedLanguages.size > 1) {
+        if (userSettings.learnedLanguages.isNotEmpty()) {
             HorizontalDivider()
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SectionHeader(title = "Primary Language for Study", icon = Icons.Default.Done)
@@ -106,10 +107,11 @@ fun SettingsScreen(
                 FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     userSettings.learnedLanguages.forEach { language ->
                         val isSelected = userSettings.languageLearning == language
+                        val canChange = !isMentorMode && userSettings.learnedLanguages.size > 1
                         FilterChip(
                             selected = isSelected,
-                            onClick = { if (!isMentorMode) settingsViewModel.setCurrentLanguage(language) },
-                            enabled = !isMentorMode,
+                            onClick = { if (canChange) settingsViewModel.setCurrentLanguage(language) },
+                            enabled = canChange || isSelected,
                             label = { Text(language) },
                             leadingIcon = if (isSelected) {
                                 { Icon(imageVector = Icons.Rounded.RadioButtonChecked, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
@@ -137,29 +139,69 @@ fun SettingsScreen(
                     checked = userSettings.mentorCodeEnabled,
                     onCheckedChange = { settingsViewModel.toggleMentorCode(it) },
                     enabled = !isMentorMode,
+                    thumbContent = {
+                        val icon = if (userSettings.mentorCodeEnabled) Icons.Rounded.Check else Icons.Rounded.Close
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(SwitchDefaults.IconSize),
+                            tint = if (isMentorMode) {
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            } else {
+                                if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                    },
                     colors = SwitchDefaults.colors(
-                        disabledUncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
-                        disabledUncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        disabledUncheckedTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                        disabledUncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                        disabledCheckedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
+                        disabledCheckedThumbColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                     )
                 )
             }
 
-            if (userSettings.mentorCodeEnabled) {
-                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))) {
-                    Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Your Mentor Share Code", style = MaterialTheme.typography.labelMedium)
-                        Text(text = mentorCode ?: "Generating...", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = { mentorCode?.let { clipboardManager.setText(AnnotatedString(it)) } }, shape = RoundedCornerShape(8.dp)) {
-                                Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Copy")
-                            }
-                            if (!isMentorMode) {
-                                OutlinedButton(onClick = { settingsViewModel.regenerateMentorCode() }, shape = RoundedCornerShape(8.dp)) {
-                                    Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                
+                // Only show code card if enabled, or if we want it to be visible but disabled
+                // Actually, let's always show the code card if it's enabled or in mentor mode
+                if (userSettings.mentorCodeEnabled || isMentorMode) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (userSettings.mentorCodeEnabled) 0.3f else 0.1f))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Your Mentor Share Code", style = MaterialTheme.typography.labelMedium, color = if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                            Text(
+                                text = mentorCode ?: "Generating...",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                color = if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(
+                                    onClick = { mentorCode?.let { clipboardManager.setText(AnnotatedString(it)) } },
+                                    shape = RoundedCornerShape(8.dp),
+                                    enabled = userSettings.mentorCodeEnabled
+                                ) {
+                                    Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Regenerate")
+                                    Text("Copy")
+                                }
+                                if (!isMentorMode) {
+                                    OutlinedButton(
+                                        onClick = { settingsViewModel.regenerateMentorCode() },
+                                        shape = RoundedCornerShape(8.dp),
+                                        enabled = userSettings.mentorCodeEnabled
+                                    ) {
+                                        Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Regenerate")
+                                    }
                                 }
                             }
                         }
@@ -167,7 +209,11 @@ fun SettingsScreen(
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Mentor Access Level", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "Mentor Access Level",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    )
                     val levels = listOf(
                         "view" to "Read Only: View your data but cannot make changes.",
                         "status" to "Status Updates: Change learning statuses (no content edits).",
@@ -175,15 +221,24 @@ fun SettingsScreen(
                     )
                     levels.forEach { (level, description) ->
                         val isSelected = userSettings.mentorAccessLevel == level
+                        val radioEnabled = !isMentorMode && userSettings.mentorCodeEnabled
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(
                                 selected = isSelected,
-                                onClick = { if (!isMentorMode) settingsViewModel.setMentorAccessLevel(level) },
-                                enabled = !isMentorMode
+                                onClick = { if (radioEnabled) settingsViewModel.setMentorAccessLevel(level) },
+                                enabled = radioEnabled
                             )
                             Column(modifier = Modifier.padding(start = 8.dp)) {
-                                Text(level.replaceFirstChar { it.uppercase() }, fontWeight = FontWeight.SemiBold, color = if (isMentorMode && !isSelected) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onSurface)
-                                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    level.replaceFirstChar { it.uppercase() },
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (!radioEnabled && !isSelected) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (!radioEnabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
@@ -193,7 +248,7 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(16.dp))
         OutlinedButton(onClick = { authViewModel.signOut(context) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-            Icon(Icons.Default.Logout, contentDescription = null)
+            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text("Sign Out")
         }

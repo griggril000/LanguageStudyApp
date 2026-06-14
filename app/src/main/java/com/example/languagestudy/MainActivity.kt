@@ -148,7 +148,7 @@ fun MainScreen(
                             }
                         }
                         
-                        val showSwitcher = userSettings.learnedLanguages.size > 1 && 
+                        val showSwitcher = userSettings.learnedLanguages.isNotEmpty() &&
                                          currentRoute != NavRoute.Skills && 
                                          currentRoute != NavRoute.Journal
                         
