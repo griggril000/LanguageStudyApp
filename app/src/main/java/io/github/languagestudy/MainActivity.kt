@@ -89,7 +89,7 @@ fun MainScreen(
     )
     val userSettings by settingsVm.userSettings.collectAsState()
 
-    val startRoute = if (currentUser == null) NavRoute.Login else NavRoute.Portfolio
+    val startRoute = if (currentUser == null) NavRoute.Login else NavRoute.Vocab
     val backStack = rememberNavBackStack(startRoute as NavKey)
     
     val scope = rememberCoroutineScope()
