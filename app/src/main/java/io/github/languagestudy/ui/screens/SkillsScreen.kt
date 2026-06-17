@@ -582,9 +582,11 @@ fun SkillItem(
                             skill.name,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            textDecoration = if (skill.status == "PROFICIENT") TextDecoration.LineThrough else null
+                            textDecoration = if (skill.status == "PROFICIENT") TextDecoration.LineThrough else null,
+                            maxLines = if (isReorderMode) 1 else Int.MAX_VALUE,
+                            overflow = if (isReorderMode) androidx.compose.ui.text.style.TextOverflow.Ellipsis else androidx.compose.ui.text.style.TextOverflow.Clip
                         )
-                        if (skill.language.isNotBlank()) {
+                        if (skill.language.isNotBlank() && !isReorderMode) {
                             Text(
                                 skill.language,
                                 style = MaterialTheme.typography.bodySmall,
@@ -627,7 +629,7 @@ fun SkillItem(
                     skill.progress / 100f
                 }
 
-                if (displayProgress > 0 || skill.status == "IN_PROGRESS") {
+                if (!isReorderMode && (displayProgress > 0 || skill.status == "IN_PROGRESS")) {
                     Spacer(Modifier.height(8.dp))
                     LinearProgressIndicator(
                         progress = { displayProgress },
