@@ -91,6 +91,11 @@ fun SkillsScreen(
     var initialTouchY by remember { mutableStateOf(0f) }
     var localSkillsList by remember { mutableStateOf(skillsList) }
     var autoScrollJob by remember { mutableStateOf<Job?>(null) }
+    var isReorderMode by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isDragEnabled) {
+        if (!isDragEnabled) isReorderMode = false
+    }
 
     LaunchedEffect(skillsList) {
         if (draggedItemIndex == null) {
@@ -235,12 +240,36 @@ fun SkillsScreen(
 
             Column(modifier = Modifier.padding(16.dp)) {
                 if (allSkills.isNotEmpty()) {
-                    Text(
-                        text = "${allSkills.size} total skills | ${skillsList.size} showing",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "${allSkills.size} total skills | ${skillsList.size} showing",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        if (isDragEnabled) {
+                            TextButton(
+                                onClick = { isReorderMode = !isReorderMode },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Icon(
+                                    if (isReorderMode) Icons.Rounded.Check else Icons.Rounded.Reorder,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    if (isReorderMode) "Done Sorting" else "Reorder",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                        }
+                    }
                 }
 
                 if (allSkills.isEmpty()) {
@@ -265,8 +294,8 @@ fun SkillsScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier
                             .weight(1f)
-                            .pointerInput(isDragEnabled) {
-                                if (!isDragEnabled) return@pointerInput
+                            .pointerInput(isDragEnabled, isReorderMode) {
+                                if (!isDragEnabled || !isReorderMode) return@pointerInput
                                 detectDragGesturesAfterLongPress(
                                     onDragStart = { offset ->
                                         lazyListState.layoutInfo.visibleItemsInfo
@@ -275,25 +304,29 @@ fun SkillsScreen(
                                             }?.also {
                                                 draggedItemIndex = it.index
                                                 initialTouchY = offset.y - it.offset
+                                                draggingOffset = 0f
                                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             }
                                     },
-                                    onDrag = { change, _ ->
+                                    onDrag = { change, dragAmount ->
                                         change.consume()
                                         
                                         val currentIdx = draggedItemIndex ?: return@detectDragGesturesAfterLongPress
                                         val itemInfo = lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == currentIdx } ?: return@detectDragGesturesAfterLongPress
                                         
-                                        val targetItemTop = change.position.y - initialTouchY
-                                        draggingOffset = targetItemTop - itemInfo.offset
+                                        draggingOffset += dragAmount.y
                                         
                                         val currentItemY = itemInfo.offset + draggingOffset
                                         val currentItemCenterY = currentItemY + itemInfo.size / 2
                                         
-                                        // Check for swap
+                                        // Improved swap logic: check if dragged item center crosses target item center
                                         val targetItem = lazyListState.layoutInfo.visibleItemsInfo.find { it ->
                                             it.index != currentIdx &&
-                                            currentItemCenterY.toInt() in it.offset..(it.offset + it.size)
+                                            if (it.index > currentIdx) {
+                                                currentItemCenterY > it.offset + it.size / 2
+                                            } else {
+                                                currentItemCenterY < it.offset + it.size / 2
+                                            }
                                         }
 
                                         if (targetItem != null) {
@@ -303,30 +336,40 @@ fun SkillsScreen(
                                             newList.add(targetIdx, item)
                                             localSkillsList = newList
                                             
+                                            // Counter-adjust the offset to prevent the item from jumping visually 
+                                            // during the index change in the LazyColumn
+                                            draggingOffset += (itemInfo.offset - targetItem.offset)
                                             draggedItemIndex = targetIdx
-                                            // Re-calculate draggingOffset for the new position in the list
-                                            draggingOffset = targetItemTop - targetItem.offset
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         }
 
-                                        // Auto-scroll logic
+                                        // Refined Auto-scroll logic with proportional speed
                                         val viewPortTop = 0
                                         val viewPortBottom = lazyListState.layoutInfo.viewportEndOffset
-                                        if (currentItemY < viewPortTop + 100 && autoScrollJob == null) {
-                                            autoScrollJob = coroutineScope.launch {
-                                                while (true) {
-                                                    lazyListState.scrollBy(-10f)
-                                                    delay(10)
+                                        val scrollThreshold = 120f
+                                        
+                                        val scrollAmount = when {
+                                            currentItemY < viewPortTop + scrollThreshold -> 
+                                                ((currentItemY - (viewPortTop + scrollThreshold)) / 4).coerceAtMost(-5f)
+                                            currentItemY + itemInfo.size > viewPortBottom - scrollThreshold -> 
+                                                ((currentItemY + itemInfo.size - (viewPortBottom - scrollThreshold)) / 4).coerceAtLeast(5f)
+                                            else -> 0f
+                                        }
+
+                                        if (scrollAmount != 0f) {
+                                            if (autoScrollJob == null) {
+                                                autoScrollJob = coroutineScope.launch {
+                                                    while (true) {
+                                                        val actualScroll = lazyListState.scrollBy(scrollAmount)
+                                                        // Compensation: If items move up (positive scroll), 
+                                                        // offset decreases, so we MUST add the scroll to draggingOffset
+                                                        // to keep the item at the same position relative to the finger.
+                                                        draggingOffset += actualScroll
+                                                        delay(10)
+                                                    }
                                                 }
                                             }
-                                        } else if (currentItemY + itemInfo.size > viewPortBottom - 100 && autoScrollJob == null) {
-                                            autoScrollJob = coroutineScope.launch {
-                                                while (true) {
-                                                    lazyListState.scrollBy(10f)
-                                                    delay(10)
-                                                }
-                                            }
-                                        } else if (currentItemY.toInt() in (viewPortTop + 100)..(viewPortBottom - 100)) {
+                                        } else {
                                             autoScrollJob?.cancel()
                                             autoScrollJob = null
                                         }
@@ -357,7 +400,7 @@ fun SkillsScreen(
                             SkillItem(
                                 skill = skill,
                                 learnedLanguages = learnedLanguages,
-                                isDragEnabled = isDragEnabled,
+                                isReorderMode = isReorderMode,
                                 canEdit = canEditContent,
                                 canChangeStatus = canChangeStatus,
                                 onStatusCycle = { viewModel.cycleSkillStatus(skill) },
@@ -391,7 +434,7 @@ fun SkillsScreen(
 fun SkillItem(
     skill: SkillEntity,
     learnedLanguages: List<String>,
-    isDragEnabled: Boolean,
+    isReorderMode: Boolean = false,
     canEdit: Boolean,
     canChangeStatus: Boolean,
     onStatusCycle: () -> Unit,
@@ -410,6 +453,10 @@ fun SkillItem(
     var editName by remember { mutableStateOf(skill.name) }
     var editLang by remember { mutableStateOf(skill.language) }
     var hintVersion by remember { mutableStateOf(0) }
+
+    LaunchedEffect(isReorderMode) {
+        if (isReorderMode) expanded = false
+    }
 
     if (showDeleteConfirm) {
         DeleteConfirmationDialog(
@@ -541,7 +588,7 @@ fun SkillItem(
                         }
                     }
 
-                    if (canEdit) {
+                    if (canEdit && !isReorderMode) {
                         IconButton(onClick = { showEditDialog = true }) {
                             Icon(
                                 Icons.Rounded.Edit,
@@ -552,11 +599,11 @@ fun SkillItem(
                         }
                     }
 
-                    if (isDragEnabled) {
+                    if (isReorderMode) {
                         Icon(
                             Icons.Rounded.DragHandle,
                             contentDescription = "Drag to reorder",
-                            tint = MaterialTheme.colorScheme.outlineVariant,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(24.dp)
                         )
                     } else {

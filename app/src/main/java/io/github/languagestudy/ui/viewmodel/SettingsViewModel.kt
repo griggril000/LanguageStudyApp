@@ -239,6 +239,17 @@ class SettingsViewModel(
         }
     }
 
+    fun setHomepageTab(tab: String) {
+        if (userId.isBlank() || !checkRateLimit("set_homepage_tab", QUICK_COOLDOWN_MS)) return
+        viewModelScope.launch {
+            try {
+                repository.updateUserSettings(userId, mapOf("homepageTab" to tab))
+            } catch (e: Exception) {
+                _errorMessages.emit("Failed to set start tab: ${e.message}")
+            }
+        }
+    }
+
     private fun generateRandomCode(): String {
         val chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
         return (1..5).map { chars.random() }.joinToString("")

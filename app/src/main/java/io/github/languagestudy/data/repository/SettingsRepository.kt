@@ -34,6 +34,7 @@ class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFire
                 val mentorCodeEnabled = snapshot.getBoolean("mentorCodeEnabled") ?: false
                 val mentorAccessLevel = snapshot.getString("mentorAccessLevel") ?: "view"
                 val mentorQuickReviewEnabled = snapshot.getBoolean("mentorQuickReviewEnabled") ?: false
+                val homepageTab = snapshot.getString("homepageTab") ?: "vocab"
                 
                 trySend(UserSettings(
                     learnedLanguages = learnedLanguages,
@@ -42,7 +43,8 @@ class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFire
                     isPublic = isPublic,
                     mentorCodeEnabled = mentorCodeEnabled,
                     mentorAccessLevel = mentorAccessLevel,
-                    mentorQuickReviewEnabled = mentorQuickReviewEnabled
+                    mentorQuickReviewEnabled = mentorQuickReviewEnabled,
+                    homepageTab = homepageTab
                 ))
             } else {
                 trySend(UserSettings())
