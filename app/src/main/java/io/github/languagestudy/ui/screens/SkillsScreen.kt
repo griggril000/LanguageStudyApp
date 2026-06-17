@@ -89,6 +89,7 @@ fun SkillsScreen(
     var draggedItemIndex by remember { mutableStateOf<Int?>(null) }
     var draggingOffset by remember { mutableStateOf(0f) }
     var initialTouchY by remember { mutableStateOf(0f) }
+    var currentTouchY by remember { mutableStateOf(0f) }
     var localSkillsList by remember { mutableStateOf(skillsList) }
     var autoScrollJob by remember { mutableStateOf<Job?>(null) }
     var isReorderMode by remember { mutableStateOf(false) }
@@ -304,17 +305,20 @@ fun SkillsScreen(
                                             }?.also {
                                                 draggedItemIndex = it.index
                                                 initialTouchY = offset.y - it.offset
+                                                currentTouchY = offset.y
                                                 draggingOffset = 0f
                                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             }
                                     },
                                     onDrag = { change, dragAmount ->
                                         change.consume()
+                                        currentTouchY = change.position.y
                                         
                                         val currentIdx = draggedItemIndex ?: return@detectDragGesturesAfterLongPress
                                         val itemInfo = lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == currentIdx } ?: return@detectDragGesturesAfterLongPress
                                         
-                                        draggingOffset += dragAmount.y
+                                        // Absolute position calculation: stay locked to finger
+                                        draggingOffset = currentTouchY - itemInfo.offset - initialTouchY
                                         
                                         val currentItemY = itemInfo.offset + draggingOffset
                                         val currentItemCenterY = currentItemY + itemInfo.size / 2
@@ -336,10 +340,9 @@ fun SkillsScreen(
                                             newList.add(targetIdx, item)
                                             localSkillsList = newList
                                             
-                                            // Counter-adjust the offset to prevent the item from jumping visually 
-                                            // during the index change in the LazyColumn
-                                            draggingOffset += (itemInfo.offset - targetItem.offset)
                                             draggedItemIndex = targetIdx
+                                            // Recalculate offset immediately for the new position
+                                            draggingOffset = currentTouchY - targetItem.offset - initialTouchY
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         }
 
@@ -360,11 +363,13 @@ fun SkillsScreen(
                                             if (autoScrollJob == null) {
                                                 autoScrollJob = coroutineScope.launch {
                                                     while (true) {
-                                                        val actualScroll = lazyListState.scrollBy(scrollAmount)
-                                                        // Compensation: If items move up (positive scroll), 
-                                                        // offset decreases, so we MUST add the scroll to draggingOffset
-                                                        // to keep the item at the same position relative to the finger.
-                                                        draggingOffset += actualScroll
+                                                        lazyListState.scrollBy(scrollAmount)
+                                                        // Update draggingOffset to stay in sync with the scrolling list
+                                                        lazyListState.layoutInfo.visibleItemsInfo
+                                                            .firstOrNull { it.index == draggedItemIndex }
+                                                            ?.let { info ->
+                                                                draggingOffset = currentTouchY - info.offset - initialTouchY
+                                                            }
                                                         delay(10)
                                                     }
                                                 }
@@ -577,9 +582,11 @@ fun SkillItem(
                             skill.name,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            textDecoration = if (skill.status == "PROFICIENT") TextDecoration.LineThrough else null
+                            textDecoration = if (skill.status == "PROFICIENT") TextDecoration.LineThrough else null,
+                            maxLines = if (isReorderMode) 1 else Int.MAX_VALUE,
+                            overflow = if (isReorderMode) androidx.compose.ui.text.style.TextOverflow.Ellipsis else androidx.compose.ui.text.style.TextOverflow.Clip
                         )
-                        if (skill.language.isNotBlank()) {
+                        if (skill.language.isNotBlank() && !isReorderMode) {
                             Text(
                                 skill.language,
                                 style = MaterialTheme.typography.bodySmall,
@@ -622,7 +629,7 @@ fun SkillItem(
                     skill.progress / 100f
                 }
 
-                if (displayProgress > 0 || skill.status == "IN_PROGRESS") {
+                if (!isReorderMode && (displayProgress > 0 || skill.status == "IN_PROGRESS")) {
                     Spacer(Modifier.height(8.dp))
                     LinearProgressIndicator(
                         progress = { displayProgress },
