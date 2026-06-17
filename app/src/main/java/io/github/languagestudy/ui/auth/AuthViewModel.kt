@@ -17,10 +17,13 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.ViewModelProvider
 import io.github.languagestudy.R
 import io.github.languagestudy.data.repository.AdminRepository
+import io.github.languagestudy.data.repository.MentorRepository
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -206,6 +209,63 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
 
             val credentialManager = CredentialManager.create(context)
             credentialManager.clearCredentialState(ClearCredentialStateRequest())
+        }
+    }
+
+    fun deleteAccount(context: Context, onComplete: (Boolean, String?) -> Unit) {
+        val user = auth.currentUser
+        if (user == null) {
+            onComplete(false, "No user logged in")
+            return
+        }
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val db = FirebaseFirestore.getInstance()
+                val userDocRef = db.collection("users").document(user.uid)
+
+                // Delete subcollections
+                val collections = listOf("vocabulary", "skills", "portfolio", "journal", "metadata")
+                for (collectionName in collections) {
+                    val snapshot = userDocRef.collection(collectionName).get().await()
+                    if (!snapshot.isEmpty) {
+                        val batch = db.batch()
+                        for (doc in snapshot.documents) {
+                            batch.delete(doc.reference)
+                        }
+                        batch.commit().await()
+                    }
+                }
+
+                // Delete mentor code if exists
+                val mentorCodeId = MentorRepository.getMentorCodeIdForUser(user.uid)
+                if (mentorCodeId != null) {
+                    MentorRepository.deleteMentorCode(mentorCodeId)
+                }
+
+                // Delete user document
+                userDocRef.delete().await()
+
+                // Delete auth user
+                user.delete().await()
+
+                // Sign out and clear local data
+                signOut(context)
+                onComplete(true, null)
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Error deleting account", e)
+                when (e) {
+                    is FirebaseAuthRecentLoginRequiredException -> {
+                        onComplete(false, "Please sign out and sign in again, then try deleting your account for security.")
+                    }
+                    else -> {
+                        onComplete(false, e.message ?: "Error deleting account")
+                    }
+                }
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 }

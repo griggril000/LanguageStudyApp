@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.languagestudy.ui.auth.AuthViewModel
+import io.github.languagestudy.ui.components.DeleteConfirmationDialog
 import io.github.languagestudy.ui.components.SectionHeader
 import io.github.languagestudy.ui.viewmodel.SettingsViewModel
 
@@ -44,6 +45,7 @@ fun SettingsScreen(
     val mentorCode by settingsViewModel.mentorCode.collectAsState()
     val scrollState = rememberScrollState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         settingsViewModel.errorMessages.collect { message ->
@@ -54,6 +56,23 @@ fun SettingsScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
+        if (showDeleteDialog) {
+            DeleteConfirmationDialog(
+                title = "Delete Account?",
+                message = "This will permanently delete your account and all your data (vocabulary, skills, portfolio, journal, etc.). This action cannot be undone.",
+                onConfirm = {
+                    authViewModel.deleteAccount(context) { success, message ->
+                        if (!success && message != null) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(message)
+                            }
+                        }
+                    }
+                },
+                onDismiss = { showDeleteDialog = false }
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -373,6 +392,18 @@ fun SettingsScreen(
             Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text("Sign Out")
+        }
+
+        if (currentUser != null && !isMentorMode) {
+            TextButton(
+                onClick = { showDeleteDialog = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Icon(Icons.Default.DeleteForever, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Delete Account")
+            }
         }
 
         TextButton(

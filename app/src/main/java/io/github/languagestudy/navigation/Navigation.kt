@@ -1,6 +1,7 @@
 package io.github.languagestudy.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Login
 import androidx.compose.material.icons.rounded.Book
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Psychology
@@ -37,7 +38,7 @@ sealed interface NavRoute : NavKey {
 
 val NavRoute.icon: ImageVector
     get() = when (this) {
-        NavRoute.Login -> Icons.Rounded.Login
+        NavRoute.Login -> Icons.AutoMirrored.Rounded.Login
         NavRoute.Portfolio -> Icons.Rounded.Work
         NavRoute.Vocab -> Icons.Rounded.Book
         NavRoute.Skills -> Icons.Rounded.Psychology
