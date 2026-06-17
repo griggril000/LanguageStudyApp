@@ -7,5 +7,6 @@ data class UserSettings(
     val isPublic: Boolean = false,
     val mentorCodeEnabled: Boolean = false,
     val mentorAccessLevel: String = "view",
-    val mentorQuickReviewEnabled: Boolean = false
+    val mentorQuickReviewEnabled: Boolean = false,
+    val homepageTab: String = "vocab"
 )

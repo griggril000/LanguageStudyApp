@@ -2,18 +2,68 @@ package io.github.languagestudy.ui.screens
 
 import android.content.ClipData
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.SupervisorAccount
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Done
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.RadioButtonChecked
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
@@ -23,10 +73,13 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.languagestudy.navigation.NavRoute
+import io.github.languagestudy.navigation.label
 import io.github.languagestudy.ui.auth.AuthViewModel
 import io.github.languagestudy.ui.components.DeleteConfirmationDialog
 import io.github.languagestudy.ui.components.SectionHeader
 import io.github.languagestudy.ui.viewmodel.SettingsViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -151,6 +204,30 @@ fun SettingsScreen(
                             label = { Text(language) },
                             leadingIcon = if (isSelected) {
                                 { Icon(imageVector = Icons.Rounded.RadioButtonChecked, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
+                            } else null
+                        )
+                    }
+                }
+            }
+        }
+
+        if (userSettings.learnedLanguages.isNotEmpty()) {
+            HorizontalDivider()
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionHeader(title = "Startup Tab", icon = Icons.Rounded.Home)
+                Text(text = "Choose which tab opens when you start the app.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    NavRoute.mainRoutes.forEach { route ->
+                        val routeName = route.label.lowercase()
+                        val isSelected = userSettings.homepageTab == routeName
+                        val canChange = !isMentorMode
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { if (canChange) settingsViewModel.setHomepageTab(routeName) },
+                            enabled = canChange || isSelected,
+                            label = { Text(route.label) },
+                            leadingIcon = if (isSelected) {
+                                { Icon(imageVector = Icons.Rounded.Done, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
                             } else null
                         )
                     }
@@ -290,6 +367,30 @@ fun SettingsScreen(
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        if (userSettings.learnedLanguages.isNotEmpty()) {
+            HorizontalDivider()
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionHeader(title = "Startup Tab", icon = Icons.Rounded.Home)
+                Text(text = "Choose which tab opens when you start the app.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    NavRoute.mainRoutes.forEach { route ->
+                        val routeName = route.label.lowercase()
+                        val isSelected = userSettings.homepageTab == routeName
+                        val canChange = !isMentorMode
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { if (canChange) settingsViewModel.setHomepageTab(routeName) },
+                            enabled = canChange || isSelected,
+                            label = { Text(route.label) },
+                            leadingIcon = if (isSelected) {
+                                { Icon(imageVector = Icons.Rounded.Done, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
+                            } else null
+                        )
                     }
                 }
             }

@@ -89,8 +89,20 @@ fun MainScreen(
     )
     val userSettings by settingsVm.userSettings.collectAsState()
 
-    val startRoute = if (currentUser == null) NavRoute.Login else NavRoute.Vocab
-    val backStack = rememberNavBackStack(startRoute as NavKey)
+    val startRoute = remember(currentUser) {
+        if (currentUser == null) NavRoute.Login else NavRoute.fromString(userSettings.homepageTab)
+    }
+    val backStack = rememberNavBackStack(startRoute)
+
+    LaunchedEffect(userSettings.homepageTab) {
+        if (currentUser != null && backStack.size == 1 && backStack.lastOrNull() == NavRoute.Vocab) {
+            val preferred = NavRoute.fromString(userSettings.homepageTab)
+            if (preferred != NavRoute.Vocab) {
+                backStack.clear()
+                backStack.add(preferred)
+            }
+        }
+    }
     
     val scope = rememberCoroutineScope()
 
@@ -129,7 +141,7 @@ fun MainScreen(
             entry<NavRoute.Login> { 
                 LoginScreen(onLoginSuccess = {
                     backStack.clear()
-                    backStack.add(NavRoute.Portfolio)
+                    backStack.add(NavRoute.fromString(userSettings.homepageTab))
                 }) 
             }
             entry<NavRoute.Vocab> { 

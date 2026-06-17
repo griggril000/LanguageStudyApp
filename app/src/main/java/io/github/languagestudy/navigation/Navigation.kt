@@ -33,6 +33,14 @@ sealed interface NavRoute : NavKey {
 
     companion object {
         val mainRoutes = listOf(Vocab, Skills, Portfolio, Journal)
+
+        fun fromString(route: String): NavRoute = when (route.lowercase()) {
+            "vocab" -> Vocab
+            "skills" -> Skills
+            "portfolio" -> Portfolio
+            "journal" -> Journal
+            else -> Vocab
+        }
     }
 }
 
