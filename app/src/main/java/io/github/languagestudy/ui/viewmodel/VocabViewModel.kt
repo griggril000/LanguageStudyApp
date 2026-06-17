@@ -82,7 +82,11 @@ class VocabViewModel(
 
     fun deleteVocab(vocab: VocabEntity) {
         viewModelScope.launch {
-            repository.delete(vocab, userId)
+            try {
+                repository.delete(vocab, userId)
+            } catch (e: Exception) {
+                _error.emit("Failed to delete vocab: ${e.message}")
+            }
         }
     }
 
@@ -121,16 +125,24 @@ class VocabViewModel(
     fun addCategory(name: String) {
         if (name.isBlank()) return
         viewModelScope.launch {
-            repository.addCategory(name.trim(), userId)
+            try {
+                repository.addCategory(name.trim(), userId)
+            } catch (e: Exception) {
+                _error.emit("Failed to add category: ${e.message}")
+            }
         }
     }
 
     fun deleteCategory(name: String) {
         if (name == "General") return
         viewModelScope.launch {
-            repository.deleteCategory(name, userId)
-            if (_selectedCategory.value == name) {
-                _selectedCategory.value = null
+            try {
+                repository.deleteCategory(name, userId)
+                if (_selectedCategory.value == name) {
+                    _selectedCategory.value = null
+                }
+            } catch (e: Exception) {
+                _error.emit("Failed to delete category: ${e.message}")
             }
         }
     }

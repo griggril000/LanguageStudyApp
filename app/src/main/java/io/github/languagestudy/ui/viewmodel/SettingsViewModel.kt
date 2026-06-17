@@ -44,7 +44,6 @@ class SettingsViewModel(
 
     init {
         loadAvailableLanguages()
-        loadMentorCode()
         
         // Load resources for the initial primary language when settings load
         viewModelScope.launch {
@@ -54,18 +53,35 @@ class SettingsViewModel(
                 }
             }
         }
-    }
 
-    private fun loadMentorCode() {
-        if (userId.isBlank()) return
+        // Sync mentorCode state flow with userSettings shareCode, with a fallback check
         viewModelScope.launch {
-            _mentorCode.value = mentorRepository.getMentorCodeIdForUser(userId)
+            userSettings.map { it.shareCode }.distinctUntilChanged().collect { code ->
+                if (code.isBlank()) {
+                    // Fallback: check if the user has a code in the mentorCodes collection
+                    // that hasn't been synced to their settings doc yet.
+                    val existingCode = mentorRepository.getMentorCodeIdForUser(userId)
+                    if (existingCode != null) {
+                        _mentorCode.value = existingCode
+                        // Silently sync it back to settings doc
+                        repository.updateUserSettings(userId, mapOf("shareCode" to existingCode))
+                    } else {
+                        _mentorCode.value = null
+                    }
+                } else {
+                    _mentorCode.value = code
+                }
+            }
         }
     }
 
     private fun loadAvailableLanguages() {
         viewModelScope.launch {
-            _availableLanguages.value = repository.getAvailableLanguages()
+            try {
+                _availableLanguages.value = repository.getAvailableLanguages()
+            } catch (e: Exception) {
+                android.util.Log.e("SettingsVM", "Error loading languages", e)
+            }
         }
     }
 
@@ -113,8 +129,12 @@ class SettingsViewModel(
     fun setResourceLanguage(language: String) {
         _resourceLanguage.value = language
         viewModelScope.launch {
-            repository.getLanguageResources(language).collect { 
-                _resources.value = it
+            try {
+                repository.getLanguageResources(language).collect { 
+                    _resources.value = it
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SettingsVM", "Error loading resources", e)
             }
         }
     }
@@ -122,15 +142,23 @@ class SettingsViewModel(
     fun toggleMentorCode(enabled: Boolean) {
         if (userId.isBlank() || !checkRateLimit("mentor_code_toggle")) return
         viewModelScope.launch {
-            val updates = mutableMapOf<String, Any>("mentorCodeEnabled" to enabled)
-            if (enabled && _mentorCode.value == null) {
-                _mentorCode.value = mentorRepository.generateUniqueMentorCode(userId)
-            }
-            
-            repository.updateUserSettings(userId, updates)
-            
-            _mentorCode.value?.let { code ->
-                mentorRepository.updateMentorCodeStatus(code, enabled)
+            try {
+                val updates = mutableMapOf<String, Any>("mentorCodeEnabled" to enabled)
+                var currentCode = _mentorCode.value
+                
+                if (enabled && currentCode == null) {
+                    currentCode = mentorRepository.generateUniqueMentorCode(userId)
+                    _mentorCode.value = currentCode
+                    updates["shareCode"] = currentCode
+                }
+                
+                repository.updateUserSettings(userId, updates)
+                
+                currentCode?.let { code ->
+                    mentorRepository.updateMentorCodeStatus(code, enabled)
+                }
+            } catch (e: Exception) {
+                _errorMessages.emit("Failed to update mentor access: ${e.message}")
             }
         }
     }
@@ -138,23 +166,36 @@ class SettingsViewModel(
     fun regenerateMentorCode() {
         if (userId.isBlank() || !checkRateLimit("mentor_code_regenerate", 3000L)) return
         viewModelScope.launch {
-            _mentorCode.value?.let { oldCode ->
-                mentorRepository.deleteMentorCode(oldCode)
+            try {
+                _mentorCode.value?.let { oldCode ->
+                    mentorRepository.deleteMentorCode(oldCode)
+                }
+                val newCode = mentorRepository.generateUniqueMentorCode(userId)
+                _mentorCode.value = newCode
+                repository.updateUserSettings(userId, mapOf("shareCode" to newCode))
+            } catch (e: Exception) {
+                _errorMessages.emit("Failed to regenerate code: ${e.message}")
             }
-            val newCode = mentorRepository.generateUniqueMentorCode(userId)
-            _mentorCode.value = newCode
         }
     }
 
     fun setMentorAccessLevel(level: String) {
         if (userId.isBlank() || !checkRateLimit("mentor_access_level", QUICK_COOLDOWN_MS)) return
         viewModelScope.launch {
-            repository.updateUserSettings(userId, mapOf("mentorAccessLevel" to level))
+            try {
+                repository.updateUserSettings(userId, mapOf("mentorAccessLevel" to level))
+            } catch (e: Exception) {
+                _errorMessages.emit("Failed to update access level: ${e.message}")
+            }
         }
     }
 
     suspend fun validateCode(code: String): String? {
-        return mentorRepository.validateMentorCode(code)
+        return try {
+            mentorRepository.validateMentorCode(code)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun toggleLanguage(language: String) {
@@ -179,14 +220,22 @@ class SettingsViewModel(
         }
 
         viewModelScope.launch {
-            repository.updateUserSettings(userId, updates)
+            try {
+                repository.updateUserSettings(userId, updates)
+            } catch (e: Exception) {
+                _errorMessages.emit("Failed to update languages: ${e.message}")
+            }
         }
     }
 
     fun setCurrentLanguage(language: String) {
         if (userId.isBlank() || !checkRateLimit("set_current_language", QUICK_COOLDOWN_MS)) return
         viewModelScope.launch {
-            repository.updateUserSettings(userId, mapOf("languageLearning" to language))
+            try {
+                repository.updateUserSettings(userId, mapOf("languageLearning" to language))
+            } catch (e: Exception) {
+                _errorMessages.emit("Failed to set primary language: ${e.message}")
+            }
         }
     }
 

@@ -136,7 +136,11 @@ class SkillViewModel(
 
     fun deleteSkill(skill: SkillEntity) {
         viewModelScope.launch {
-            repository.delete(skill, userId)
+            try {
+                repository.delete(skill, userId)
+            } catch (e: Exception) {
+                _error.emit("Failed to delete skill: ${e.message}")
+            }
         }
     }
 

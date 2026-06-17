@@ -73,7 +73,11 @@ class JournalViewModel(
 
     fun deleteEntry(entry: JournalEntryEntity) {
         viewModelScope.launch {
-            repository.delete(entry, userId)
+            try {
+                repository.delete(entry, userId)
+            } catch (e: Exception) {
+                _error.emit("Failed to delete entry: ${e.message}")
+            }
         }
     }
 
