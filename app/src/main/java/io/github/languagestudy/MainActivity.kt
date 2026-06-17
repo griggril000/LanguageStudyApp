@@ -132,19 +132,6 @@ fun MainScreen(
                     backStack.add(NavRoute.Portfolio)
                 }) 
             }
-            entry<NavRoute.Portfolio> { 
-                val userId = effectiveUserId
-                val portfolioVm: PortfolioViewModel = viewModel(
-                    key = "portfolio_$userId",
-                    factory = PortfolioViewModelFactory(userId, app.settingsRepository)
-                )
-                PortfolioScreen(
-                    viewModel = portfolioVm, 
-                    searchViewModel = searchViewModel,
-                    isMentorMode = isMentorMode,
-                    mentorAccessLevel = userSettings.mentorAccessLevel
-                ) 
-            }
             entry<NavRoute.Vocab> { 
                 VocabScreen(
                     userId = effectiveUserId, 
@@ -160,6 +147,19 @@ fun MainScreen(
                     isMentorMode = isMentorMode,
                     mentorAccessLevel = userSettings.mentorAccessLevel
                 ) 
+            }
+            entry<NavRoute.Portfolio> {
+                val userId = effectiveUserId
+                val portfolioVm: PortfolioViewModel = viewModel(
+                    key = "portfolio_$userId",
+                    factory = PortfolioViewModelFactory(userId, app.settingsRepository)
+                )
+                PortfolioScreen(
+                    viewModel = portfolioVm,
+                    searchViewModel = searchViewModel,
+                    isMentorMode = isMentorMode,
+                    mentorAccessLevel = userSettings.mentorAccessLevel
+                )
             }
             entry<NavRoute.Journal> { 
                 JournalScreen(
