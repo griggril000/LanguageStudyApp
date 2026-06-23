@@ -1,8 +1,10 @@
 package io.github.languagestudy.data.repository
 
+import io.github.languagestudy.data.local.entity.JournalEntryEntity
 import io.github.languagestudy.data.local.entity.SkillEntity
 import io.github.languagestudy.data.local.entity.Subtask
 import io.github.languagestudy.data.local.entity.VocabEntity
+import io.github.languagestudy.data.model.PortfolioItem
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -10,7 +12,9 @@ import kotlinx.coroutines.launch
 class SampleDataSeeder(
     private val vocabRepository: VocabRepository,
     private val skillRepository: SkillRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val portfolioRepository: PortfolioRepository,
+    private val journalRepository: JournalRepository
 ) {
     suspend fun seed(userId: String) = coroutineScope {
         android.util.Log.d("SampleDataSeeder", "Seeding data for user: $userId")
@@ -82,6 +86,23 @@ class SampleDataSeeder(
         }
 
         launch {
+            val portfolios = listOf(
+                PortfolioItem(title = "Spanish Greeting Practice", link = "https://www.youtube.com/watch?v=dQw4w9WgXcQ", type = "youtube", videoId = "dQw4w9WgXcQ", language = "Spanish", isTop = true),
+                PortfolioItem(title = "French Alphabet Song", link = "https://www.youtube.com/watch?v=5Xm-0Y_s758", type = "youtube", videoId = "5Xm-0Y_s758", language = "French")
+            )
+            portfolios.forEach { portfolioRepository.addPortfolioItem(userId, it) }
+        }
+
+        launch {
+            val journals = listOf(
+                JournalEntryEntity(title = "First Spanish Lesson", content = "Learned how to say hello and thank you today. Spanish sounds very musical!", language = "Spanish"),
+                JournalEntryEntity(title = "Starting French", content = "Bonjour! French pronunciation is quite different from what I expected, but I like it.", language = "French"),
+                JournalEntryEntity(title = "Japanese Hiragana Progress", content = "I can now recognize all the vowels and the K-row in Hiragana!", language = "Japanese")
+            )
+            journals.forEach { journalRepository.insert(it, userId) }
+        }
+
+        launch {
             settingsRepository.updateUserSettings(userId, mapOf(
                 "learnedLanguages" to listOf("Spanish", "French", "Japanese"),
                 "languageLearning" to "Spanish"
@@ -89,3 +110,4 @@ class SampleDataSeeder(
         }
     }
 }
+
