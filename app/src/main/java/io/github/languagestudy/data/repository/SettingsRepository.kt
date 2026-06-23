@@ -35,6 +35,7 @@ class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFire
                 val mentorAccessLevel = snapshot.getString("mentorAccessLevel") ?: "view"
                 val mentorQuickReviewEnabled = snapshot.getBoolean("mentorQuickReviewEnabled") ?: false
                 val homepageTab = snapshot.getString("homepageTab") ?: "vocab"
+                val firstLogin = snapshot.getBoolean("firstLogin") ?: false
                 
                 trySend(UserSettings(
                     learnedLanguages = learnedLanguages,
@@ -44,10 +45,12 @@ class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFire
                     mentorCodeEnabled = mentorCodeEnabled,
                     mentorAccessLevel = mentorAccessLevel,
                     mentorQuickReviewEnabled = mentorQuickReviewEnabled,
-                    homepageTab = homepageTab
+                    homepageTab = homepageTab,
+                    firstLogin = firstLogin
                 ))
             } else {
-                trySend(UserSettings())
+                // Document doesn't exist = brand new user
+                trySend(UserSettings(firstLogin = true))
             }
         }
         awaitClose { listener.remove() }

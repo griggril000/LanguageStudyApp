@@ -214,6 +214,14 @@ fun MainScreen(
         )
     }
 
+    if (currentUser != null && userSettings.firstLogin) {
+        WelcomeWalkthrough(
+            viewModel = settingsVm,
+            onDismiss = { settingsVm.setFirstLogin(false) },
+            onFinish = { settingsVm.setFirstLogin(false) }
+        )
+    }
+
     Scaffold(
         topBar = {
             if (currentUser != null) {
