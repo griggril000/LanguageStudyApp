@@ -1,9 +1,9 @@
 package io.github.languagestudy.data.repository
 
-import io.github.languagestudy.data.model.LanguageResource
-import io.github.languagestudy.data.model.UserSettings
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import io.github.languagestudy.data.model.LanguageResource
+import io.github.languagestudy.data.model.UserSettings
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -11,7 +11,7 @@ import kotlinx.coroutines.tasks.await
 
 class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()) {
 
-    private fun getSettingsDoc(userId: String) = 
+    private fun getSettingsDoc(userId: String) =
         firestore.collection("users").document(userId).collection("metadata").document("settings")
 
     fun getUserSettings(userId: String): Flow<UserSettings> = callbackFlow {
@@ -27,27 +27,31 @@ class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFire
                 return@addSnapshotListener
             }
             if (snapshot != null && snapshot.exists()) {
-                val learnedLanguages = snapshot.get("learnedLanguages") as? List<String> ?: emptyList()
+                val learnedLanguages =
+                    snapshot.get("learnedLanguages") as? List<String> ?: emptyList()
                 val languageLearning = snapshot.getString("languageLearning") ?: ""
                 val shareCode = snapshot.getString("shareCode") ?: ""
                 val isPublic = snapshot.getBoolean("isPublic") ?: false
                 val mentorCodeEnabled = snapshot.getBoolean("mentorCodeEnabled") ?: false
                 val mentorAccessLevel = snapshot.getString("mentorAccessLevel") ?: "view"
-                val mentorQuickReviewEnabled = snapshot.getBoolean("mentorQuickReviewEnabled") ?: false
+                val mentorQuickReviewEnabled =
+                    snapshot.getBoolean("mentorQuickReviewEnabled") ?: false
                 val homepageTab = snapshot.getString("homepageTab") ?: "vocab"
                 val firstLogin = snapshot.getBoolean("firstLogin") ?: false
-                
-                trySend(UserSettings(
-                    learnedLanguages = learnedLanguages,
-                    languageLearning = languageLearning,
-                    shareCode = shareCode,
-                    isPublic = isPublic,
-                    mentorCodeEnabled = mentorCodeEnabled,
-                    mentorAccessLevel = mentorAccessLevel,
-                    mentorQuickReviewEnabled = mentorQuickReviewEnabled,
-                    homepageTab = homepageTab,
-                    firstLogin = firstLogin
-                ))
+
+                trySend(
+                    UserSettings(
+                        learnedLanguages = learnedLanguages,
+                        languageLearning = languageLearning,
+                        shareCode = shareCode,
+                        isPublic = isPublic,
+                        mentorCodeEnabled = mentorCodeEnabled,
+                        mentorAccessLevel = mentorAccessLevel,
+                        mentorQuickReviewEnabled = mentorQuickReviewEnabled,
+                        homepageTab = homepageTab,
+                        firstLogin = firstLogin
+                    )
+                )
             } else {
                 // Document doesn't exist = brand new user
                 trySend(UserSettings(firstLogin = true))
@@ -84,11 +88,11 @@ class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFire
                 return@addSnapshotListener
             }
             if (snapshot != null && snapshot.exists()) {
-                val links = snapshot.get("links") as? List<Map<String, String>> ?: emptyList()
-                val resourceList = links.map { 
+                val links = snapshot.get("links") as? List<Map<String, Any>> ?: emptyList()
+                val resourceList = links.map {
                     LanguageResource(
-                        name = it["name"] ?: "",
-                        url = it["url"] ?: ""
+                        name = it["name"] as? String ?: "",
+                        url = it["url"] as? String ?: ""
                     )
                 }
                 trySend(resourceList)

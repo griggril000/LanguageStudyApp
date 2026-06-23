@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -26,12 +27,14 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
@@ -46,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -62,6 +66,7 @@ fun WelcomeWalkthrough(
     var currentStep by remember { mutableIntStateOf(1) }
     val totalSteps = 6
 
+    val uriHandler = LocalUriHandler.current
     val availableLanguages by viewModel.availableLanguages.collectAsState(initial = emptyList())
     var selectedLang by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
@@ -152,7 +157,16 @@ fun WelcomeWalkthrough(
                                 selectedLang = it
                                 showError = false
                             },
-                            availableLanguages = availableLanguages
+                            availableLanguages = availableLanguages,
+                            onRequestLanguage = { langName ->
+                                val uri = "mailto:griggriley+languagestudy@gmail.com" +
+                                        "?subject=${android.net.Uri.encode("Language Study - New Language Request")}" +
+                                        "&body=${android.net.Uri.encode("I would like to request support for: $langName")}"
+                                try {
+                                    uriHandler.openUri(uri)
+                                } catch (_: Exception) {
+                                }
+                            }
                         )
 
                         3 -> VocabStep()
@@ -251,7 +265,8 @@ private fun WelcomeStep() {
 private fun SelectLanguageStep(
     selectedLang: String,
     onLangSelected: (String) -> Unit,
-    availableLanguages: List<String>
+    availableLanguages: List<String>,
+    onRequestLanguage: (String) -> Unit
 ) {
     Column {
         Text(
@@ -295,6 +310,71 @@ private fun SelectLanguageStep(
                             onLangSelected(lang)
                             expanded = false
                         }
+                    )
+                }
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            "My language isn't listed here...",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                        onLangSelected("Unlisted")
+                    }
+                )
+            }
+        }
+
+        if (selectedLang == "Unlisted") {
+            var requestedLang by remember { mutableStateOf("") }
+            var requestSent by remember { mutableStateOf(false) }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            if (!requestSent) {
+                OutlinedTextField(
+                    value = requestedLang,
+                    onValueChange = { requestedLang = it },
+                    label = { Text("What language are you studying?") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    trailingIcon = {
+                        IconButton(
+                            onClick = {
+                                if (requestedLang.isNotBlank()) {
+                                    onRequestLanguage(requestedLang)
+                                    requestSent = true
+                                }
+                            },
+                            enabled = requestedLang.isNotBlank()
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Rounded.Send,
+                                contentDescription = "Send Email Request"
+                            )
+                        }
+                    }
+                )
+                Text(
+                    text = "We'll add resources for this language soon!",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                )
+            } else {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Request sent for $requestedLang! You can continue the walkthrough or select another language above.",
+                        modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }
