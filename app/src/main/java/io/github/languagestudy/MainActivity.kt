@@ -30,6 +30,7 @@ import androidx.window.core.layout.WindowWidthSizeClass
 import io.github.languagestudy.navigation.NavRoute
 import io.github.languagestudy.navigation.icon
 import io.github.languagestudy.navigation.label
+import io.github.languagestudy.data.repository.SampleDataSeeder
 import io.github.languagestudy.ui.auth.AuthViewModel
 import io.github.languagestudy.ui.auth.AuthViewModelFactory
 import io.github.languagestudy.ui.auth.LoginScreen
@@ -108,6 +109,11 @@ fun MainScreen(
 
     LaunchedEffect(currentUser) {
         if (currentUser != null) {
+            android.util.Log.d("MainActivity", "Current user email: ${currentUser?.email}")
+            if (currentUser?.email == "test@example.com") {
+                val seeder = SampleDataSeeder(app.vocabRepository, app.skillRepository, app.settingsRepository)
+                launch { seeder.seed(currentUser!!.uid) }
+            }
             intentFlow.collect { intent ->
                 if (intent.action == Intent.ACTION_VIEW) {
                     val data = intent.data
@@ -205,6 +211,14 @@ fun MainScreen(
         LanguageResourcesDialog(
             viewModel = settingsVm,
             onDismiss = { showResources = false }
+        )
+    }
+
+    if (currentUser != null && userSettings.firstLogin) {
+        WelcomeWalkthrough(
+            viewModel = settingsVm,
+            onDismiss = { settingsVm.setFirstLogin(false) },
+            onFinish = { settingsVm.setFirstLogin(false) }
         )
     }
 

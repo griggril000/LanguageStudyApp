@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Language
@@ -43,6 +44,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -134,389 +136,537 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-        if (currentUser != null) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+            if (currentUser != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                            alpha = 0.5f
+                        )
+                    )
                 ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier.size(48.dp)
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                        }
-                    }
-                    Column {
-                        Text(
-                            text = if (isMentorMode) "Viewing Account" else "Account",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(text = currentUser?.email ?: "", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SectionHeader(title = "Languages you are learning", icon = Icons.Default.Language)
-            if (availableLanguages.isEmpty()) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            } else {
-                FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    availableLanguages.forEach { language ->
-                        val isSelected = userSettings.learnedLanguages.contains(language)
-                        val canToggle = (!isSelected || userSettings.learnedLanguages.size > 1) && !isMentorMode
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { if (canToggle) settingsViewModel.toggleLanguage(language) },
-                            enabled = canToggle || isSelected,
-                            label = { Text(language) },
-                            leadingIcon = if (isSelected) {
-                                { Icon(imageVector = Icons.Rounded.Done, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
-                            } else null
-                        )
-                    }
-                }
-            }
-        }
-
-        if (userSettings.learnedLanguages.isNotEmpty()) {
-            HorizontalDivider()
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionHeader(title = "Primary Language for Study", icon = Icons.Default.Done)
-                Text(text = "Select which language to focus on.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    userSettings.learnedLanguages.forEach { language ->
-                        val isSelected = userSettings.languageLearning == language
-                        val canChange = !isMentorMode && userSettings.learnedLanguages.size > 1
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { if (canChange) settingsViewModel.setCurrentLanguage(language) },
-                            enabled = canChange || isSelected,
-                            label = { Text(language) },
-                            leadingIcon = if (isSelected) {
-                                { Icon(imageVector = Icons.Rounded.RadioButtonChecked, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
-                            } else null
-                        )
-                    }
-                }
-            }
-        }
-
-        if (userSettings.learnedLanguages.isNotEmpty()) {
-            HorizontalDivider()
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionHeader(title = "Startup Tab", icon = Icons.Rounded.Home)
-                Text(text = "Choose which tab opens when you start the app.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    NavRoute.mainRoutes.forEach { route ->
-                        val routeName = route.label.lowercase()
-                        val isSelected = userSettings.homepageTab == routeName
-                        val canChange = !isMentorMode
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { if (canChange) settingsViewModel.setHomepageTab(routeName) },
-                            enabled = canChange || isSelected,
-                            label = { Text(route.label) },
-                            leadingIcon = if (isSelected) {
-                                { Icon(imageVector = Icons.Rounded.Done, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
-                            } else null
-                        )
-                    }
-                }
-            }
-        }
-
-        HorizontalDivider()
-
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            SectionHeader(title = "Mentor Access", icon = Icons.Default.SupervisorAccount)
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Enable Mentor View", style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        if (isMentorMode) "Settings are read-only in mentor mode." else "Allow someone with your code to view your progress.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = userSettings.mentorCodeEnabled,
-                    onCheckedChange = { settingsViewModel.toggleMentorCode(it) },
-                    enabled = !isMentorMode,
-                    thumbContent = {
-                        val icon = if (userSettings.mentorCodeEnabled) Icons.Rounded.Check else Icons.Rounded.Close
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            modifier = Modifier.size(SwitchDefaults.IconSize),
-                            tint = if (isMentorMode) {
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            } else {
-                                if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
                             }
-                        )
-                    },
-                    colors = SwitchDefaults.colors(
-                        disabledUncheckedTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                        disabledUncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                        disabledCheckedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
-                        disabledCheckedThumbColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                    )
-                )
-            }
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Only show code card and access level if enabled, or if in mentor mode
-                if (userSettings.mentorCodeEnabled || isMentorMode) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (userSettings.mentorCodeEnabled) 0.3f else 0.1f))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Your Mentor Share Code", style = MaterialTheme.typography.labelMedium, color = if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                        }
+                        Column {
                             Text(
-                                text = mentorCode ?: "Generating...",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                                color = if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                text = if (isMentorMode) "Viewing Account" else "Account",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
                             )
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        mentorCode?.let { code ->
-                                            scope.launch {
-                                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Mentor Code", code)))
-                                            }
-                                        }
-                                    },
-                                    shape = RoundedCornerShape(8.dp),
-                                    enabled = true
-                                ) {
-                                    Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Copy")
-                                }
-                                if (!isMentorMode) {
-                                    OutlinedButton(
-                                        onClick = { settingsViewModel.regenerateMentorCode() },
-                                        shape = RoundedCornerShape(8.dp),
-                                        enabled = true
-                                    ) {
-                                        Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        Spacer(Modifier.width(8.dp))
-                                        Text("Regenerate")
+                            Text(
+                                text = currentUser?.email ?: "",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionHeader(title = "Languages you are learning", icon = Icons.Default.Language)
+                if (availableLanguages.isEmpty()) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                } else {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        availableLanguages.forEach { language ->
+                            val isSelected = userSettings.learnedLanguages.contains(language)
+                            val canToggle =
+                                (!isSelected || userSettings.learnedLanguages.size > 1) && !isMentorMode
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { if (canToggle) settingsViewModel.toggleLanguage(language) },
+                                enabled = canToggle || isSelected,
+                                label = { Text(language) },
+                                leadingIcon = if (isSelected) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Done,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                        )
                                     }
-                                }
-                            }
+                                } else null
+                            )
                         }
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            "Mentor Access Level",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        )
-                        val levels = listOf(
-                            "view" to "Read Only: View your data but cannot make changes.",
-                            "status" to "Status Updates: Change learning statuses (no content edits).",
-                            "full" to "Edit All: Add, edit, and delete vocabulary, skills, and portfolio."
-                        )
-                        levels.forEach { (level, description) ->
-                            val isSelected = userSettings.mentorAccessLevel == level
-                            val radioEnabled = !isMentorMode
+                    if (!isMentorMode) {
+                        var showRequestField by remember { mutableStateOf(false) }
+                        var requestedName by remember { mutableStateOf("") }
+
+                        if (!showRequestField) {
+                            TextButton(
+                                onClick = { showRequestField = true },
+                                modifier = Modifier.padding(top = 4.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Language,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text("Don't see your language? Request it")
+                            }
+                        } else {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable(
-                                        enabled = radioEnabled,
-                                        onClick = { settingsViewModel.setMentorAccessLevel(level) }
-                                    )
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .padding(top = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = null, // Handled by Row's clickable
-                                    enabled = radioEnabled
+                                OutlinedTextField(
+                                    value = requestedName,
+                                    onValueChange = { requestedName = it },
+                                    label = { Text("Language Name") },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    singleLine = true
                                 )
-                                Column(modifier = Modifier.padding(start = 8.dp)) {
-                                    Text(
-                                        level.replaceFirstChar { it.uppercase() },
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = if (!radioEnabled && !isSelected) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onSurface
+                                IconButton(
+                                    onClick = {
+                                        if (requestedName.isNotBlank()) {
+                                            val uri = "mailto:griggriley+languagestudy@gmail.com" +
+                                                    "?subject=${android.net.Uri.encode("Language Study - New Language Request")}" +
+                                                    "&body=${android.net.Uri.encode("I would like to request support for the following language: $requestedName")}"
+                                            try {
+                                                uriHandler.openUri(uri)
+                                                requestedName = ""
+                                                showRequestField = false
+                                            } catch (_: Exception) {
+                                            }
+                                        }
+                                    },
+                                    enabled = requestedName.isNotBlank()
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Rounded.Send,
+                                        contentDescription = "Send Email"
                                     )
-                                    Text(
-                                        description,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = if (!radioEnabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                }
+                                IconButton(onClick = { showRequestField = false }) {
+                                    Icon(Icons.Rounded.Close, contentDescription = "Cancel")
                                 }
                             }
                         }
                     }
                 }
             }
-        }
 
-        if (userSettings.learnedLanguages.isNotEmpty()) {
-            HorizontalDivider()
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionHeader(title = "Startup Tab", icon = Icons.Rounded.Home)
-                Text(text = "Choose which tab opens when you start the app.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    NavRoute.mainRoutes.forEach { route ->
-                        val routeName = route.label.lowercase()
-                        val isSelected = userSettings.homepageTab == routeName
-                        val canChange = !isMentorMode
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { if (canChange) settingsViewModel.setHomepageTab(routeName) },
-                            enabled = canChange || isSelected,
-                            label = { Text(route.label) },
-                            leadingIcon = if (isSelected) {
-                                { Icon(imageVector = Icons.Rounded.Done, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
-                            } else null
-                        )
+            if (userSettings.learnedLanguages.isNotEmpty()) {
+                HorizontalDivider()
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SectionHeader(title = "Primary Language for Study", icon = Icons.Default.Done)
+                    Text(
+                        text = "Select which language to focus on.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        userSettings.learnedLanguages.forEach { language ->
+                            val isSelected = userSettings.languageLearning == language
+                            val canChange = !isMentorMode && userSettings.learnedLanguages.size > 1
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    if (canChange) settingsViewModel.setCurrentLanguage(
+                                        language
+                                    )
+                                },
+                                enabled = canChange || isSelected,
+                                label = { Text(language) },
+                                leadingIcon = if (isSelected) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Rounded.RadioButtonChecked,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                        )
+                                    }
+                                } else null
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        HorizontalDivider()
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            SectionHeader(title = "Mentor Mode", icon = Icons.Default.School)
-            if (isMentorMode) {
-                Text(
-                    "You are currently viewing another user's progress. Your actions may be limited based on their permission settings.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Button(
-                    onClick = { authViewModel.exitMentorMode() },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                ) {
-                    Text("Exit Mentor Mode")
+            if (userSettings.learnedLanguages.isNotEmpty()) {
+                HorizontalDivider()
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SectionHeader(title = "Startup Tab", icon = Icons.Rounded.Home)
+                    Text(
+                        text = "Choose which tab opens when you start the app.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        NavRoute.mainRoutes.forEach { route ->
+                            val routeName = route.label.lowercase()
+                            val isSelected = userSettings.homepageTab == routeName
+                            val canChange = !isMentorMode
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    if (canChange) settingsViewModel.setHomepageTab(
+                                        routeName
+                                    )
+                                },
+                                enabled = canChange || isSelected,
+                                label = { Text(route.label) },
+                                leadingIcon = if (isSelected) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Done,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                        )
+                                    }
+                                } else null
+                            )
+                        }
+                    }
                 }
-            } else {
-                Text(
-                    "Enter a student's share code to view their progress and help them learn.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            }
 
-                var inputCode by remember { mutableStateOf("") }
-                var isValidating by remember { mutableStateOf(false) }
-                var errorMessage by remember { mutableStateOf<String?>(null) }
+            HorizontalDivider()
 
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                SectionHeader(title = "Mentor Access", icon = Icons.Default.SupervisorAccount)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    OutlinedTextField(
-                        value = inputCode,
-                        onValueChange = {
-                            if (it.length <= 5) {
-                                inputCode = it.uppercase()
-                                errorMessage = null
-                            }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Enable Mentor View", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            if (isMentorMode) "Settings are read-only in mentor mode." else "Allow someone with your code to view your progress.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = userSettings.mentorCodeEnabled,
+                        onCheckedChange = { settingsViewModel.toggleMentorCode(it) },
+                        enabled = !isMentorMode,
+                        thumbContent = {
+                            val icon =
+                                if (userSettings.mentorCodeEnabled) Icons.Rounded.Check else Icons.Rounded.Close
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(SwitchDefaults.IconSize),
+                                tint = if (isMentorMode) {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                } else {
+                                    if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
                         },
-                        label = { Text("Share Code") },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
-                        isError = errorMessage != null,
-                        supportingText = errorMessage?.let { { Text(it) } }
+                        colors = SwitchDefaults.colors(
+                            disabledUncheckedTrackColor = MaterialTheme.colorScheme.onSurface.copy(
+                                alpha = 0.12f
+                            ),
+                            disabledUncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(
+                                alpha = 0.38f
+                            ),
+                            disabledCheckedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
+                            disabledCheckedThumbColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                        )
                     )
+                }
 
-                    Button(
-                        onClick = {
-                            if (inputCode.length == 5) {
-                                scope.launch {
-                                    isValidating = true
-                                    errorMessage = null
-                                    try {
-                                        val ownerUid = settingsViewModel.validateCode(inputCode)
-                                        if (ownerUid != null) {
-                                            if (ownerUid == currentUser?.uid) {
-                                                errorMessage = "Cannot mentor yourself"
-                                            } else {
-                                                authViewModel.enterMentorMode(ownerUid, inputCode)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Only show code card and access level if enabled, or if in mentor mode
+                    if (userSettings.mentorCodeEnabled || isMentorMode) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(
+                                    alpha = if (userSettings.mentorCodeEnabled) 0.3f else 0.1f
+                                )
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    "Your Mentor Share Code",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(
+                                        alpha = 0.38f
+                                    )
+                                )
+                                Text(
+                                    text = mentorCode ?: "Generating...",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                    color = if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(
+                                        alpha = 0.38f
+                                    )
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            mentorCode?.let { code ->
+                                                scope.launch {
+                                                    clipboard.setClipEntry(
+                                                        ClipEntry(
+                                                            ClipData.newPlainText(
+                                                                "Mentor Code",
+                                                                code
+                                                            )
+                                                        )
+                                                    )
+                                                }
                                             }
-                                        } else {
-                                            errorMessage = "Invalid or disabled code"
+                                        },
+                                        shape = RoundedCornerShape(8.dp),
+                                        enabled = true
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.ContentCopy,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Copy")
+                                    }
+                                    if (!isMentorMode) {
+                                        OutlinedButton(
+                                            onClick = { settingsViewModel.regenerateMentorCode() },
+                                            shape = RoundedCornerShape(8.dp),
+                                            enabled = true
+                                        ) {
+                                            Icon(
+                                                Icons.Rounded.Refresh,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("Regenerate")
                                         }
-                                    } catch (_: Exception) {
-                                        errorMessage = "Error validating code"
-                                    } finally {
-                                        isValidating = false
                                     }
                                 }
                             }
-                        },
-                        enabled = inputCode.length == 5 && !isValidating,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.height(56.dp).align(Alignment.Top)
-                    ) {
-                        if (isValidating) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                "Mentor Access Level",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(
+                                    alpha = 0.38f
+                                )
                             )
-                        } else {
-                            Text("Join")
+                            val levels = listOf(
+                                "view" to "Read Only: View your data but cannot make changes.",
+                                "status" to "Status Updates: Change learning statuses (no content edits).",
+                                "full" to "Edit All: Add, edit, and delete vocabulary, skills, and portfolio."
+                            )
+                            levels.forEach { (level, description) ->
+                                val isSelected = userSettings.mentorAccessLevel == level
+                                val radioEnabled = !isMentorMode
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(
+                                            enabled = radioEnabled,
+                                            onClick = { settingsViewModel.setMentorAccessLevel(level) }
+                                        )
+                                        .padding(vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = null, // Handled by Row's clickable
+                                        enabled = radioEnabled
+                                    )
+                                    Column(modifier = Modifier.padding(start = 8.dp)) {
+                                        Text(
+                                            level.replaceFirstChar { it.uppercase() },
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (!radioEnabled && !isSelected) MaterialTheme.colorScheme.onSurface.copy(
+                                                alpha = 0.38f
+                                            ) else MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            description,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (!radioEnabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                alpha = 0.38f
+                                            ) else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
 
-        Spacer(Modifier.height(16.dp))
-        OutlinedButton(onClick = { authViewModel.signOut(context) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Sign Out")
-        }
+            HorizontalDivider()
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                SectionHeader(title = "Mentor Mode", icon = Icons.Default.School)
+                if (isMentorMode) {
+                    Text(
+                        "You are currently viewing another user's progress. Your actions may be limited based on their permission settings.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Button(
+                        onClick = { authViewModel.exitMentorMode() },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Text("Exit Mentor Mode")
+                    }
+                } else {
+                    Text(
+                        "Enter a student's share code to view their progress and help them learn.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
 
-        if (currentUser != null && !isMentorMode) {
-            TextButton(
-                onClick = { showDeleteDialog = true },
+                    var inputCode by remember { mutableStateOf("") }
+                    var isValidating by remember { mutableStateOf(false) }
+                    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = inputCode,
+                            onValueChange = {
+                                if (it.length <= 5) {
+                                    inputCode = it.uppercase()
+                                    errorMessage = null
+                                }
+                            },
+                            label = { Text("Share Code") },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true,
+                            isError = errorMessage != null,
+                            supportingText = errorMessage?.let { { Text(it) } }
+                        )
+
+                        Button(
+                            onClick = {
+                                if (inputCode.length == 5) {
+                                    scope.launch {
+                                        isValidating = true
+                                        errorMessage = null
+                                        try {
+                                            val ownerUid = settingsViewModel.validateCode(inputCode)
+                                            if (ownerUid != null) {
+                                                if (ownerUid == currentUser?.uid) {
+                                                    errorMessage = "Cannot mentor yourself"
+                                                } else {
+                                                    authViewModel.enterMentorMode(
+                                                        ownerUid,
+                                                        inputCode
+                                                    )
+                                                }
+                                            } else {
+                                                errorMessage = "Invalid or disabled code"
+                                            }
+                                        } catch (_: Exception) {
+                                            errorMessage = "Error validating code"
+                                        } finally {
+                                            isValidating = false
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = inputCode.length == 5 && !isValidating,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .height(56.dp)
+                                .align(Alignment.Top)
+                        ) {
+                            if (isValidating) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            } else {
+                                Text("Join")
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            OutlinedButton(
+                onClick = { authViewModel.signOut(context) },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
             ) {
-                Icon(Icons.Default.DeleteForever, contentDescription = null)
+                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Delete Account")
+                Text("Sign Out")
+            }
+
+            if (currentUser != null && !isMentorMode) {
+                TextButton(
+                    onClick = { showDeleteDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Icon(Icons.Default.DeleteForever, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Delete Account")
+                }
+            }
+
+            TextButton(
+                onClick = { uriHandler.openUri("https://www.flaticon.com/free-icons/globe") },
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
+                Text(
+                    text = "Globe icons created by Techno Icons - Flaticon",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
-
-        TextButton(
-            onClick = { uriHandler.openUri("https://www.flaticon.com/free-icons/globe") },
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        ) {
-            Text(
-                text = "Globe icons created by Techno Icons - Flaticon",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
     }
-}
 }

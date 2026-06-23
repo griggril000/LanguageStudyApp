@@ -230,9 +230,16 @@ class SettingsViewModel(
 
     fun setCurrentLanguage(language: String) {
         if (userId.isBlank() || !checkRateLimit("set_current_language", QUICK_COOLDOWN_MS)) return
+        val currentSettings = userSettings.value
+        val updates = mutableMapOf<String, Any>("languageLearning" to language)
+        
+        if (!currentSettings.learnedLanguages.contains(language)) {
+            updates["learnedLanguages"] = currentSettings.learnedLanguages + language
+        }
+
         viewModelScope.launch {
             try {
-                repository.updateUserSettings(userId, mapOf("languageLearning" to language))
+                repository.updateUserSettings(userId, updates)
             } catch (e: Exception) {
                 _errorMessages.emit("Failed to set primary language: ${e.message}")
             }
@@ -246,6 +253,17 @@ class SettingsViewModel(
                 repository.updateUserSettings(userId, mapOf("homepageTab" to tab))
             } catch (e: Exception) {
                 _errorMessages.emit("Failed to set start tab: ${e.message}")
+            }
+        }
+    }
+
+    fun setFirstLogin(isFirst: Boolean) {
+        if (userId.isBlank()) return
+        viewModelScope.launch {
+            try {
+                repository.updateUserSettings(userId, mapOf("firstLogin" to isFirst))
+            } catch (e: Exception) {
+                _errorMessages.emit("Failed to update login status: ${e.message}")
             }
         }
     }
