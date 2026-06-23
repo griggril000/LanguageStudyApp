@@ -7,25 +7,23 @@ data class PortfolioItem(
     @DocumentId 
     var id: String = "",
     
-    val title: String = "",
+    var title: String = "",
     
-    val link: String = "",
+    var link: String = "",
     
     @get:PropertyName("isTop")
     @set:PropertyName("isTop")
-    @get:JvmName("isTop")
     var isTop: Boolean = false,
     
     @get:PropertyName("isPrivate")
     @set:PropertyName("isPrivate")
-    @get:JvmName("isPrivate")
     var isPrivate: Boolean = false,
     
-    val type: String = "youtube",
+    var type: String = "youtube",
     
-    val videoId: String? = null,
+    var videoId: String? = null,
     
-    val language: String = "",
+    var language: String = "",
 
-    val dateAdded: com.google.firebase.Timestamp? = null
+    var dateAdded: com.google.firebase.Timestamp? = null
 )
