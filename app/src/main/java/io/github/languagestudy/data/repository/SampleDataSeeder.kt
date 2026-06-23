@@ -28,15 +28,78 @@ class SampleDataSeeder(
 
         launch {
             val samples = listOf(
-                VocabEntity(id = "sample_v1", word = "Hola", translation = "Hello", category = "Greeting", language = "Spanish", status = "PROFICIENT"),
-                VocabEntity(id = "sample_v2", word = "Gracias", translation = "Thank you", category = "Greeting", language = "Spanish", status = "IN_PROGRESS"),
-                VocabEntity(id = "sample_v3", word = "Buenos días", translation = "Good morning", category = "Greeting", language = "Spanish", status = "NOT_STARTED"),
-                VocabEntity(id = "sample_v4", word = "Bonjour", translation = "Hello", category = "Greeting", language = "French", status = "NOT_STARTED"),
-                VocabEntity(id = "sample_v5", word = "S'il vous plaît", translation = "Please", category = "Politeness", language = "French", status = "PROFICIENT"),
-                VocabEntity(id = "sample_v6", word = "Merci", translation = "Thank you", category = "Greeting", language = "French", status = "IN_PROGRESS"),
-                VocabEntity(id = "sample_v7", word = "Konnichiwa", translation = "Hello", category = "Greeting", language = "Japanese", status = "IN_PROGRESS"),
-                VocabEntity(id = "sample_v8", word = "Arigato", translation = "Thank you", category = "Greeting", language = "Japanese", status = "NOT_STARTED"),
-                VocabEntity(id = "sample_v9", word = "Sumimasen", translation = "Excuse me / Sorry", category = "Politeness", language = "Japanese", status = "NOT_STARTED")
+                VocabEntity(
+                    id = "sample_v1",
+                    word = "Hola",
+                    translation = "Hello",
+                    category = "Greeting",
+                    language = "Spanish",
+                    status = "PROFICIENT"
+                ),
+                VocabEntity(
+                    id = "sample_v2",
+                    word = "Gracias",
+                    translation = "Thank you",
+                    category = "Greeting",
+                    language = "Spanish",
+                    status = "IN_PROGRESS"
+                ),
+                VocabEntity(
+                    id = "sample_v3",
+                    word = "Buenos días",
+                    translation = "Good morning",
+                    category = "Greeting",
+                    language = "Spanish",
+                    status = "NOT_STARTED"
+                ),
+                VocabEntity(
+                    id = "sample_v4",
+                    word = "Bonjour",
+                    translation = "Hello",
+                    category = "Greeting",
+                    language = "French",
+                    status = "NOT_STARTED"
+                ),
+                VocabEntity(
+                    id = "sample_v5",
+                    word = "S'il vous plaît",
+                    translation = "Please",
+                    category = "Politeness",
+                    language = "French",
+                    status = "PROFICIENT"
+                ),
+                VocabEntity(
+                    id = "sample_v6",
+                    word = "Merci",
+                    translation = "Thank you",
+                    category = "Greeting",
+                    language = "French",
+                    status = "IN_PROGRESS"
+                ),
+                VocabEntity(
+                    id = "sample_v7",
+                    word = "Konnichiwa",
+                    translation = "Hello",
+                    category = "Greeting",
+                    language = "Japanese",
+                    status = "IN_PROGRESS"
+                ),
+                VocabEntity(
+                    id = "sample_v8",
+                    word = "Arigato",
+                    translation = "Thank you",
+                    category = "Greeting",
+                    language = "Japanese",
+                    status = "NOT_STARTED"
+                ),
+                VocabEntity(
+                    id = "sample_v9",
+                    word = "Sumimasen",
+                    translation = "Excuse me / Sorry",
+                    category = "Politeness",
+                    language = "Japanese",
+                    status = "NOT_STARTED"
+                )
             )
             samples.forEach { vocabRepository.insert(it, userId) }
         }
@@ -76,8 +139,16 @@ class SampleDataSeeder(
                     priority = 2,
                     subtasks = listOf(
                         Subtask(id = "j1", text = "Vowels (a, i, u, e, o)", status = "PROFICIENT"),
-                        Subtask(id = "j2", text = "K-row (ka, ki, ku, ke, ko)", status = "PROFICIENT"),
-                        Subtask(id = "j3", text = "S-row (sa, shi, su, se, so)", status = "PROFICIENT")
+                        Subtask(
+                            id = "j2",
+                            text = "K-row (ka, ki, ku, ke, ko)",
+                            status = "PROFICIENT"
+                        ),
+                        Subtask(
+                            id = "j3",
+                            text = "S-row (sa, shi, su, se, so)",
+                            status = "PROFICIENT"
+                        )
                     ),
                     progress = 100
                 )
@@ -87,26 +158,53 @@ class SampleDataSeeder(
 
         launch {
             val portfolios = listOf(
-                PortfolioItem(title = "Spanish Greeting Practice", link = "https://www.youtube.com/watch?v=dQw4w9WgXcQ", type = "youtube", videoId = "dQw4w9WgXcQ", language = "Spanish", isTop = true),
-                PortfolioItem(title = "French Alphabet Song", link = "https://www.youtube.com/watch?v=5Xm-0Y_s758", type = "youtube", videoId = "5Xm-0Y_s758", language = "French")
+                PortfolioItem(
+                    title = "Spanish Greeting Practice",
+                    link = "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                    type = "youtube",
+                    videoId = "dQw4w9WgXcQ",
+                    language = "Spanish",
+                    isTop = true
+                ),
+                PortfolioItem(
+                    title = "French Alphabet Song",
+                    link = "https://www.youtube.com/watch?v=5Xm-0Y_s758",
+                    type = "youtube",
+                    videoId = "5Xm-0Y_s758",
+                    language = "French"
+                )
             )
             portfolios.forEach { portfolioRepository.addPortfolioItem(userId, it) }
         }
 
         launch {
             val journals = listOf(
-                JournalEntryEntity(title = "First Spanish Lesson", content = "Learned how to say hello and thank you today. Spanish sounds very musical!", language = "Spanish"),
-                JournalEntryEntity(title = "Starting French", content = "Bonjour! French pronunciation is quite different from what I expected, but I like it.", language = "French"),
-                JournalEntryEntity(title = "Japanese Hiragana Progress", content = "I can now recognize all the vowels and the K-row in Hiragana!", language = "Japanese")
+                JournalEntryEntity(
+                    title = "First Spanish Lesson",
+                    content = "Learned how to say hello and thank you today. Spanish sounds wonderful!",
+                    language = "Spanish"
+                ),
+                JournalEntryEntity(
+                    title = "Starting French",
+                    content = "Bonjour! French pronunciation is quite different from what I expected, but I like it.",
+                    language = "French"
+                ),
+                JournalEntryEntity(
+                    title = "Japanese Hiragana Progress",
+                    content = "I can now recognize all the vowels and the K-row in Hiragana!",
+                    language = "Japanese"
+                )
             )
             journals.forEach { journalRepository.insert(it, userId) }
         }
 
         launch {
-            settingsRepository.updateUserSettings(userId, mapOf(
-                "learnedLanguages" to listOf("Spanish", "French", "Japanese"),
-                "languageLearning" to "Spanish"
-            ))
+            settingsRepository.updateUserSettings(
+                userId, mapOf(
+                    "learnedLanguages" to listOf("Spanish", "French", "Japanese"),
+                    "languageLearning" to "Spanish"
+                )
+            )
         }
     }
 }
