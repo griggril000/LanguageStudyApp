@@ -154,6 +154,7 @@ fun WelcomeWalkthrough(
                             },
                             availableLanguages = availableLanguages
                         )
+
                         3 -> VocabStep()
                         4 -> SkillsStep()
                         5 -> PortfolioStep()
@@ -358,7 +359,7 @@ private fun PortfolioStep() {
 private fun FinalStep() {
     Column {
         Text(
-            text = "You're all set. You can adjust settings anytime in the Settings tab. Let's get started!",
+            text = "You're all set. You can adjust settings anytime in the Settings menu. Let's get started!",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
