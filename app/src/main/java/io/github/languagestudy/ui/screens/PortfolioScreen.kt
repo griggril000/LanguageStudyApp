@@ -378,9 +378,10 @@ fun FeaturedPortfolioItem(
                         .height(220.dp)
                         .background(Color.Black)
                 ) {
-                    if (item.type == "youtube" && item.videoId != null) {
+                    val videoId = item.videoId
+                    if (item.type == "youtube" && videoId != null) {
                         YouTubePlayer(
-                            videoId = item.videoId,
+                            videoId = videoId,
                             modifier = Modifier.fillMaxSize()
                         )
                     } else if (item.type == "soundcloud") {
