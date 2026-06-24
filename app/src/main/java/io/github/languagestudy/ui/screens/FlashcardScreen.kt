@@ -1,21 +1,11 @@
 package io.github.languagestudy.ui.screens
 
+import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -25,25 +15,8 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -153,23 +126,40 @@ fun FlashcardScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // Flashcard
+            // Flashcard with transition to prevent "showing back of next card" bug
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                Flashcard(
-                    vocab = currentItem,
-                    isFlipped = isFlipped,
-                    onFlip = { viewModel.flipCard() }
-                )
+                AnimatedContent(
+                    targetState = currentItem,
+                    transitionSpec = {
+                        val isNext = targetState.id != initialState.id && 
+                                   reviewList.indexOf(targetState) > reviewList.indexOf(initialState)
+                        
+                        if (isNext) {
+                            (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
+                                slideOutHorizontally { width -> -width } + fadeOut())
+                        } else {
+                            (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
+                                slideOutHorizontally { width -> width } + fadeOut())
+                        }.using(SizeTransform(clip = false))
+                    },
+                    label = "cardTransition"
+                ) { targetItem ->
+                    Flashcard(
+                        vocab = targetItem,
+                        isFlipped = isFlipped && targetItem.id == currentItem.id,
+                        onFlip = { viewModel.flipCard() }
+                    )
+                }
             }
 
             Spacer(Modifier.height(24.dp))
 
-            // Status Selector (1, 2, 3 shortcuts in JS)
+            // Status Selector
             Surface(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                 shape = RoundedCornerShape(20.dp),
@@ -244,139 +234,143 @@ fun Flashcard(
     isFlipped: Boolean,
     onFlip: () -> Unit
 ) {
-    val rotation by animateFloatAsState(
-        targetValue = if (isFlipped) 180f else 0f,
-        animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
-        label = "cardRotation"
-    )
-
-    Card(
-        modifier = Modifier
-            .fillMaxSize()
-            .graphicsLayer {
-                rotationY = rotation
-                cameraDistance = 12f * density
-            }
-            .clickable { onFlip() },
-        shape = RoundedCornerShape(32.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant
+    // key(vocab.id) ensures that the rotation animation resets immediately 
+    // when we switch to a new card, preventing the "briefly showing the back" bug.
+    key(vocab.id) {
+        val rotation by animateFloatAsState(
+            targetValue = if (isFlipped) 180f else 0f,
+            animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+            label = "cardRotation"
         )
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            if (rotation <= 90f) {
-                // Front Side
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(32.dp)
-                ) {
-                    Text(
-                        text = vocab.word,
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(Modifier.height(24.dp))
-                    Text(
-                        text = "Tap to flip",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                        fontWeight = FontWeight.Medium
-                    )
+
+        Card(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    rotationY = rotation
+                    cameraDistance = 12f * density
                 }
-            } else {
-                // Back Side
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp)
-                        .graphicsLayer { rotationY = 180f },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    if (vocab.status == "PROFICIENT") {
-                        Surface(
-                            color = Color(0xFF2E7D32).copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Rounded.CheckCircle,
-                                    contentDescription = null,
-                                    tint = Color(0xFF2E7D32),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    "MASTERED",
-                                    color = Color(0xFF2E7D32),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-
-                    val youtubeId = UrlUtils.getYouTubeId(vocab.translation)
-                    val isSoundCloud = UrlUtils.isSoundCloudUrl(vocab.translation)
-
-                    val cleanTranslation = vocab.translation
-                        .replace(Regex("https?://\\S+"), "")
-                        .trim()
-
-                    if (cleanTranslation.isNotBlank()) {
+                .clickable { onFlip() },
+            shape = RoundedCornerShape(32.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant
+            )
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                if (rotation <= 90f) {
+                    // Front Side
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(32.dp)
+                    ) {
                         Text(
-                            text = cleanTranslation,
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
+                            text = vocab.word,
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.ExtraBold,
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                    } else if (youtubeId == null && !isSoundCloud) {
+                        Spacer(Modifier.height(24.dp))
                         Text(
-                            text = "(no translation)",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                            text = "Tap to flip",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.Medium
                         )
                     }
-
-                    if (youtubeId != null || isSoundCloud) {
-                        Spacer(Modifier.height(24.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(220.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .graphicsLayer {
-                                    // Ensure web content doesn't flip again
+                } else {
+                    // Back Side
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp)
+                            .graphicsLayer { rotationY = 180f },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        if (vocab.status == "PROFICIENT") {
+                            Surface(
+                                color = Color(0xFF2E7D32).copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.padding(bottom = 16.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.CheckCircle,
+                                        contentDescription = null,
+                                        tint = Color(0xFF2E7D32),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        "MASTERED",
+                                        color = Color(0xFF2E7D32),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
-                        ) {
-                            if (youtubeId != null) {
-                                YouTubePlayer(videoId = youtubeId)
-                            } else if (isSoundCloud) {
-                                SoundCloudPlayer(url = vocab.translation)
                             }
                         }
-                    }
 
-                    Spacer(Modifier.height(24.dp))
-                    Text(
-                        text = "Tap to see word",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    )
+                        val youtubeId = UrlUtils.getYouTubeId(vocab.translation)
+                        val isSoundCloud = UrlUtils.isSoundCloudUrl(vocab.translation)
+
+                        val cleanTranslation = vocab.translation
+                            .replace(Regex("https?://\\S+"), "")
+                            .trim()
+
+                        if (cleanTranslation.isNotBlank()) {
+                            Text(
+                                text = cleanTranslation,
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        } else if (youtubeId == null && !isSoundCloud) {
+                            Text(
+                                text = "(no translation)",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                            )
+                        }
+
+                        if (youtubeId != null || isSoundCloud) {
+                            Spacer(Modifier.height(24.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(220.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .graphicsLayer {
+                                        // Ensure web content doesn't flip again
+                                    }
+                            ) {
+                                if (youtubeId != null) {
+                                    YouTubePlayer(videoId = youtubeId)
+                                } else if (isSoundCloud) {
+                                    SoundCloudPlayer(url = vocab.translation)
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(24.dp))
+                        Text(
+                            text = "Tap to see word",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    }
                 }
             }
         }
