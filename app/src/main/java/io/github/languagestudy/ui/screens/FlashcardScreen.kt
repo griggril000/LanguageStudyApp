@@ -389,34 +389,45 @@ fun StatusButton(
     isActive: Boolean,
     onClick: () -> Unit
 ) {
-    val color = when (status) {
-        "PROFICIENT" -> Color(0xFF2E7D32)
-        "IN_PROGRESS" -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.outline
+    val (color, label) = when (status) {
+        "PROFICIENT" -> Color(0xFF2E7D32) to "Mastered"
+        "IN_PROGRESS" -> MaterialTheme.colorScheme.primary to "Learning"
+        else -> MaterialTheme.colorScheme.outline to "Not Started"
     }
 
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        color = if (isActive) color else Color.Transparent,
-        border = if (isActive) null else androidx.compose.foundation.BorderStroke(
-            1.dp,
-            color.copy(alpha = 0.5f)
-        ),
-        modifier = Modifier.size(56.dp)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            val icon = when (status) {
-                "PROFICIENT" -> Icons.Rounded.CheckCircle
-                "IN_PROGRESS" -> Icons.Rounded.Schedule
-                else -> Icons.Rounded.RadioButtonUnchecked
+        Surface(
+            onClick = onClick,
+            shape = RoundedCornerShape(16.dp),
+            color = if (isActive) color else Color.Transparent,
+            border = if (isActive) null else androidx.compose.foundation.BorderStroke(
+                1.dp,
+                color.copy(alpha = 0.5f)
+            ),
+            modifier = Modifier.size(56.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                val icon = when (status) {
+                    "PROFICIENT" -> Icons.Rounded.CheckCircle
+                    "IN_PROGRESS" -> Icons.Rounded.Schedule
+                    else -> Icons.Rounded.RadioButtonUnchecked
+                }
+                Icon(
+                    icon,
+                    contentDescription = status,
+                    tint = if (isActive) Color.White else color,
+                    modifier = Modifier.size(28.dp)
+                )
             }
-            Icon(
-                icon,
-                contentDescription = status,
-                tint = if (isActive) Color.White else color,
-                modifier = Modifier.size(28.dp)
-            )
         }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (isActive) color else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium
+        )
     }
 }
