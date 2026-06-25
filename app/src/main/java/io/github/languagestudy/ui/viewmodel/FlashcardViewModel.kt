@@ -26,6 +26,19 @@ class FlashcardViewModel(
     private val _isFlipped = MutableStateFlow(false)
     val isFlipped: StateFlow<Boolean> = _isFlipped.asStateFlow()
 
+    private val _isSessionFinished = MutableStateFlow(false)
+    val isSessionFinished: StateFlow<Boolean> = _isSessionFinished.asStateFlow()
+
+    private val _sessionStats = MutableStateFlow(SessionStats())
+    val sessionStats: StateFlow<SessionStats> = _sessionStats.asStateFlow()
+
+    data class SessionStats(
+        val totalReviewed: Int = 0,
+        val notStartedCount: Int = 0,
+        val inProgressCount: Int = 0,
+        val proficientCount: Int = 0
+    )
+
     fun init(userId: String, allVocab: List<VocabEntity>, categoryFilter: String? = null, languageFilter: String? = null) {
         this.userId = userId
         val filtered = allVocab.filter {
@@ -35,6 +48,8 @@ class FlashcardViewModel(
         _reviewList.value = buildReviewList(filtered, FLASHCARD_TARGET_COUNT)
         _currentIndex.value = 0
         _isFlipped.value = false
+        _isSessionFinished.value = false
+        _sessionStats.value = SessionStats()
     }
 
     private fun buildReviewList(items: List<VocabEntity>, targetCount: Int): List<VocabEntity> {
@@ -101,9 +116,23 @@ class FlashcardViewModel(
             val newList = _reviewList.value.toMutableList()
             newList[_currentIndex.value] = currentItem.copy(status = newStatus)
             _reviewList.value = newList
-            
-            // Note: Unlike JS, we don't remove from list immediately to avoid index jumping
-            // but we can add a visual indicator that it's updated.
+
+            // Update stats
+            _sessionStats.value = _sessionStats.value.let { stats ->
+                stats.copy(
+                    totalReviewed = stats.totalReviewed + 1,
+                    notStartedCount = stats.notStartedCount + if (newStatus == "NOT_STARTED") 1 else 0,
+                    inProgressCount = stats.inProgressCount + if (newStatus == "IN_PROGRESS") 1 else 0,
+                    proficientCount = stats.proficientCount + if (newStatus == "PROFICIENT") 1 else 0
+                )
+            }
+
+            // Automatically move to next card or finish session
+            if (_currentIndex.value < _reviewList.value.size - 1) {
+                nextCard()
+            } else {
+                _isSessionFinished.value = true
+            }
         }
     }
 }

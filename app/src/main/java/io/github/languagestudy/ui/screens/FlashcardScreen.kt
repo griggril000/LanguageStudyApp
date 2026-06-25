@@ -4,8 +4,10 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -53,9 +55,16 @@ fun FlashcardScreen(
     val reviewList by viewModel.reviewList.collectAsState()
     val currentIndex by viewModel.currentIndex.collectAsState()
     val isFlipped by viewModel.isFlipped.collectAsState()
+    val isSessionFinished by viewModel.isSessionFinished.collectAsState()
+    val sessionStats by viewModel.sessionStats.collectAsState()
 
     LaunchedEffect(userId) {
         viewModel.init(userId, allVocab, categoryFilter, languageFilter)
+    }
+
+    if (isSessionFinished) {
+        ReviewSessionStats(stats = sessionStats, onClose = onClose)
+        return
     }
 
     if (reviewList.isEmpty()) {
@@ -422,6 +431,91 @@ fun StatusButton(
             style = MaterialTheme.typography.labelSmall,
             color = if (isActive) color else MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+fun ReviewSessionStats(
+    stats: FlashcardViewModel.SessionStats,
+    onClose: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            Icons.Rounded.CheckCircle,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(80.dp)
+        )
+        
+        Spacer(Modifier.height(24.dp))
+        
+        Text(
+            text = "Session Complete!",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
+        )
+        
+        Spacer(Modifier.height(8.dp))
+        
+        Text(
+            text = "You reviewed ${stats.totalReviewed} words in this session.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        
+        Spacer(Modifier.height(32.dp))
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                StatRow("Mastered", stats.proficientCount, Color(0xFF2E7D32))
+                HorizontalDivider(Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                StatRow("Learning", stats.inProgressCount, MaterialTheme.colorScheme.primary)
+                HorizontalDivider(Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                StatRow("Not Started", stats.notStartedCount, MaterialTheme.colorScheme.outline)
+            }
+        }
+        
+        Spacer(Modifier.height(48.dp))
+        
+        Button(
+            onClick = onClose,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            contentPadding = PaddingValues(16.dp)
+        ) {
+            Text("Back to Vocabulary", fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun StatRow(label: String, count: Int, color: Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(12.dp).clip(CircleShape).background(color))
+            Spacer(Modifier.width(12.dp))
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+        }
+        Text(
+            count.toString(),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = color
         )
     }
 }
