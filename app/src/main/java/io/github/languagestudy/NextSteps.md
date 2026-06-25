@@ -3,3 +3,5 @@
 ## Settings
 
 - Refine/simplify settings inspired by Gospel Library settings
+- Add release notes
+    - How to manage them maybe pull from Play release notes
