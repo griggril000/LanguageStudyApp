@@ -17,6 +17,7 @@ class SkillRepository(private val skillDao: SkillDao) {
     private var listenerRegistration: ListenerRegistration? = null
 
     val allSkills: Flow<List<SkillEntity>> = skillDao.getAllSkills()
+    val skillCount: Flow<Int> = skillDao.getSkillCount()
 
     /**
      * Listen for real-time updates from Firestore.

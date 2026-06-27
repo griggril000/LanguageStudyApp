@@ -23,6 +23,7 @@ class VocabRepository(
     private var categoryListenerRegistration: ListenerRegistration? = null
 
     val allVocab: Flow<List<VocabEntity>> = vocabDao.getAllVocab()
+    val vocabCount: Flow<Int> = vocabDao.getVocabCount()
     val allCategories: Flow<List<CategoryEntity>> = categoryDao.getAllCategories()
 
     fun startSync(userId: String): Flow<Unit> = callbackFlow {
