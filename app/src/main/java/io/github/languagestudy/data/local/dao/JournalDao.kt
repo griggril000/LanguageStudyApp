@@ -9,6 +9,9 @@ interface JournalDao {
     @Query("SELECT * FROM journal_entries ORDER BY timestamp DESC")
     fun getAllEntries(): Flow<List<JournalEntryEntity>>
 
+    @Query("SELECT COUNT(*) FROM journal_entries")
+    fun getEntryCount(): Flow<Int>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEntry(entry: JournalEntryEntity)
 

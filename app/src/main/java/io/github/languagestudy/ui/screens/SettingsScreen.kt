@@ -78,6 +78,7 @@ import io.github.languagestudy.navigation.label
 import io.github.languagestudy.ui.auth.AuthViewModel
 import io.github.languagestudy.ui.components.DeleteConfirmationDialog
 import io.github.languagestudy.ui.viewmodel.SettingsViewModel
+import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import io.noties.markwon.Markwon
 import kotlinx.coroutines.launch
 
@@ -278,7 +279,7 @@ fun SettingsScreen(
                     onShowAccessLevelDialog = { showAccessLevelDialog = true }
                 )
 
-                "details" -> AppDetailsView()
+                "details" -> AppDetailsView(settingsViewModel = settingsViewModel)
                 "notes" -> {
                     val releaseNotes by settingsViewModel.releaseNotes.collectAsState()
                     ReleaseNotesView(releaseNotes = releaseNotes)
@@ -494,9 +495,12 @@ fun SettingsMainView(
 }
 
 @Composable
-fun AppDetailsView() {
+fun AppDetailsView(settingsViewModel: SettingsViewModel) {
     val scrollState = rememberScrollState()
-    val context = LocalContext.current
+    val vocabCount by settingsViewModel.vocabCount.collectAsState()
+    val skillCount by settingsViewModel.skillCount.collectAsState()
+    val portfolioCount by settingsViewModel.portfolioCount.collectAsState()
+    val journalCount by settingsViewModel.journalCount.collectAsState()
 
     Column(
         modifier = Modifier
@@ -517,11 +521,10 @@ fun AppDetailsView() {
             color = MaterialTheme.colorScheme.primary
         )
 
-        // Placeholders for data counts - in a real app these would come from ViewModels
-        DetailItem(label = "Vocabulary items", value = "...")
-        DetailItem(label = "Skills tracked", value = "...")
-        DetailItem(label = "Portfolio entries", value = "...")
-        DetailItem(label = "Journal entries", value = "...")
+        DetailItem(label = "Vocabulary items", value = vocabCount.toString())
+        DetailItem(label = "Skills tracked", value = skillCount.toString())
+        DetailItem(label = "Portfolio entries", value = portfolioCount.toString())
+        DetailItem(label = "Journal entries", value = journalCount.toString())
     }
 }
 
@@ -663,43 +666,10 @@ private fun compareVersions(v1: String, v2: String): Int {
 
 @Composable
 fun LibrariesView() {
-    val scrollState = rememberScrollState()
-    val libraries = listOf(
-        "Jetpack Compose" to "Modern toolkit for building native UI.",
-        "Firebase" to "Authentication, Firestore, and Cloud Messaging.",
-        "Room" to "Persistence library for local database.",
-        "Retrofit & OkHttp" to "Type-safe HTTP client for Android and Java.",
-        "Coil" to "Image loading library for Android backed by Kotlin Coroutines.",
-        "YouTube Player" to "Official YouTube Player API for Android.",
-        "Navigation 3" to "Declarative navigation for Compose.",
-        "Moshi" to "A modern JSON library for Android and Java.",
-        "Kotlin Coroutines" to "Asynchronous programming made easy.",
-        "Markwon" to "Android markdown rendering library."
+    LibrariesContainer(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
     )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        libraries.forEach { (name, desc) ->
-            Column {
-                Text(
-                    name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    desc,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            HorizontalDivider(thickness = 0.5.dp)
-        }
-    }
 }
 
 @Composable

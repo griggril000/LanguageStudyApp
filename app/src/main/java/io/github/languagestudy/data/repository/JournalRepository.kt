@@ -16,6 +16,7 @@ class JournalRepository(private val journalDao: JournalDao) {
     private var listenerRegistration: ListenerRegistration? = null
 
     val allEntries: Flow<List<JournalEntryEntity>> = journalDao.getAllEntries()
+    val entryCount: Flow<Int> = journalDao.getEntryCount()
 
     fun startSync(userId: String): Flow<Unit> = callbackFlow {
         if (userId.isBlank()) {

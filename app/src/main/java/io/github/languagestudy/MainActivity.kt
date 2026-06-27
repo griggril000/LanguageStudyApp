@@ -136,7 +136,11 @@ fun MainScreen(
         factory = SettingsViewModelFactory(
             app.settingsRepository,
             app.mentorRepository,
-            effectiveUserId
+            effectiveUserId,
+            app.vocabRepository,
+            app.skillRepository,
+            app.portfolioRepository,
+            app.journalRepository
         )
     )
     val userSettings by settingsVm.userSettings.collectAsState()

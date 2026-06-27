@@ -6,19 +6,40 @@ import androidx.lifecycle.viewModelScope
 import io.github.languagestudy.data.model.GitHubRelease
 import io.github.languagestudy.data.model.LanguageResource
 import io.github.languagestudy.data.model.UserSettings
+import io.github.languagestudy.data.repository.JournalRepository
 import io.github.languagestudy.data.repository.MentorRepository
+import io.github.languagestudy.data.repository.PortfolioRepository
 import io.github.languagestudy.data.repository.SettingsRepository
+import io.github.languagestudy.data.repository.SkillRepository
+import io.github.languagestudy.data.repository.VocabRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(
     private val repository: SettingsRepository,
     private val mentorRepository: MentorRepository,
-    private val userId: String
+    private val userId: String,
+    private val vocabRepository: VocabRepository,
+    private val skillRepository: SkillRepository,
+    private val portfolioRepository: PortfolioRepository,
+    private val journalRepository: JournalRepository
 ) : ViewModel() {
 
     val userSettings: StateFlow<UserSettings> = repository.getUserSettings(userId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserSettings())
+
+    val vocabCount: StateFlow<Int> = vocabRepository.vocabCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val skillCount: StateFlow<Int> = skillRepository.skillCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val portfolioCount: StateFlow<Int> = portfolioRepository.getPortfolioItems(userId, limit = 100)
+        .map { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val journalCount: StateFlow<Int> = journalRepository.entryCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     private val _mentorCode = MutableStateFlow<String?>(null)
     val mentorCode: StateFlow<String?> = _mentorCode.asStateFlow()
@@ -297,12 +318,24 @@ class SettingsViewModel(
 class SettingsViewModelFactory(
     private val repository: SettingsRepository,
     private val mentorRepository: MentorRepository,
-    private val userId: String
+    private val userId: String,
+    private val vocabRepository: VocabRepository,
+    private val skillRepository: SkillRepository,
+    private val portfolioRepository: PortfolioRepository,
+    private val journalRepository: JournalRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return SettingsViewModel(repository, mentorRepository, userId) as T
+            return SettingsViewModel(
+                repository,
+                mentorRepository,
+                userId,
+                vocabRepository,
+                skillRepository,
+                portfolioRepository,
+                journalRepository
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
