@@ -1,7 +1,7 @@
 package io.github.languagestudy.ui.screens
 
-import androidx.activity.compose.BackHandler
 import android.content.ClipData
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,7 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Language
@@ -28,7 +27,8 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.SupervisorAccount
-import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.AlertDialog
@@ -88,7 +88,7 @@ fun SettingsScreen(
     val mentorCode by settingsViewModel.mentorCode.collectAsState()
     val availableLanguages by settingsViewModel.availableLanguages.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    
+
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showJoinDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -96,7 +96,7 @@ fun SettingsScreen(
     var showLearningLangsDialog by remember { mutableStateOf(false) }
     var showStartupTabDialog by remember { mutableStateOf(false) }
     var showAccessLevelDialog by remember { mutableStateOf(false) }
-    
+
     var currentView by remember { mutableStateOf("main") }
 
     BackHandler(enabled = true) {
@@ -191,7 +191,8 @@ fun SettingsScreen(
         SelectionDialog(
             title = "Startup Tab",
             options = NavRoute.mainRoutes,
-            selectedOption = NavRoute.mainRoutes.find { it.label.lowercase() == userSettings.homepageTab } ?: NavRoute.Vocab,
+            selectedOption = NavRoute.mainRoutes.find { it.label.lowercase() == userSettings.homepageTab }
+                ?: NavRoute.Vocab,
             onOptionSelected = { settingsViewModel.setHomepageTab(it.label.lowercase()) },
             onDismiss = { showStartupTabDialog = false },
             labelProvider = { it.label }
@@ -205,8 +206,8 @@ fun SettingsScreen(
             selectedOption = userSettings.mentorAccessLevel,
             onOptionSelected = { settingsViewModel.setMentorAccessLevel(it) },
             onDismiss = { showAccessLevelDialog = false },
-            labelProvider = { 
-                when(it) {
+            labelProvider = {
+                when (it) {
                     "view" -> "Read Only"
                     "status" -> "Status Updates"
                     "full" -> "Edit All"
@@ -219,16 +220,18 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
-                    Text(when(currentView) {
-                        "details" -> "App Details"
-                        "notes" -> "Release Notes"
-                        "libraries" -> "Libraries Used"
-                        else -> "Settings"
-                    })
+                title = {
+                    Text(
+                        when (currentView) {
+                            "details" -> "App Details"
+                            "notes" -> "Release Notes"
+                            "libraries" -> "Libraries Used"
+                            else -> "Settings"
+                        }
+                    )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { 
+                    IconButton(onClick = {
                         if (currentView != "main") {
                             currentView = "main"
                         } else {
@@ -348,7 +351,9 @@ fun SettingsMainView(
         )
         PreferenceItem(
             title = "Languages I'm Learning",
-            summary = if (userSettings.learnedLanguages.isEmpty()) "None" else userSettings.learnedLanguages.joinToString(", "),
+            summary = if (userSettings.learnedLanguages.isEmpty()) "None" else userSettings.learnedLanguages.joinToString(
+                ", "
+            ),
             icon = Icons.Default.Language,
             onClick = onShowLearningLangsDialog
         )
@@ -524,20 +529,32 @@ fun ReleaseNotesView() {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Version 1.2.0", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("• Redesigned Settings screen with a cleaner layout.\n" +
-                "• Added Mentor View functionality for progress tracking.\n" +
-                "• Improved vocabulary and skill management.\n" +
-                "• New Portfolio and Journal features for immersive learning.",
-            style = MaterialTheme.typography.bodyLarge)
-        
+        Text(
+            "Version 1.2.0",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            "• Redesigned Settings screen with a cleaner layout.\n" +
+                    "• Added Mentor View functionality for progress tracking.\n" +
+                    "• Improved vocabulary and skill management.\n" +
+                    "• New Portfolio and Journal features for immersive learning.",
+            style = MaterialTheme.typography.bodyLarge
+        )
+
         HorizontalDivider()
-        
-        Text("Version 1.1.0", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("• Initial release with core features.\n" +
-                "• Support for multiple languages.\n" +
-                "• Dark mode support.",
-            style = MaterialTheme.typography.bodyLarge)
+
+        Text(
+            "Version 1.1.0",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            "• Initial release with core features.\n" +
+                    "• Support for multiple languages.\n" +
+                    "• Dark mode support.",
+            style = MaterialTheme.typography.bodyLarge
+        )
     }
 }
 
@@ -555,7 +572,7 @@ fun LibrariesView() {
         "Moshi" to "A modern JSON library for Android and Java.",
         "Kotlin Coroutines" to "Asynchronous programming made easy."
     )
-    
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -565,8 +582,16 @@ fun LibrariesView() {
     ) {
         libraries.forEach { (name, desc) ->
             Column {
-                Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(desc, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    desc,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             HorizontalDivider(thickness = 0.5.dp)
         }
@@ -791,7 +816,22 @@ fun SwitchPreference(
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
-                enabled = enabled
+                enabled = enabled,
+                thumbContent = {
+                    Icon(
+                        imageVector = if (checked) Icons.Rounded.Check else Icons.Rounded.Close,
+                        contentDescription = null,
+                        modifier = Modifier.size(androidx.compose.material3.SwitchDefaults.IconSize),
+                    )
+                },
+                colors = androidx.compose.material3.SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.primary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                    checkedIconColor = MaterialTheme.colorScheme.onPrimary,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    uncheckedIconColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             )
         }
     )

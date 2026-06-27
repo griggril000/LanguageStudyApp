@@ -77,10 +77,8 @@ class SettingsViewModel(
 
     private fun loadAvailableLanguages() {
         viewModelScope.launch {
-            try {
-                _availableLanguages.value = repository.getAvailableLanguages()
-            } catch (e: Exception) {
-                android.util.Log.e("SettingsVM", "Error loading languages", e)
+            repository.getAvailableLanguages().collect { languages ->
+                _availableLanguages.value = languages
             }
         }
     }

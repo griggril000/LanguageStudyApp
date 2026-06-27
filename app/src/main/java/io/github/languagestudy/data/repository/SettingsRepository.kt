@@ -67,14 +67,23 @@ class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFire
         getSettingsDoc(userId).set(settings, SetOptions.merge()).await()
     }
 
-    suspend fun getAvailableLanguages(): List<String> {
-        return try {
-            val snapshot = firestore.collection("languageLinks").get().await()
-            snapshot.documents.mapNotNull { it.id }.filter { it.isNotBlank() }.sorted()
-        } catch (e: Exception) {
-            android.util.Log.e("SettingsRepository", "Error getting languages", e)
-            emptyList()
-        }
+    fun getAvailableLanguages(): Flow<List<String>> = callbackFlow {
+        val listener = firestore.collection("languageLinks")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close()
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val languages = snapshot.documents.mapNotNull { it.id }
+                        .filter { it.isNotBlank() }
+                        .sorted()
+                    trySend(languages)
+                } else {
+                    trySend(emptyList())
+                }
+            }
+        awaitClose { listener.remove() }
     }
 
     fun getLanguageResources(language: String): Flow<List<LanguageResource>> = callbackFlow {
