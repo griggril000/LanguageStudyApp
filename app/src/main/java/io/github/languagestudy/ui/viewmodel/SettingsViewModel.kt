@@ -3,6 +3,7 @@ package io.github.languagestudy.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import io.github.languagestudy.data.model.GitHubRelease
 import io.github.languagestudy.data.model.LanguageResource
 import io.github.languagestudy.data.model.UserSettings
 import io.github.languagestudy.data.repository.MentorRepository
@@ -25,6 +26,9 @@ class SettingsViewModel(
     private val _availableLanguages = MutableStateFlow<List<String>>(emptyList())
     val availableLanguages: StateFlow<List<String>> = _availableLanguages.asStateFlow()
 
+    private val _releaseNotes = MutableStateFlow<List<GitHubRelease>>(emptyList())
+    val releaseNotes: StateFlow<List<GitHubRelease>> = _releaseNotes.asStateFlow()
+
     private val _resources = MutableStateFlow<List<LanguageResource>>(emptyList())
     val resources: StateFlow<List<LanguageResource>> = _resources.asStateFlow()
 
@@ -44,6 +48,7 @@ class SettingsViewModel(
 
     init {
         loadAvailableLanguages()
+        loadReleaseNotes()
         
         // Load resources for the initial primary language when settings load
         viewModelScope.launch {
@@ -80,6 +85,12 @@ class SettingsViewModel(
             repository.getAvailableLanguages().collect { languages ->
                 _availableLanguages.value = languages
             }
+        }
+    }
+
+    private fun loadReleaseNotes() {
+        viewModelScope.launch {
+            _releaseNotes.value = repository.getReleaseNotes()
         }
     }
 

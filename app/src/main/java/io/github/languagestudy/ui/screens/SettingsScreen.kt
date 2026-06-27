@@ -1,6 +1,7 @@
 package io.github.languagestudy.ui.screens
 
 import android.content.ClipData
+import android.widget.TextView
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,11 +35,14 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -58,6 +62,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
@@ -65,12 +70,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.languagestudy.BuildConfig
 import io.github.languagestudy.navigation.NavRoute
 import io.github.languagestudy.navigation.label
 import io.github.languagestudy.ui.auth.AuthViewModel
 import io.github.languagestudy.ui.components.DeleteConfirmationDialog
 import io.github.languagestudy.ui.viewmodel.SettingsViewModel
+import io.noties.markwon.Markwon
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -271,7 +279,11 @@ fun SettingsScreen(
                 )
 
                 "details" -> AppDetailsView()
-                "notes" -> ReleaseNotesView()
+                "notes" -> {
+                    val releaseNotes by settingsViewModel.releaseNotes.collectAsState()
+                    ReleaseNotesView(releaseNotes = releaseNotes)
+                }
+
                 "libraries" -> LibrariesView()
             }
         }
@@ -464,6 +476,7 @@ fun SettingsMainView(
         )
         PreferenceItem(
             title = "App Details",
+            summary = "Version ${BuildConfig.VERSION_NAME}",
             onClick = onNavigateToDetails
         )
         PreferenceItem(
@@ -484,13 +497,6 @@ fun SettingsMainView(
 fun AppDetailsView() {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
-    val packageInfo = remember {
-        try {
-            context.packageManager.getPackageInfo(context.packageName, 0)
-        } catch (e: Exception) {
-            null
-        }
-    }
 
     Column(
         modifier = Modifier
@@ -499,7 +505,7 @@ fun AppDetailsView() {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        DetailItem(label = "Language Study Version", value = packageInfo?.versionName ?: "1.0.0")
+        DetailItem(label = "Language Study Version", value = BuildConfig.VERSION_NAME)
         DetailItem(label = "Android Version", value = android.os.Build.VERSION.RELEASE)
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
@@ -520,8 +526,17 @@ fun AppDetailsView() {
 }
 
 @Composable
-fun ReleaseNotesView() {
+fun ReleaseNotesView(releaseNotes: List<io.github.languagestudy.data.model.GitHubRelease>) {
     val scrollState = rememberScrollState()
+    val currentVersion = BuildConfig.VERSION_NAME
+
+    val filteredReleases = remember(releaseNotes) {
+        releaseNotes.filter { release ->
+            val tag = release.tagName.removePrefix("v")
+            compareVersions(tag, currentVersion) <= 0
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -529,33 +544,121 @@ fun ReleaseNotesView() {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            "Version 1.2.0",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            "• Redesigned Settings screen with a cleaner layout.\n" +
-                    "• Added Mentor View functionality for progress tracking.\n" +
-                    "• Improved vocabulary and skill management.\n" +
-                    "• New Portfolio and Journal features for immersive learning.",
-            style = MaterialTheme.typography.bodyLarge
-        )
+        if (filteredReleases.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                if (releaseNotes.isEmpty()) {
+                    CircularProgressIndicator()
+                } else {
+                    Text("No release notes found for this version.")
+                }
+            }
+        } else {
+            filteredReleases.forEach { release ->
+                OutlinedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.outlinedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                release.name ?: release.tagName,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
 
-        HorizontalDivider()
+                            release.publishedAt?.let { dateStr ->
+                                formatDate(dateStr)?.let { dateText ->
+                                    Text(
+                                        dateText,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
 
-        Text(
-            "Version 1.1.0",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            "• Initial release with core features.\n" +
-                    "• Support for multiple languages.\n" +
-                    "• Dark mode support.",
-            style = MaterialTheme.typography.bodyLarge
-        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(bottom = 4.dp),
+                            thickness = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+
+                        release.body?.let {
+                            MarkdownText(
+                                markdown = it,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
+}
+
+@Composable
+fun MarkdownText(markdown: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val linkColor = MaterialTheme.colorScheme.primary.toArgb()
+    val markwon = remember { Markwon.create(context) }
+    val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
+    AndroidView(
+        modifier = modifier,
+        factory = { ctx ->
+            TextView(ctx).apply {
+                textSize = 16f
+                setLinkTextColor(linkColor)
+                movementMethod = android.text.method.LinkMovementMethod.getInstance()
+            }
+        },
+        update = { textView ->
+            textView.setTextColor(textColor)
+            textView.setLinkTextColor(linkColor)
+            markwon.setMarkdown(textView, markdown)
+            android.text.util.Linkify.addLinks(textView, android.text.util.Linkify.WEB_URLS)
+        }
+    )
+}
+
+private fun formatDate(isoString: String): String? {
+    return try {
+        // GitHub API returns ISO 8601 format like "2023-10-27T12:34:56Z"
+        val inputFormat = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US)
+        inputFormat.timeZone = java.util.TimeZone.getTimeZone("UTC")
+        val date = inputFormat.parse(isoString)
+        val outputFormat = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+        date?.let { outputFormat.format(it) }
+    } catch (e: Exception) {
+        null
+    }
+}
+
+private fun compareVersions(v1: String, v2: String): Int {
+    val parts1 = v1.split(".").map { it.toIntOrNull() ?: 0 }
+    val parts2 = v2.split(".").map { it.toIntOrNull() ?: 0 }
+    val length = maxOf(parts1.size, parts2.size)
+    for (i in 0 until length) {
+        val p1 = if (i < parts1.size) parts1[i] else 0
+        val p2 = if (i < parts2.size) parts2[i] else 0
+        if (p1 < p2) return -1
+        if (p1 > p2) return 1
+    }
+    return 0
 }
 
 @Composable
@@ -570,7 +673,8 @@ fun LibrariesView() {
         "YouTube Player" to "Official YouTube Player API for Android.",
         "Navigation 3" to "Declarative navigation for Compose.",
         "Moshi" to "A modern JSON library for Android and Java.",
-        "Kotlin Coroutines" to "Asynchronous programming made easy."
+        "Kotlin Coroutines" to "Asynchronous programming made easy.",
+        "Markwon" to "Android markdown rendering library."
     )
 
     Column(

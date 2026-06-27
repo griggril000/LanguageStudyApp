@@ -2,6 +2,7 @@ package io.github.languagestudy.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import io.github.languagestudy.data.model.GitHubRelease
 import io.github.languagestudy.data.model.LanguageResource
 import io.github.languagestudy.data.model.UserSettings
 import kotlinx.coroutines.channels.awaitClose
@@ -9,7 +10,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()) {
+class SettingsRepository(
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val githubService: GitHubService? = null
+) {
 
     private fun getSettingsDoc(userId: String) =
         firestore.collection("users").document(userId).collection("metadata").document("settings")
@@ -60,6 +64,15 @@ class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFire
             }
         }
         awaitClose { listener.remove() }
+    }
+
+    suspend fun getReleaseNotes(): List<GitHubRelease> {
+        return try {
+            githubService?.getReleases("Bearer ${io.github.languagestudy.BuildConfig.GITHUB_TOKEN}") ?: emptyList()
+        } catch (e: Exception) {
+            android.util.Log.e("SettingsRepository", "Error fetching release notes", e)
+            emptyList()
+        }
     }
 
     suspend fun updateUserSettings(userId: String, settings: Map<String, Any>) {

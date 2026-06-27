@@ -66,7 +66,6 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import androidx.window.core.layout.WindowWidthSizeClass
-import io.github.languagestudy.data.repository.SampleDataSeeder
 import io.github.languagestudy.navigation.NavRoute
 import io.github.languagestudy.navigation.icon
 import io.github.languagestudy.navigation.label
@@ -91,7 +90,6 @@ import io.github.languagestudy.ui.viewmodel.SettingsViewModelFactory
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val intentFlow = MutableSharedFlow<Intent>(extraBufferCapacity = 1)
@@ -169,16 +167,16 @@ fun MainScreen(
 
         LaunchedEffect(currentUser) {
             if (currentUser != null) {
-                if (currentUser?.email == "test@example.com") {
-                    val seeder = SampleDataSeeder(
-                        app.vocabRepository,
-                        app.skillRepository,
-                        app.settingsRepository,
-                        app.portfolioRepository,
-                        app.journalRepository
-                    )
-                    launch { seeder.seed(currentUser!!.uid) }
-                }
+//                if (currentUser?.email == "test@example.com") {
+//                    val seeder = SampleDataSeeder(
+//                        app.vocabRepository,
+//                        app.skillRepository,
+//                        app.settingsRepository,
+//                        app.portfolioRepository,
+//                        app.journalRepository
+//                    )
+//                    launch { seeder.seed(currentUser!!.uid) }
+//                }
                 intentFlow.collect { intent ->
                     if (intent.action == Intent.ACTION_VIEW) {
                         val data = intent.data
@@ -295,163 +293,168 @@ fun MainScreen(
             )
         }
 
-    Scaffold(
-        topBar = {
-            if (currentUser != null && 
-                backStack.lastOrNull() != NavRoute.Settings && 
-                backStack.lastOrNull() != NavRoute.Admin) {
-                TopAppBar(
-                    title = {
-                        Column {
-                            Text(
-                                if (isMentorMode) "Mentor View" else "Language Study",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            if (isMentorMode) {
-                                val mentorCode by authViewModel.mentorCode.collectAsState()
+        Scaffold(
+            topBar = {
+                if (currentUser != null &&
+                    backStack.lastOrNull() != NavRoute.Settings &&
+                    backStack.lastOrNull() != NavRoute.Admin
+                ) {
+                    TopAppBar(
+                        title = {
+                            Column {
                                 Text(
-                                    "Code: $mentorCode",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary
+                                    if (isMentorMode) "Mentor View" else "Language Study",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
                                 )
-                            }
-                        }
-                    },
-                    actions = {
-                        if (isMentorMode) {
-                            TextButton(onClick = {
-                                authViewModel.exitMentorMode()
-                                searchViewModel.setSelectedLanguage(null)
-                            }) {
-                                Text("Exit")
-                            }
-                        }
-
-                        val showSwitcher = userSettings.learnedLanguages.isNotEmpty()
-
-                        if (showSwitcher) {
-                            val languageOverride by searchViewModel.selectedLanguage.collectAsState()
-                            val displayLanguage = languageOverride ?: userSettings.languageLearning
-                            Box {
-                                TextButton(onClick = { showLangMenu = true }) {
+                                if (isMentorMode) {
+                                    val mentorCode by authViewModel.mentorCode.collectAsState()
                                     Text(
-                                        displayLanguage.ifBlank { "Select Lang" },
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.Bold
+                                        "Code: $mentorCode",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        },
+                        actions = {
+                            if (isMentorMode) {
+                                TextButton(onClick = {
+                                    authViewModel.exitMentorMode()
+                                    searchViewModel.setSelectedLanguage(null)
+                                }) {
+                                    Text("Exit")
+                                }
+                            }
+
+                            val showSwitcher = userSettings.learnedLanguages.isNotEmpty()
+
+                            if (showSwitcher) {
+                                val languageOverride by searchViewModel.selectedLanguage.collectAsState()
+                                val displayLanguage =
+                                    languageOverride ?: userSettings.languageLearning
+                                Box {
+                                    TextButton(onClick = { showLangMenu = true }) {
+                                        Text(
+                                            displayLanguage.ifBlank { "Select Lang" },
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    DropdownMenu(
+                                        expanded = showLangMenu,
+                                        onDismissRequest = { showLangMenu = false }
+                                    ) {
+                                        userSettings.learnedLanguages.forEach { lang ->
+                                            DropdownMenuItem(
+                                                text = { Text(lang) },
+                                                onClick = {
+                                                    if (isMentorMode) {
+                                                        searchViewModel.setSelectedLanguage(lang)
+                                                    } else {
+                                                        settingsVm.setCurrentLanguage(lang)
+                                                        // Also clear override when setting persistent language
+                                                        searchViewModel.setSelectedLanguage(null)
+                                                    }
+                                                    showLangMenu = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            Box {
+                                IconButton(onClick = { showMenu = true }) {
+                                    Icon(
+                                        Icons.Rounded.MoreVert,
+                                        contentDescription = "More options"
                                     )
                                 }
                                 DropdownMenu(
-                                    expanded = showLangMenu,
-                                    onDismissRequest = { showLangMenu = false }
+                                    expanded = showMenu,
+                                    onDismissRequest = { showMenu = false }
                                 ) {
-                                    userSettings.learnedLanguages.forEach { lang ->
+                                    DropdownMenuItem(
+                                        text = { Text("Study Resources") },
+                                        onClick = {
+                                            showMenu = false
+                                            showResources = true
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.AutoMirrored.Rounded.MenuBook,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    )
+                                    if (isAdmin) {
                                         DropdownMenuItem(
-                                            text = { Text(lang) },
+                                            text = { Text("Admin") },
                                             onClick = {
-                                                if (isMentorMode) {
-                                                    searchViewModel.setSelectedLanguage(lang)
-                                                } else {
-                                                    settingsVm.setCurrentLanguage(lang)
-                                                    // Also clear override when setting persistent language
-                                                    searchViewModel.setSelectedLanguage(null)
+                                                showMenu = false
+                                                if (backStack.lastOrNull() != NavRoute.Admin) {
+                                                    backStack.add(NavRoute.Admin)
                                                 }
-                                                showLangMenu = false
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    Icons.Rounded.AdminPanelSettings,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
                                             }
                                         )
                                     }
-                                }
-                            }
-                        }
-                        Box {
-                            IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
-                            }
-                            DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Study Resources") },
-                                    onClick = {
-                                        showMenu = false
-                                        showResources = true
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.AutoMirrored.Rounded.MenuBook,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                )
-                                if (isAdmin) {
                                     DropdownMenuItem(
-                                        text = { Text("Admin") },
+                                        text = { Text("Settings") },
                                         onClick = {
                                             showMenu = false
-                                            if (backStack.lastOrNull() != NavRoute.Admin) {
-                                                backStack.add(NavRoute.Admin)
+                                            if (backStack.lastOrNull() != NavRoute.Settings) {
+                                                backStack.add(NavRoute.Settings)
                                             }
                                         },
                                         leadingIcon = {
                                             Icon(
-                                                Icons.Rounded.AdminPanelSettings,
+                                                Icons.Rounded.Settings,
                                                 contentDescription = null,
                                                 modifier = Modifier.size(18.dp)
                                             )
                                         }
                                     )
                                 }
-                                DropdownMenuItem(
-                                    text = { Text("Settings") },
-                                    onClick = {
-                                        showMenu = false
-                                        if (backStack.lastOrNull() != NavRoute.Settings) {
-                                            backStack.add(NavRoute.Settings)
-                                        }
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Rounded.Settings,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                )
                             }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                    )
+                }
+            },
+            bottomBar = {
+                if (!useNavRail && currentUser != null && !WindowInsets.isImeVisible) {
+                    NavigationBar {
+                        NavRoute.mainRoutes.forEach { route ->
+                            NavigationBarItem(
+                                selected = backStack.lastOrNull() == route,
+                                onClick = {
+                                    if (backStack.lastOrNull() != route) {
+                                        backStack.clear()
+                                        backStack.add(route)
+                                    }
+                                },
+                                icon = { Icon(route.icon, contentDescription = route.label) },
+                                label = { Text(route.label) }
+                            )
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-                )
-            }
-        },
-        bottomBar = {
-            if (!useNavRail && currentUser != null && !WindowInsets.isImeVisible) {
-                NavigationBar {
-                    NavRoute.mainRoutes.forEach { route ->
-                        NavigationBarItem(
-                            selected = backStack.lastOrNull() == route,
-                            onClick = {
-                                if (backStack.lastOrNull() != route) {
-                                    backStack.clear()
-                                    backStack.add(route)
-                                }
-                            },
-                            icon = { Icon(route.icon, contentDescription = route.label) },
-                            label = { Text(route.label) }
-                        )
                     }
                 }
-            }
-        },
-        contentWindowInsets = WindowInsets(0, 0, 0, 0)
-    ) { innerPadding ->
-        Row(
-            Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
+            },
+            contentWindowInsets = WindowInsets(0, 0, 0, 0)
+        ) { innerPadding ->
+            Row(
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
                 if (useNavRail && currentUser != null) {
                     NavigationRail(
                         containerColor = MaterialTheme.colorScheme.surface,
