@@ -79,6 +79,8 @@ import io.github.languagestudy.ui.auth.AuthViewModel
 import io.github.languagestudy.ui.components.DeleteConfirmationDialog
 import io.github.languagestudy.ui.viewmodel.SettingsViewModel
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
+import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
+import io.github.languagestudy.R
 import io.noties.markwon.Markwon
 import kotlinx.coroutines.launch
 
@@ -666,7 +668,10 @@ private fun compareVersions(v1: String, v2: String): Int {
 
 @Composable
 fun LibrariesView() {
+    val libraries by produceLibraries()
+
     LibrariesContainer(
+        libraries = libraries,
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
     )
