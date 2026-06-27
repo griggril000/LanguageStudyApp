@@ -101,9 +101,7 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         enableEdgeToEdge()
         setContent {
-            LanguageStudyTheme {
-                MainScreen(intentFlow = intentFlow)
-            }
+            MainScreen(intentFlow = intentFlow)
         }
         val currentIntent = intent
         if (currentIntent != null) {
@@ -145,147 +143,163 @@ fun MainScreen(
     )
     val userSettings by settingsVm.userSettings.collectAsState()
 
-    val startRoute = remember(currentUser) {
-        if (currentUser == null) NavRoute.Login else NavRoute.fromString(userSettings.homepageTab)
+    val darkTheme = when (userSettings.theme) {
+        "light" -> false
+        "dark" -> true
+        else -> androidx.compose.foundation.isSystemInDarkTheme()
     }
-    val backStack = rememberNavBackStack(startRoute)
 
-    LaunchedEffect(userSettings.homepageTab) {
-        if (currentUser != null && backStack.size == 1 && backStack.lastOrNull() == NavRoute.Vocab) {
-            val preferred = NavRoute.fromString(userSettings.homepageTab)
-            if (preferred != NavRoute.Vocab) {
-                backStack.clear()
-                backStack.add(preferred)
+    LanguageStudyTheme(darkTheme = darkTheme) {
+        val startRoute = remember(currentUser) {
+            if (currentUser == null) NavRoute.Login else NavRoute.fromString(userSettings.homepageTab)
+        }
+        val backStack = rememberNavBackStack(startRoute)
+
+        LaunchedEffect(userSettings.homepageTab) {
+            if (currentUser != null && backStack.size == 1 && backStack.lastOrNull() == NavRoute.Vocab) {
+                val preferred = NavRoute.fromString(userSettings.homepageTab)
+                if (preferred != NavRoute.Vocab) {
+                    backStack.clear()
+                    backStack.add(preferred)
+                }
             }
         }
-    }
 
-    val scope = rememberCoroutineScope()
+        val scope = rememberCoroutineScope()
 
-    LaunchedEffect(currentUser) {
-        if (currentUser != null) {
-            if (currentUser?.email == "test@example.com") {
-                val seeder = SampleDataSeeder(
-                    app.vocabRepository,
-                    app.skillRepository,
-                    app.settingsRepository,
-                    app.portfolioRepository,
-                    app.journalRepository
-                )
-                launch { seeder.seed(currentUser!!.uid) }
-            }
-            intentFlow.collect { intent ->
-                if (intent.action == Intent.ACTION_VIEW) {
-                    val data = intent.data
-                    if (data?.host == "language-study.github.io" && (data.path == "/index.html" || data.path == "/")) {
-                        val code = data.getQueryParameter("mentor")
-                        if (code != null && code.length == 5) {
-                            val ownerUid = settingsVm.validateCode(code)
-                            if (ownerUid != null && ownerUid != currentUser?.uid) {
-                                authViewModel.enterMentorMode(ownerUid, code)
-                                backStack.clear()
-                                backStack.add(NavRoute.Portfolio)
+        LaunchedEffect(currentUser) {
+            if (currentUser != null) {
+                if (currentUser?.email == "test@example.com") {
+                    val seeder = SampleDataSeeder(
+                        app.vocabRepository,
+                        app.skillRepository,
+                        app.settingsRepository,
+                        app.portfolioRepository,
+                        app.journalRepository
+                    )
+                    launch { seeder.seed(currentUser!!.uid) }
+                }
+                intentFlow.collect { intent ->
+                    if (intent.action == Intent.ACTION_VIEW) {
+                        val data = intent.data
+                        if (data?.host == "language-study.github.io" && (data.path == "/index.html" || data.path == "/")) {
+                            val code = data.getQueryParameter("mentor")
+                            if (code != null && code.length == 5) {
+                                val ownerUid = settingsVm.validateCode(code)
+                                if (ownerUid != null && ownerUid != currentUser?.uid) {
+                                    authViewModel.enterMentorMode(ownerUid, code)
+                                    backStack.clear()
+                                    backStack.add(NavRoute.Portfolio)
+                                }
                             }
                         }
                     }
                 }
             }
         }
-    }
 
-    var showMenu by remember { mutableStateOf(false) }
-    var showLangMenu by remember { mutableStateOf(false) }
-    var showResources by remember { mutableStateOf(false) }
+        var showMenu by remember { mutableStateOf(false) }
+        var showLangMenu by remember { mutableStateOf(false) }
+        var showResources by remember { mutableStateOf(false) }
 
-    val adaptiveInfo = currentWindowAdaptiveInfo()
-    val useNavRail =
-        adaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
+        val adaptiveInfo = currentWindowAdaptiveInfo()
+        val useNavRail =
+            adaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
 
-    val currentRoute = backStack.lastOrNull() as? NavRoute
+        val currentRoute = backStack.lastOrNull() as? NavRoute
 
-    val provider = remember(currentUser, effectiveUserId) {
-        entryProvider<NavKey> {
-            entry<NavRoute.Login> {
-                LoginScreen(onLoginSuccess = {
-                    backStack.clear()
-                    backStack.add(NavRoute.fromString(userSettings.homepageTab))
-                })
-            }
-            entry<NavRoute.Vocab> {
-                VocabScreen(
-                    userId = effectiveUserId,
-                    searchViewModel = searchViewModel,
-                    isMentorMode = isMentorMode,
-                    mentorAccessLevel = userSettings.mentorAccessLevel
-                )
-            }
-            entry<NavRoute.Skills> {
-                SkillsScreen(
-                    userId = effectiveUserId,
-                    searchViewModel = searchViewModel,
-                    isMentorMode = isMentorMode,
-                    mentorAccessLevel = userSettings.mentorAccessLevel
-                )
-            }
-            entry<NavRoute.Portfolio> {
-                val userId = effectiveUserId
-                val portfolioVm: PortfolioViewModel = viewModel(
-                    key = "portfolio_$userId",
-                    factory = PortfolioViewModelFactory(userId, app.settingsRepository)
-                )
-                PortfolioScreen(
-                    viewModel = portfolioVm,
-                    searchViewModel = searchViewModel,
-                    isMentorMode = isMentorMode,
-                    mentorAccessLevel = userSettings.mentorAccessLevel
-                )
-            }
-            entry<NavRoute.Journal> {
-                JournalScreen(
-                    userId = effectiveUserId,
-                    searchViewModel = searchViewModel,
-                    isMentorMode = isMentorMode,
-                    mentorAccessLevel = userSettings.mentorAccessLevel
-                )
-            }
-            entry<NavRoute.Admin> {
-                val adminVm: AdminViewModel = viewModel(
-                    factory = AdminViewModelFactory(app.adminRepository, app.settingsRepository)
-                )
-                adminVm.initUserId(effectiveUserId)
-                AdminScreen(viewModel = adminVm)
-            }
-            entry<NavRoute.Settings> {
-                SettingsScreen(authViewModel = authViewModel, settingsViewModel = settingsVm)
+        val provider = remember(currentUser, effectiveUserId) {
+            entryProvider<NavKey> {
+                entry<NavRoute.Login> {
+                    LoginScreen(onLoginSuccess = {
+                        backStack.clear()
+                        backStack.add(NavRoute.fromString(userSettings.homepageTab))
+                    })
+                }
+                entry<NavRoute.Vocab> {
+                    VocabScreen(
+                        userId = effectiveUserId,
+                        searchViewModel = searchViewModel,
+                        isMentorMode = isMentorMode,
+                        mentorAccessLevel = userSettings.mentorAccessLevel
+                    )
+                }
+                entry<NavRoute.Skills> {
+                    SkillsScreen(
+                        userId = effectiveUserId,
+                        searchViewModel = searchViewModel,
+                        isMentorMode = isMentorMode,
+                        mentorAccessLevel = userSettings.mentorAccessLevel
+                    )
+                }
+                entry<NavRoute.Portfolio> {
+                    val userId = effectiveUserId
+                    val portfolioVm: PortfolioViewModel = viewModel(
+                        key = "portfolio_$userId",
+                        factory = PortfolioViewModelFactory(userId, app.settingsRepository)
+                    )
+                    PortfolioScreen(
+                        viewModel = portfolioVm,
+                        searchViewModel = searchViewModel,
+                        isMentorMode = isMentorMode,
+                        mentorAccessLevel = userSettings.mentorAccessLevel
+                    )
+                }
+                entry<NavRoute.Journal> {
+                    JournalScreen(
+                        userId = effectiveUserId,
+                        searchViewModel = searchViewModel,
+                        isMentorMode = isMentorMode,
+                        mentorAccessLevel = userSettings.mentorAccessLevel
+                    )
+                }
+                entry<NavRoute.Admin> {
+                    val adminVm: AdminViewModel = viewModel(
+                        factory = AdminViewModelFactory(app.adminRepository, app.settingsRepository)
+                    )
+                    adminVm.initUserId(effectiveUserId)
+                    AdminScreen(
+                        viewModel = adminVm,
+                        onBack = { if (backStack.size > 1) backStack.removeLastOrNull() }
+                    )
+                }
+                entry<NavRoute.Settings> {
+                    SettingsScreen(
+                        authViewModel = authViewModel,
+                        settingsViewModel = settingsVm,
+                        onBack = { if (backStack.size > 1) backStack.removeLastOrNull() }
+                    )
+                }
             }
         }
-    }
 
-    if (currentUser == null && backStack.lastOrNull() !is NavRoute.Login) {
-        LaunchedEffect(Unit) {
-            backStack.clear()
-            backStack.add(NavRoute.Login)
+        if (currentUser == null && backStack.lastOrNull() !is NavRoute.Login) {
+            LaunchedEffect(Unit) {
+                backStack.clear()
+                backStack.add(NavRoute.Login)
+            }
         }
-    }
 
-    if (showResources) {
-        LanguageResourcesDialog(
-            viewModel = settingsVm,
-            onDismiss = { showResources = false }
-        )
-    }
+        if (showResources) {
+            LanguageResourcesDialog(
+                viewModel = settingsVm,
+                onDismiss = { showResources = false }
+            )
+        }
 
-    if (currentUser != null && userSettings.firstLogin) {
-        WelcomeWalkthrough(
-            viewModel = settingsVm,
-            onDismiss = { settingsVm.setFirstLogin(false) },
-            onFinish = { settingsVm.setFirstLogin(false) }
-        )
-    }
+        if (currentUser != null && userSettings.firstLogin) {
+            WelcomeWalkthrough(
+                viewModel = settingsVm,
+                onDismiss = { settingsVm.setFirstLogin(false) },
+                onFinish = { settingsVm.setFirstLogin(false) }
+            )
+        }
 
     Scaffold(
         topBar = {
-            if (currentUser != null) {
+            if (currentUser != null && 
+                backStack.lastOrNull() != NavRoute.Settings && 
+                backStack.lastOrNull() != NavRoute.Admin) {
                 TopAppBar(
                     title = {
                         Column {
@@ -376,8 +390,9 @@ fun MainScreen(
                                         text = { Text("Admin") },
                                         onClick = {
                                             showMenu = false
-                                            backStack.clear()
-                                            backStack.add(NavRoute.Admin)
+                                            if (backStack.lastOrNull() != NavRoute.Admin) {
+                                                backStack.add(NavRoute.Admin)
+                                            }
                                         },
                                         leadingIcon = {
                                             Icon(
@@ -392,8 +407,9 @@ fun MainScreen(
                                     text = { Text("Settings") },
                                     onClick = {
                                         showMenu = false
-                                        backStack.clear()
-                                        backStack.add(NavRoute.Settings)
+                                        if (backStack.lastOrNull() != NavRoute.Settings) {
+                                            backStack.add(NavRoute.Settings)
+                                        }
                                     },
                                     leadingIcon = {
                                         Icon(
@@ -428,41 +444,43 @@ fun MainScreen(
                     }
                 }
             }
-        }
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
         Row(
             Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            if (useNavRail && currentUser != null) {
-                NavigationRail(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.padding(top = 8.dp)
-                ) {
-                    NavRoute.mainRoutes.forEach { route ->
-                        NavigationRailItem(
-                            selected = backStack.lastOrNull() == route,
-                            onClick = {
-                                if (backStack.lastOrNull() != route) {
-                                    backStack.clear()
-                                    backStack.add(route)
-                                }
-                            },
-                            icon = { Icon(route.icon, contentDescription = route.label) },
-                            label = { Text(route.label) }
-                        )
+                if (useNavRail && currentUser != null) {
+                    NavigationRail(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        NavRoute.mainRoutes.forEach { route ->
+                            NavigationRailItem(
+                                selected = backStack.lastOrNull() == route,
+                                onClick = {
+                                    if (backStack.lastOrNull() != route) {
+                                        backStack.clear()
+                                        backStack.add(route)
+                                    }
+                                },
+                                icon = { Icon(route.icon, contentDescription = route.label) },
+                                label = { Text(route.label) }
+                            )
+                        }
                     }
                 }
+                NavDisplay(
+                    backStack = backStack,
+                    onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(MaterialTheme.colorScheme.background),
+                    entryProvider = provider
+                )
             }
-            NavDisplay(
-                backStack = backStack,
-                onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
-                modifier = Modifier
-                    .weight(1f)
-                    .background(MaterialTheme.colorScheme.background),
-                entryProvider = provider
-            )
         }
     }
 }

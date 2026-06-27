@@ -37,6 +37,7 @@ class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFire
                 val mentorQuickReviewEnabled =
                     snapshot.getBoolean("mentorQuickReviewEnabled") ?: false
                 val homepageTab = snapshot.getString("homepageTab") ?: "vocab"
+                val theme = snapshot.getString("theme") ?: "system"
                 val firstLogin = snapshot.getBoolean("firstLogin") ?: false
 
                 trySend(
@@ -49,6 +50,7 @@ class SettingsRepository(private val firestore: FirebaseFirestore = FirebaseFire
                         mentorAccessLevel = mentorAccessLevel,
                         mentorQuickReviewEnabled = mentorQuickReviewEnabled,
                         homepageTab = homepageTab,
+                        theme = theme,
                         firstLogin = firstLogin
                     )
                 )

@@ -246,6 +246,17 @@ class SettingsViewModel(
         }
     }
 
+    fun setTheme(theme: String) {
+        if (userId.isBlank() || !checkRateLimit("set_theme", QUICK_COOLDOWN_MS)) return
+        viewModelScope.launch {
+            try {
+                repository.updateUserSettings(userId, mapOf("theme" to theme))
+            } catch (e: Exception) {
+                _errorMessages.emit("Failed to set theme: ${e.message}")
+            }
+        }
+    }
+
     fun setHomepageTab(tab: String) {
         if (userId.isBlank() || !checkRateLimit("set_homepage_tab", QUICK_COOLDOWN_MS)) return
         viewModelScope.launch {

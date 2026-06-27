@@ -1,12 +1,11 @@
 package io.github.languagestudy.ui.screens
 
+import androidx.activity.compose.BackHandler
 import android.content.ClipData
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,48 +15,39 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.SupervisorAccount
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.RadioButtonChecked
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -68,6 +58,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -79,28 +70,42 @@ import io.github.languagestudy.navigation.NavRoute
 import io.github.languagestudy.navigation.label
 import io.github.languagestudy.ui.auth.AuthViewModel
 import io.github.languagestudy.ui.components.DeleteConfirmationDialog
-import io.github.languagestudy.ui.components.SectionHeader
 import io.github.languagestudy.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     authViewModel: AuthViewModel = viewModel(),
-    settingsViewModel: SettingsViewModel
+    settingsViewModel: SettingsViewModel,
+    onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val clipboard = LocalClipboard.current
-    val uriHandler = LocalUriHandler.current
     val scope = rememberCoroutineScope()
     val currentUser by authViewModel.user.collectAsState()
     val isMentorMode by authViewModel.isMentorMode.collectAsState()
     val userSettings by settingsViewModel.userSettings.collectAsState()
-    val availableLanguages by settingsViewModel.availableLanguages.collectAsState()
     val mentorCode by settingsViewModel.mentorCode.collectAsState()
-    val scrollState = rememberScrollState()
+    val availableLanguages by settingsViewModel.availableLanguages.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showJoinDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
+    var showPrimaryLangDialog by remember { mutableStateOf(false) }
+    var showLearningLangsDialog by remember { mutableStateOf(false) }
+    var showStartupTabDialog by remember { mutableStateOf(false) }
+    var showAccessLevelDialog by remember { mutableStateOf(false) }
+    
+    var currentView by remember { mutableStateOf("main") }
+
+    BackHandler(enabled = true) {
+        if (currentView != "main") {
+            currentView = "main"
+        } else {
+            onBack()
+        }
+    }
 
     LaunchedEffect(Unit) {
         settingsViewModel.errorMessages.collect { message ->
@@ -108,565 +113,686 @@ fun SettingsScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
-        if (showDeleteDialog) {
-            DeleteConfirmationDialog(
-                title = "Delete Account?",
-                message = "This will permanently delete your account and all your data (vocabulary, skills, portfolio, journal, etc.). This action cannot be undone.",
-                onConfirm = {
-                    authViewModel.deleteAccount(context) { success, message ->
-                        if (!success && message != null) {
-                            scope.launch {
-                                snackbarHostState.showSnackbar(message)
-                            }
+    if (showDeleteDialog) {
+        DeleteConfirmationDialog(
+            title = "Delete Account?",
+            message = "This will permanently delete your account and all your data (vocabulary, skills, portfolio, journal, etc.). This action cannot be undone.",
+            onConfirm = {
+                authViewModel.deleteAccount(context) { success, message ->
+                    if (!success && message != null) {
+                        scope.launch {
+                            snackbarHostState.showSnackbar(message)
                         }
                     }
-                },
-                onDismiss = { showDeleteDialog = false }
-            )
-        }
+                }
+            },
+            onDismiss = { showDeleteDialog = false }
+        )
+    }
 
-        Column(
+    if (showJoinDialog) {
+        JoinMentorDialog(
+            onDismiss = { showJoinDialog = false },
+            onJoin = { code ->
+                scope.launch {
+                    try {
+                        val ownerUid = settingsViewModel.validateCode(code)
+                        if (ownerUid != null) {
+                            if (ownerUid == currentUser?.uid) {
+                                snackbarHostState.showSnackbar("Cannot mentor yourself")
+                            } else {
+                                authViewModel.enterMentorMode(ownerUid, code)
+                                showJoinDialog = false
+                            }
+                        } else {
+                            snackbarHostState.showSnackbar("Invalid or disabled code")
+                        }
+                    } catch (_: Exception) {
+                        snackbarHostState.showSnackbar("Error validating code")
+                    }
+                }
+            }
+        )
+    }
+
+    // Dialogs for selections
+    if (showThemeDialog) {
+        SelectionDialog(
+            title = "Select Theme",
+            options = listOf("system", "light", "dark"),
+            selectedOption = userSettings.theme,
+            onOptionSelected = { settingsViewModel.setTheme(it) },
+            onDismiss = { showThemeDialog = false },
+            labelProvider = { it.replaceFirstChar { char -> char.uppercase() } }
+        )
+    }
+
+    if (showPrimaryLangDialog) {
+        SelectionDialog(
+            title = "Primary Language",
+            options = userSettings.learnedLanguages,
+            selectedOption = userSettings.languageLearning,
+            onOptionSelected = { settingsViewModel.setCurrentLanguage(it) },
+            onDismiss = { showPrimaryLangDialog = false }
+        )
+    }
+
+    if (showLearningLangsDialog) {
+        MultiSelectionDialog(
+            title = "Languages I'm Learning",
+            options = availableLanguages,
+            selectedOptions = userSettings.learnedLanguages,
+            onToggleOption = { settingsViewModel.toggleLanguage(it) },
+            onDismiss = { showLearningLangsDialog = false }
+        )
+    }
+
+    if (showStartupTabDialog) {
+        SelectionDialog(
+            title = "Startup Tab",
+            options = NavRoute.mainRoutes,
+            selectedOption = NavRoute.mainRoutes.find { it.label.lowercase() == userSettings.homepageTab } ?: NavRoute.Vocab,
+            onOptionSelected = { settingsViewModel.setHomepageTab(it.label.lowercase()) },
+            onDismiss = { showStartupTabDialog = false },
+            labelProvider = { it.label }
+        )
+    }
+
+    if (showAccessLevelDialog) {
+        SelectionDialog(
+            title = "Mentor Access Level",
+            options = listOf("view", "status", "full"),
+            selectedOption = userSettings.mentorAccessLevel,
+            onOptionSelected = { settingsViewModel.setMentorAccessLevel(it) },
+            onDismiss = { showAccessLevelDialog = false },
+            labelProvider = { 
+                when(it) {
+                    "view" -> "Read Only"
+                    "status" -> "Status Updates"
+                    "full" -> "Edit All"
+                    else -> it.replaceFirstChar { char -> char.uppercase() }
+                }
+            }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { 
+                    Text(when(currentView) {
+                        "details" -> "App Details"
+                        "notes" -> "Release Notes"
+                        "libraries" -> "Libraries Used"
+                        else -> "Settings"
+                    })
+                },
+                navigationIcon = {
+                    IconButton(onClick = { 
+                        if (currentView != "main") {
+                            currentView = "main"
+                        } else {
+                            onBack()
+                        }
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(scrollState)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            if (currentUser != null) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
-                            alpha = 0.5f
-                        )
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                        }
-                        Column {
-                            Text(
-                                text = if (isMentorMode) "Viewing Account" else "Account",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = currentUser?.email ?: "",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+            when (currentView) {
+                "main" -> SettingsMainView(
+                    currentUser = currentUser,
+                    isMentorMode = isMentorMode,
+                    userSettings = userSettings,
+                    mentorCode = mentorCode,
+                    settingsViewModel = settingsViewModel,
+                    authViewModel = authViewModel,
+                    onNavigateToDetails = { currentView = "details" },
+                    onNavigateToNotes = { currentView = "notes" },
+                    onNavigateToLibraries = { currentView = "libraries" },
+                    onShowDeleteDialog = { showDeleteDialog = true },
+                    onShowJoinDialog = { showJoinDialog = true },
+                    onShowThemeDialog = { showThemeDialog = true },
+                    onShowPrimaryLangDialog = { showPrimaryLangDialog = true },
+                    onShowLearningLangsDialog = { showLearningLangsDialog = true },
+                    onShowStartupTabDialog = { showStartupTabDialog = true },
+                    onShowAccessLevelDialog = { showAccessLevelDialog = true }
+                )
+
+                "details" -> AppDetailsView()
+                "notes" -> ReleaseNotesView()
+                "libraries" -> LibrariesView()
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsMainView(
+    currentUser: com.google.firebase.auth.FirebaseUser?,
+    isMentorMode: Boolean,
+    userSettings: io.github.languagestudy.data.model.UserSettings,
+    mentorCode: String?,
+    settingsViewModel: SettingsViewModel,
+    authViewModel: AuthViewModel,
+    onNavigateToDetails: () -> Unit,
+    onNavigateToNotes: () -> Unit,
+    onNavigateToLibraries: () -> Unit,
+    onShowDeleteDialog: () -> Unit,
+    onShowJoinDialog: () -> Unit,
+    onShowThemeDialog: () -> Unit,
+    onShowPrimaryLangDialog: () -> Unit,
+    onShowLearningLangsDialog: () -> Unit,
+    onShowStartupTabDialog: () -> Unit,
+    onShowAccessLevelDialog: () -> Unit
+) {
+    val scrollState = rememberScrollState()
+    val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    val uriHandler = LocalUriHandler.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(horizontal = 16.dp)
+    ) {
+        PreferenceCategory(title = "Account")
+        PreferenceItem(
+            title = "Signed in as",
+            summary = currentUser?.email ?: "Not signed in",
+            icon = Icons.Default.Person,
+            onClick = {}
+        )
+        PreferenceItem(
+            title = "Sign Out",
+            icon = Icons.AutoMirrored.Filled.Logout,
+            onClick = { authViewModel.signOut(context) }
+        )
+        if (currentUser != null && !isMentorMode) {
+            PreferenceItem(
+                title = "Delete Account",
+                icon = Icons.Default.DeleteForever,
+                onClick = onShowDeleteDialog,
+                isError = true
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
+
+        PreferenceCategory(title = "Display")
+        PreferenceItem(
+            title = "Theme",
+            summary = userSettings.theme.replaceFirstChar { it.uppercase() },
+            icon = Icons.Default.Palette,
+            onClick = onShowThemeDialog
+        )
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
+
+        PreferenceCategory(title = "Learning")
+        PreferenceItem(
+            title = "Primary Language",
+            summary = userSettings.languageLearning.ifBlank { "None" },
+            icon = Icons.Default.Done,
+            onClick = onShowPrimaryLangDialog
+        )
+        PreferenceItem(
+            title = "Languages I'm Learning",
+            summary = if (userSettings.learnedLanguages.isEmpty()) "None" else userSettings.learnedLanguages.joinToString(", "),
+            icon = Icons.Default.Language,
+            onClick = onShowLearningLangsDialog
+        )
+        PreferenceItem(
+            title = "Startup Tab",
+            summary = userSettings.homepageTab.replaceFirstChar { it.uppercase() },
+            icon = Icons.Rounded.Home,
+            onClick = onShowStartupTabDialog
+        )
+        if (!isMentorMode) {
+            PreferenceItem(
+                title = "Request a Language",
+                summary = "Don't see your language? Let us know.",
+                icon = Icons.Default.Language,
+                onClick = {
+                    val uri = "mailto:griggriley+languagestudy@gmail.com" +
+                            "?subject=${android.net.Uri.encode("Language Study - New Language Request")}" +
+                            "&body=${android.net.Uri.encode("I would like to request support for the following language: ")}"
+                    try {
+                        uriHandler.openUri(uri)
+                    } catch (_: Exception) {
                     }
                 }
-            }
+            )
+        }
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionHeader(title = "Languages you are learning", icon = Icons.Default.Language)
-                if (availableLanguages.isEmpty()) {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                } else {
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        availableLanguages.forEach { language ->
-                            val isSelected = userSettings.learnedLanguages.contains(language)
-                            val canToggle =
-                                (!isSelected || userSettings.learnedLanguages.size > 1) && !isMentorMode
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { if (canToggle) settingsViewModel.toggleLanguage(language) },
-                                enabled = canToggle || isSelected,
-                                label = { Text(language) },
-                                leadingIcon = if (isSelected) {
-                                    {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Done,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(FilterChipDefaults.IconSize)
-                                        )
-                                    }
-                                } else null
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
+
+        PreferenceCategory(title = "Mentor Access")
+        SwitchPreference(
+            title = "Enable Mentor View",
+            summary = if (isMentorMode) "Settings are read-only in mentor mode." else "Allow someone with your code to view your progress.",
+            icon = Icons.Default.SupervisorAccount,
+            checked = userSettings.mentorCodeEnabled,
+            onCheckedChange = { settingsViewModel.toggleMentorCode(it) },
+            enabled = !isMentorMode
+        )
+
+        if (userSettings.mentorCodeEnabled || isMentorMode) {
+            PreferenceItem(
+                title = "Mentor Share Code",
+                summary = mentorCode ?: "Generating...",
+                icon = Icons.Rounded.Refresh,
+                onClick = {
+                    mentorCode?.let { code ->
+                        scope.launch {
+                            clipboard.setClipEntry(
+                                ClipEntry(
+                                    ClipData.newPlainText(
+                                        "Mentor Code",
+                                        code
+                                    )
+                                )
                             )
                         }
                     }
-
+                },
+                trailing = {
                     if (!isMentorMode) {
-                        var showRequestField by remember { mutableStateOf(false) }
-                        var requestedName by remember { mutableStateOf("") }
-
-                        if (!showRequestField) {
-                            TextButton(
-                                onClick = { showRequestField = true },
-                                modifier = Modifier.padding(top = 4.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Language,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text("Don't see your language? Request it")
-                            }
-                        } else {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedTextField(
-                                    value = requestedName,
-                                    onValueChange = { requestedName = it },
-                                    label = { Text("Language Name") },
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp),
-                                    singleLine = true
-                                )
-                                IconButton(
-                                    onClick = {
-                                        if (requestedName.isNotBlank()) {
-                                            val uri = "mailto:griggriley+languagestudy@gmail.com" +
-                                                    "?subject=${android.net.Uri.encode("Language Study - New Language Request")}" +
-                                                    "&body=${android.net.Uri.encode("I would like to request support for the following language: $requestedName")}"
-                                            try {
-                                                uriHandler.openUri(uri)
-                                                requestedName = ""
-                                                showRequestField = false
-                                            } catch (_: Exception) {
-                                            }
-                                        }
-                                    },
-                                    enabled = requestedName.isNotBlank()
-                                ) {
-                                    Icon(
-                                        Icons.AutoMirrored.Rounded.Send,
-                                        contentDescription = "Send Email"
-                                    )
-                                }
-                                IconButton(onClick = { showRequestField = false }) {
-                                    Icon(Icons.Rounded.Close, contentDescription = "Cancel")
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (userSettings.learnedLanguages.isNotEmpty()) {
-                HorizontalDivider()
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionHeader(title = "Primary Language for Study", icon = Icons.Default.Done)
-                    Text(
-                        text = "Select which language to focus on.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        userSettings.learnedLanguages.forEach { language ->
-                            val isSelected = userSettings.languageLearning == language
-                            val canChange = !isMentorMode && userSettings.learnedLanguages.size > 1
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = {
-                                    if (canChange) settingsViewModel.setCurrentLanguage(
-                                        language
-                                    )
-                                },
-                                enabled = canChange || isSelected,
-                                label = { Text(language) },
-                                leadingIcon = if (isSelected) {
-                                    {
-                                        Icon(
-                                            imageVector = Icons.Rounded.RadioButtonChecked,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(FilterChipDefaults.IconSize)
-                                        )
-                                    }
-                                } else null
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (userSettings.learnedLanguages.isNotEmpty()) {
-                HorizontalDivider()
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionHeader(title = "Startup Tab", icon = Icons.Rounded.Home)
-                    Text(
-                        text = "Choose which tab opens when you start the app.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        NavRoute.mainRoutes.forEach { route ->
-                            val routeName = route.label.lowercase()
-                            val isSelected = userSettings.homepageTab == routeName
-                            val canChange = !isMentorMode
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = {
-                                    if (canChange) settingsViewModel.setHomepageTab(
-                                        routeName
-                                    )
-                                },
-                                enabled = canChange || isSelected,
-                                label = { Text(route.label) },
-                                leadingIcon = if (isSelected) {
-                                    {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Done,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(FilterChipDefaults.IconSize)
-                                        )
-                                    }
-                                } else null
-                            )
-                        }
-                    }
-                }
-            }
-
-            HorizontalDivider()
-
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                SectionHeader(title = "Mentor Access", icon = Icons.Default.SupervisorAccount)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Enable Mentor View", style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            if (isMentorMode) "Settings are read-only in mentor mode." else "Allow someone with your code to view your progress.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = userSettings.mentorCodeEnabled,
-                        onCheckedChange = { settingsViewModel.toggleMentorCode(it) },
-                        enabled = !isMentorMode,
-                        thumbContent = {
-                            val icon =
-                                if (userSettings.mentorCodeEnabled) Icons.Rounded.Check else Icons.Rounded.Close
+                        IconButton(onClick = { settingsViewModel.regenerateMentorCode() }) {
                             Icon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                modifier = Modifier.size(SwitchDefaults.IconSize),
-                                tint = if (isMentorMode) {
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                } else {
-                                    if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                }
+                                Icons.Rounded.Refresh,
+                                contentDescription = "Regenerate",
+                                modifier = Modifier.size(20.dp)
                             )
-                        },
-                        colors = SwitchDefaults.colors(
-                            disabledUncheckedTrackColor = MaterialTheme.colorScheme.onSurface.copy(
-                                alpha = 0.12f
-                            ),
-                            disabledUncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(
-                                alpha = 0.38f
-                            ),
-                            disabledCheckedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
-                            disabledCheckedThumbColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                        )
-                    )
-                }
-
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Only show code card and access level if enabled, or if in mentor mode
-                    if (userSettings.mentorCodeEnabled || isMentorMode) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(
-                                    alpha = if (userSettings.mentorCodeEnabled) 0.3f else 0.1f
-                                )
-                            )
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    "Your Mentor Share Code",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(
-                                        alpha = 0.38f
-                                    )
-                                )
-                                Text(
-                                    text = mentorCode ?: "Generating...",
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                                    color = if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(
-                                        alpha = 0.38f
-                                    )
-                                )
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    OutlinedButton(
-                                        onClick = {
-                                            mentorCode?.let { code ->
-                                                scope.launch {
-                                                    clipboard.setClipEntry(
-                                                        ClipEntry(
-                                                            ClipData.newPlainText(
-                                                                "Mentor Code",
-                                                                code
-                                                            )
-                                                        )
-                                                    )
-                                                }
-                                            }
-                                        },
-                                        shape = RoundedCornerShape(8.dp),
-                                        enabled = true
-                                    ) {
-                                        Icon(
-                                            Icons.Rounded.ContentCopy,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(Modifier.width(8.dp))
-                                        Text("Copy")
-                                    }
-                                    if (!isMentorMode) {
-                                        OutlinedButton(
-                                            onClick = { settingsViewModel.regenerateMentorCode() },
-                                            shape = RoundedCornerShape(8.dp),
-                                            enabled = true
-                                        ) {
-                                            Icon(
-                                                Icons.Rounded.Refresh,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Spacer(Modifier.width(8.dp))
-                                            Text("Regenerate")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(
-                                "Mentor Access Level",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = if (userSettings.mentorCodeEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(
-                                    alpha = 0.38f
-                                )
-                            )
-                            val levels = listOf(
-                                "view" to "Read Only: View your data but cannot make changes.",
-                                "status" to "Status Updates: Change learning statuses (no content edits).",
-                                "full" to "Edit All: Add, edit, and delete vocabulary, skills, and portfolio."
-                            )
-                            levels.forEach { (level, description) ->
-                                val isSelected = userSettings.mentorAccessLevel == level
-                                val radioEnabled = !isMentorMode
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable(
-                                            enabled = radioEnabled,
-                                            onClick = { settingsViewModel.setMentorAccessLevel(level) }
-                                        )
-                                        .padding(vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(
-                                        selected = isSelected,
-                                        onClick = null, // Handled by Row's clickable
-                                        enabled = radioEnabled
-                                    )
-                                    Column(modifier = Modifier.padding(start = 8.dp)) {
-                                        Text(
-                                            level.replaceFirstChar { it.uppercase() },
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = if (!radioEnabled && !isSelected) MaterialTheme.colorScheme.onSurface.copy(
-                                                alpha = 0.38f
-                                            ) else MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            description,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = if (!radioEnabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                alpha = 0.38f
-                                            ) else MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
                         }
                     }
                 }
+            )
+            PreferenceItem(
+                title = "Mentor Access Level",
+                summary = userSettings.mentorAccessLevel.replaceFirstChar { it.uppercase() },
+                icon = Icons.Default.SupervisorAccount,
+                onClick = onShowAccessLevelDialog
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
+
+        PreferenceCategory(title = "Mentoring")
+        if (isMentorMode) {
+            PreferenceItem(
+                title = "Currently Mentoring",
+                summary = "You are viewing another user's progress. Click to exit.",
+                icon = Icons.Default.School,
+                onClick = { authViewModel.exitMentorMode() },
+                trailing = {
+                    TextButton(onClick = { authViewModel.exitMentorMode() }) {
+                        Text("Exit")
+                    }
+                }
+            )
+        } else {
+            PreferenceItem(
+                title = "Mentor a Student",
+                summary = "Enter a share code to view their progress.",
+                icon = Icons.Default.School,
+                onClick = onShowJoinDialog
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
+
+        PreferenceCategory(title = "Additional Info")
+        PreferenceItem(
+            title = "Release Notes",
+            onClick = onNavigateToNotes
+        )
+        PreferenceItem(
+            title = "App Details",
+            onClick = onNavigateToDetails
+        )
+        PreferenceItem(
+            title = "Libraries Used",
+            onClick = onNavigateToLibraries
+        )
+        PreferenceItem(
+            title = "Credits",
+            summary = "Globe icons by Techno Icons - Flaticon",
+            onClick = { uriHandler.openUri("https://www.flaticon.com/free-icons/globe") }
+        )
+
+        Spacer(Modifier.height(32.dp))
+    }
+}
+
+@Composable
+fun AppDetailsView() {
+    val scrollState = rememberScrollState()
+    val context = LocalContext.current
+    val packageInfo = remember {
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        DetailItem(label = "Language Study Version", value = packageInfo?.versionName ?: "1.0.0")
+        DetailItem(label = "Android Version", value = android.os.Build.VERSION.RELEASE)
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
+
+        Text(
+            "Personal Data",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        // Placeholders for data counts - in a real app these would come from ViewModels
+        DetailItem(label = "Vocabulary items", value = "...")
+        DetailItem(label = "Skills tracked", value = "...")
+        DetailItem(label = "Portfolio entries", value = "...")
+        DetailItem(label = "Journal entries", value = "...")
+    }
+}
+
+@Composable
+fun ReleaseNotesView() {
+    val scrollState = rememberScrollState()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text("Version 1.2.0", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("• Redesigned Settings screen with a cleaner layout.\n" +
+                "• Added Mentor View functionality for progress tracking.\n" +
+                "• Improved vocabulary and skill management.\n" +
+                "• New Portfolio and Journal features for immersive learning.",
+            style = MaterialTheme.typography.bodyLarge)
+        
+        HorizontalDivider()
+        
+        Text("Version 1.1.0", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("• Initial release with core features.\n" +
+                "• Support for multiple languages.\n" +
+                "• Dark mode support.",
+            style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+@Composable
+fun LibrariesView() {
+    val scrollState = rememberScrollState()
+    val libraries = listOf(
+        "Jetpack Compose" to "Modern toolkit for building native UI.",
+        "Firebase" to "Authentication, Firestore, and Cloud Messaging.",
+        "Room" to "Persistence library for local database.",
+        "Retrofit & OkHttp" to "Type-safe HTTP client for Android and Java.",
+        "Coil" to "Image loading library for Android backed by Kotlin Coroutines.",
+        "YouTube Player" to "Official YouTube Player API for Android.",
+        "Navigation 3" to "Declarative navigation for Compose.",
+        "Moshi" to "A modern JSON library for Android and Java.",
+        "Kotlin Coroutines" to "Asynchronous programming made easy."
+    )
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        libraries.forEach { (name, desc) ->
+            Column {
+                Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(desc, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            HorizontalDivider(thickness = 0.5.dp)
+        }
+    }
+}
 
-            HorizontalDivider()
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                SectionHeader(title = "Mentor Mode", icon = Icons.Default.School)
-                if (isMentorMode) {
-                    Text(
-                        "You are currently viewing another user's progress. Your actions may be limited based on their permission settings.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Button(
-                        onClick = { authViewModel.exitMentorMode() },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                    ) {
-                        Text("Exit Mentor Mode")
-                    }
-                } else {
-                    Text(
-                        "Enter a student's share code to view their progress and help them learn.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+@Composable
+fun JoinMentorDialog(
+    onDismiss: () -> Unit,
+    onJoin: (String) -> Unit
+) {
+    var code by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Mentor a Student") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Enter the 5-character share code from the student's app.")
+                OutlinedTextField(
+                    value = code,
+                    onValueChange = { if (it.length <= 5) code = it.uppercase() },
+                    label = { Text("Share Code") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onJoin(code) },
+                enabled = code.length == 5,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Join")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
 
-                    var inputCode by remember { mutableStateOf("") }
-                    var isValidating by remember { mutableStateOf(false) }
-                    var errorMessage by remember { mutableStateOf<String?>(null) }
-
+@Composable
+fun <T> SelectionDialog(
+    title: String,
+    options: List<T>,
+    selectedOption: T,
+    onOptionSelected: (T) -> Unit,
+    onDismiss: () -> Unit,
+    labelProvider: (T) -> String = { it.toString() }
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                options.forEach { option ->
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = inputCode,
-                            onValueChange = {
-                                if (it.length <= 5) {
-                                    inputCode = it.uppercase()
-                                    errorMessage = null
-                                }
-                            },
-                            label = { Text("Share Code") },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true,
-                            isError = errorMessage != null,
-                            supportingText = errorMessage?.let { { Text(it) } }
-                        )
-
-                        Button(
-                            onClick = {
-                                if (inputCode.length == 5) {
-                                    scope.launch {
-                                        isValidating = true
-                                        errorMessage = null
-                                        try {
-                                            val ownerUid = settingsViewModel.validateCode(inputCode)
-                                            if (ownerUid != null) {
-                                                if (ownerUid == currentUser?.uid) {
-                                                    errorMessage = "Cannot mentor yourself"
-                                                } else {
-                                                    authViewModel.enterMentorMode(
-                                                        ownerUid,
-                                                        inputCode
-                                                    )
-                                                }
-                                            } else {
-                                                errorMessage = "Invalid or disabled code"
-                                            }
-                                        } catch (_: Exception) {
-                                            errorMessage = "Error validating code"
-                                        } finally {
-                                            isValidating = false
-                                        }
-                                    }
-                                }
-                            },
-                            enabled = inputCode.length == 5 && !isValidating,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .height(56.dp)
-                                .align(Alignment.Top)
-                        ) {
-                            if (isValidating) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                            } else {
-                                Text("Join")
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onOptionSelected(option)
+                                onDismiss()
                             }
-                        }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (option == selectedOption),
+                            onClick = null
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(labelProvider(option))
                     }
                 }
             }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
 
-            Spacer(Modifier.height(16.dp))
-            OutlinedButton(
-                onClick = { authViewModel.signOut(context) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+@Composable
+fun MultiSelectionDialog(
+    title: String,
+    options: List<String>,
+    selectedOptions: List<String>,
+    onToggleOption: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
             ) {
-                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Sign Out")
-            }
-
-            if (currentUser != null && !isMentorMode) {
-                TextButton(
-                    onClick = { showDeleteDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Icon(Icons.Default.DeleteForever, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Delete Account")
+                options.forEach { option ->
+                    val isSelected = selectedOptions.contains(option)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onToggleOption(option) }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = isSelected,
+                            onCheckedChange = null
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(option)
+                    }
                 }
             }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) { Text("Done") }
+        }
+    )
+}
 
-            TextButton(
-                onClick = { uriHandler.openUri("https://www.flaticon.com/free-icons/globe") },
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            ) {
+@Composable
+fun DetailItem(label: String, value: String) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+fun PreferenceCategory(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp, bottom = 4.dp)
+    )
+}
+
+@Composable
+fun PreferenceItem(
+    title: String,
+    summary: String? = null,
+    icon: ImageVector? = null,
+    onClick: () -> Unit = {},
+    isError: Boolean = false,
+    trailing: @Composable (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.width(16.dp))
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+            )
+            if (summary != null) {
                 Text(
-                    text = "Globe icons created by Techno Icons - Flaticon",
-                    style = MaterialTheme.typography.labelSmall,
+                    text = summary,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
+        if (trailing != null) {
+            trailing()
+        }
     }
+}
+
+@Composable
+fun SwitchPreference(
+    title: String,
+    summary: String? = null,
+    icon: ImageVector? = null,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true
+) {
+    PreferenceItem(
+        title = title,
+        summary = summary,
+        icon = icon,
+        onClick = { if (enabled) onCheckedChange(!checked) },
+        trailing = {
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                enabled = enabled
+            )
+        }
+    )
 }
