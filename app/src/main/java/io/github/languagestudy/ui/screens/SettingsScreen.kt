@@ -3,6 +3,7 @@ package io.github.languagestudy.ui.screens
 import android.content.ClipData
 import android.widget.TextView
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -109,6 +112,11 @@ fun SettingsScreen(
     var showAccessLevelDialog by remember { mutableStateOf(false) }
 
     var currentView by remember { mutableStateOf("main") }
+
+    val mainScrollState = rememberScrollState()
+    val detailsScrollState = rememberScrollState()
+    val notesScrollState = rememberScrollState()
+    val librariesLazyListState = rememberLazyListState()
 
     BackHandler(enabled = true) {
         if (currentView != "main") {
@@ -269,6 +277,7 @@ fun SettingsScreen(
                     mentorCode = mentorCode,
                     settingsViewModel = settingsViewModel,
                     authViewModel = authViewModel,
+                    scrollState = mainScrollState,
                     onNavigateToDetails = { currentView = "details" },
                     onNavigateToNotes = { currentView = "notes" },
                     onNavigateToLibraries = { currentView = "libraries" },
@@ -281,13 +290,20 @@ fun SettingsScreen(
                     onShowAccessLevelDialog = { showAccessLevelDialog = true }
                 )
 
-                "details" -> AppDetailsView(settingsViewModel = settingsViewModel)
+                "details" -> AppDetailsView(
+                    settingsViewModel = settingsViewModel,
+                    scrollState = detailsScrollState
+                )
+
                 "notes" -> {
                     val releaseNotes by settingsViewModel.releaseNotes.collectAsState()
-                    ReleaseNotesView(releaseNotes = releaseNotes)
+                    ReleaseNotesView(
+                        releaseNotes = releaseNotes,
+                        scrollState = notesScrollState
+                    )
                 }
 
-                "libraries" -> LibrariesView()
+                "libraries" -> LibrariesView(lazyListState = librariesLazyListState)
             }
         }
     }
@@ -301,6 +317,7 @@ fun SettingsMainView(
     mentorCode: String?,
     settingsViewModel: SettingsViewModel,
     authViewModel: AuthViewModel,
+    scrollState: ScrollState,
     onNavigateToDetails: () -> Unit,
     onNavigateToNotes: () -> Unit,
     onNavigateToLibraries: () -> Unit,
@@ -312,7 +329,6 @@ fun SettingsMainView(
     onShowStartupTabDialog: () -> Unit,
     onShowAccessLevelDialog: () -> Unit
 ) {
-    val scrollState = rememberScrollState()
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -497,8 +513,10 @@ fun SettingsMainView(
 }
 
 @Composable
-fun AppDetailsView(settingsViewModel: SettingsViewModel) {
-    val scrollState = rememberScrollState()
+fun AppDetailsView(
+    settingsViewModel: SettingsViewModel,
+    scrollState: ScrollState
+) {
     val vocabCount by settingsViewModel.vocabCount.collectAsState()
     val skillCount by settingsViewModel.skillCount.collectAsState()
     val portfolioCount by settingsViewModel.portfolioCount.collectAsState()
@@ -531,8 +549,10 @@ fun AppDetailsView(settingsViewModel: SettingsViewModel) {
 }
 
 @Composable
-fun ReleaseNotesView(releaseNotes: List<io.github.languagestudy.data.model.GitHubRelease>) {
-    val scrollState = rememberScrollState()
+fun ReleaseNotesView(
+    releaseNotes: List<io.github.languagestudy.data.model.GitHubRelease>,
+    scrollState: ScrollState
+) {
     val currentVersion = BuildConfig.VERSION_NAME
 
     val filteredReleases = remember(releaseNotes) {
@@ -667,12 +687,13 @@ private fun compareVersions(v1: String, v2: String): Int {
 }
 
 @Composable
-fun LibrariesView() {
+fun LibrariesView(lazyListState: LazyListState) {
     val libraries by produceLibraries()
 
     LibrariesContainer(
         libraries = libraries,
         modifier = Modifier.fillMaxSize(),
+        lazyListState = lazyListState,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
     )
 }
