@@ -4,6 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -152,6 +154,20 @@ fun MainScreen(
     }
 
     LanguageStudyTheme(darkTheme = darkTheme) {
+        val activity = LocalActivity.current as? ComponentActivity
+        LaunchedEffect(darkTheme) {
+            activity?.enableEdgeToEdge(
+                statusBarStyle = SystemBarStyle.auto(
+                    android.graphics.Color.TRANSPARENT,
+                    android.graphics.Color.TRANSPARENT,
+                ) { darkTheme },
+                navigationBarStyle = SystemBarStyle.auto(
+                    android.graphics.Color.argb(0xe6, 0xFF, 0xFF, 0xFF),
+                    android.graphics.Color.argb(0x80, 0x1b, 0x1b, 0x1b),
+                ) { darkTheme }
+            )
+        }
+
         val startRoute = remember(currentUser) {
             if (currentUser == null) NavRoute.Login else NavRoute.fromString(userSettings.homepageTab)
         }
@@ -451,8 +467,7 @@ fun MainScreen(
                         }
                     }
                 }
-            },
-            contentWindowInsets = WindowInsets(0, 0, 0, 0)
+            }
         ) { innerPadding ->
             Row(
                 Modifier
