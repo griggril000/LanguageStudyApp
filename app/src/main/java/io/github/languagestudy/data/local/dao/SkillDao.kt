@@ -9,6 +9,9 @@ interface SkillDao {
     @Query("SELECT * FROM skills ORDER BY priority ASC")
     fun getAllSkills(): Flow<List<SkillEntity>>
 
+    @Query("SELECT COUNT(*) FROM skills")
+    fun getSkillCount(): Flow<Int>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSkill(skill: SkillEntity)
 

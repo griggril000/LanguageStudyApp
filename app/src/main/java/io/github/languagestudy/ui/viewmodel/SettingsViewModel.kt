@@ -3,27 +3,52 @@ package io.github.languagestudy.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import io.github.languagestudy.data.model.GitHubRelease
 import io.github.languagestudy.data.model.LanguageResource
 import io.github.languagestudy.data.model.UserSettings
+import io.github.languagestudy.data.repository.JournalRepository
 import io.github.languagestudy.data.repository.MentorRepository
+import io.github.languagestudy.data.repository.PortfolioRepository
 import io.github.languagestudy.data.repository.SettingsRepository
+import io.github.languagestudy.data.repository.SkillRepository
+import io.github.languagestudy.data.repository.VocabRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(
     private val repository: SettingsRepository,
     private val mentorRepository: MentorRepository,
-    private val userId: String
+    private val userId: String,
+    private val vocabRepository: VocabRepository,
+    private val skillRepository: SkillRepository,
+    private val portfolioRepository: PortfolioRepository,
+    private val journalRepository: JournalRepository
 ) : ViewModel() {
 
     val userSettings: StateFlow<UserSettings> = repository.getUserSettings(userId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserSettings())
+
+    val vocabCount: StateFlow<Int> = vocabRepository.vocabCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val skillCount: StateFlow<Int> = skillRepository.skillCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val portfolioCount: StateFlow<Int> = portfolioRepository.getPortfolioItems(userId, limit = 100)
+        .map { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val journalCount: StateFlow<Int> = journalRepository.entryCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     private val _mentorCode = MutableStateFlow<String?>(null)
     val mentorCode: StateFlow<String?> = _mentorCode.asStateFlow()
 
     private val _availableLanguages = MutableStateFlow<List<String>>(emptyList())
     val availableLanguages: StateFlow<List<String>> = _availableLanguages.asStateFlow()
+
+    private val _releaseNotes = MutableStateFlow<List<GitHubRelease>>(emptyList())
+    val releaseNotes: StateFlow<List<GitHubRelease>> = _releaseNotes.asStateFlow()
 
     private val _resources = MutableStateFlow<List<LanguageResource>>(emptyList())
     val resources: StateFlow<List<LanguageResource>> = _resources.asStateFlow()
@@ -44,6 +69,7 @@ class SettingsViewModel(
 
     init {
         loadAvailableLanguages()
+        loadReleaseNotes()
         
         // Load resources for the initial primary language when settings load
         viewModelScope.launch {
@@ -77,11 +103,15 @@ class SettingsViewModel(
 
     private fun loadAvailableLanguages() {
         viewModelScope.launch {
-            try {
-                _availableLanguages.value = repository.getAvailableLanguages()
-            } catch (e: Exception) {
-                android.util.Log.e("SettingsVM", "Error loading languages", e)
+            repository.getAvailableLanguages().collect { languages ->
+                _availableLanguages.value = languages
             }
+        }
+    }
+
+    private fun loadReleaseNotes() {
+        viewModelScope.launch {
+            _releaseNotes.value = repository.getReleaseNotes()
         }
     }
 
@@ -246,6 +276,17 @@ class SettingsViewModel(
         }
     }
 
+    fun setTheme(theme: String) {
+        if (userId.isBlank() || !checkRateLimit("set_theme", QUICK_COOLDOWN_MS)) return
+        viewModelScope.launch {
+            try {
+                repository.updateUserSettings(userId, mapOf("theme" to theme))
+            } catch (e: Exception) {
+                _errorMessages.emit("Failed to set theme: ${e.message}")
+            }
+        }
+    }
+
     fun setHomepageTab(tab: String) {
         if (userId.isBlank() || !checkRateLimit("set_homepage_tab", QUICK_COOLDOWN_MS)) return
         viewModelScope.launch {
@@ -277,12 +318,24 @@ class SettingsViewModel(
 class SettingsViewModelFactory(
     private val repository: SettingsRepository,
     private val mentorRepository: MentorRepository,
-    private val userId: String
+    private val userId: String,
+    private val vocabRepository: VocabRepository,
+    private val skillRepository: SkillRepository,
+    private val portfolioRepository: PortfolioRepository,
+    private val journalRepository: JournalRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return SettingsViewModel(repository, mentorRepository, userId) as T
+            return SettingsViewModel(
+                repository,
+                mentorRepository,
+                userId,
+                vocabRepository,
+                skillRepository,
+                portfolioRepository,
+                journalRepository
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

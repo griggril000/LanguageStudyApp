@@ -9,6 +9,9 @@ interface VocabDao {
     @Query("SELECT * FROM vocabulary ORDER BY dateAdded DESC")
     fun getAllVocab(): Flow<List<VocabEntity>>
 
+    @Query("SELECT COUNT(*) FROM vocabulary")
+    fun getVocabCount(): Flow<Int>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertVocab(vocab: VocabEntity)
 

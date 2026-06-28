@@ -6,7 +6,12 @@ import androidx.lifecycle.viewModelScope
 import io.github.languagestudy.data.model.LanguageResource
 import io.github.languagestudy.data.repository.AdminRepository
 import io.github.languagestudy.data.repository.SettingsRepository
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AdminViewModel(
@@ -45,7 +50,9 @@ class AdminViewModel(
     private fun loadLanguages() {
         viewModelScope.launch {
             try {
-                _languages.value = settingsRepository.getAvailableLanguages()
+                settingsRepository.getAvailableLanguages().collect { languages ->
+                    _languages.value = languages
+                }
             } catch (e: Exception) {
                 _error.emit("Failed to load languages: ${e.message}")
             }
@@ -87,7 +94,6 @@ class AdminViewModel(
             _isLoading.value = true
             try {
                 adminRepository.addLanguage(trimmedName, userId)
-                loadLanguages()
                 selectLanguage(trimmedName)
                 _message.emit("✓ Language added: $trimmedName")
             } catch (e: Exception) {
@@ -105,7 +111,6 @@ class AdminViewModel(
             _isLoading.value = true
             try {
                 adminRepository.deleteLanguage(language)
-                loadLanguages()
                 selectLanguage("")
                 _message.emit("Language deleted")
             } catch (e: Exception) {
@@ -127,14 +132,14 @@ class AdminViewModel(
 
     private fun isValidUrl(url: String): Boolean {
         val formatted = formatUrl(url)
-        return (formatted.startsWith("http://") || formatted.startsWith("https://")) && 
-               formatted.contains(".") && !formatted.contains(" ")
+        return (formatted.startsWith("http://") || formatted.startsWith("https://")) &&
+                formatted.contains(".") && !formatted.contains(" ")
     }
 
     fun addLink(name: String, url: String) {
         val language = _selectedLanguage.value
         if (language.isBlank()) return
-        
+
         val trimmedName = name.trim()
         if (trimmedName.isBlank()) {
             viewModelScope.launch { _error.emit("Resource name is required") }
@@ -172,7 +177,7 @@ class AdminViewModel(
     fun updateLink(index: Int, name: String, url: String) {
         val language = _selectedLanguage.value
         if (language.isBlank()) return
-        
+
         val trimmedName = name.trim()
         if (trimmedName.isBlank()) {
             viewModelScope.launch { _error.emit("Resource name is required") }

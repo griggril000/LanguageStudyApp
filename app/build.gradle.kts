@@ -1,10 +1,21 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.devtools.ksp)
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.aboutLibraries)
 }
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+val githubToken = localProperties.getProperty("github.token") ?: ""
 
 android {
     namespace = "io.github.languagestudy"
@@ -14,10 +25,12 @@ android {
         applicationId = "io.github.languagestudy"
         minSdk = 24
         targetSdk = 37
-        versionCode = 4
-        versionName = "1.2.0"
+        versionCode = 5
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "GITHUB_TOKEN", "\"$githubToken\"")
     }
 
     buildTypes {
@@ -38,6 +51,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -71,14 +85,14 @@ dependencies {
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.runtime)
-    implementation("io.coil-kt.coil3:coil-compose:3.0.0-rc01")
-    implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.0-rc01")
+    implementation(libs.coil3.coil.compose)
+    implementation(libs.coil.network.okhttp)
     implementation(libs.converter.moshi)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.kotlinx.serialization.core)
-    implementation("com.google.code.gson:gson:2.11.0")
+    implementation(libs.gson)
     implementation(libs.logging.interceptor)
     implementation(libs.material)
     implementation(libs.moshi.kotlin)
@@ -87,6 +101,8 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.okhttp)
     implementation(libs.youtube.player)
+    implementation(libs.markwon.core)
+    implementation(libs.aboutLibraries.compose)
     implementation(libs.play.services.location)
     implementation(libs.retrofit)
     testImplementation(libs.androidx.core)

@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,8 +21,9 @@ import io.github.languagestudy.ui.components.LanguageDropdown
 import io.github.languagestudy.ui.components.SectionHeader
 import io.github.languagestudy.ui.viewmodel.AdminViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminScreen(viewModel: AdminViewModel) {
+fun AdminScreen(viewModel: AdminViewModel, onBack: () -> Unit) {
     val languages by viewModel.languages.collectAsState()
     val selectedLanguage by viewModel.selectedLanguage.collectAsState()
     val links by viewModel.links.collectAsState()
@@ -57,19 +59,33 @@ fun AdminScreen(viewModel: AdminViewModel) {
         )
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        item {
-            Text(
-                text = "Language Administration",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 8.dp)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Admin") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
             )
         }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                Text(
+                    text = "Language Administration",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
 
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -218,6 +234,7 @@ fun AdminScreen(viewModel: AdminViewModel) {
             }
         }
     }
+}
 }
 
 @Composable
