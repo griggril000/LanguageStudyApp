@@ -9,22 +9,25 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.PasswordCredential
-import androidx.credentials.exceptions.GetCredentialCancellationException
-import androidx.credentials.exceptions.GetCredentialException
-import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.ViewModelProvider
-import io.github.languagestudy.R
-import io.github.languagestudy.data.repository.AdminRepository
-import io.github.languagestudy.data.repository.MentorRepository
+import androidx.lifecycle.viewModelScope
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.flow.*
+import io.github.languagestudy.R
+import io.github.languagestudy.data.repository.AdminRepository
+import io.github.languagestudy.data.repository.MentorRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -55,7 +58,7 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
-    
+
     init {
         checkAdminStatus()
     }
@@ -70,11 +73,11 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
             try {
                 val tokenResult = user.getIdToken(true).await()
                 val adminClaim = tokenResult.claims["admin"]
-                var isAdmin = adminClaim == true || 
-                             adminClaim == "true" || 
-                             adminClaim == 1 || 
-                             adminClaim == 1L ||
-                             (adminClaim as? Number)?.toInt() == 1
+                var isAdmin = adminClaim == true ||
+                        adminClaim == "true" ||
+                        adminClaim == 1 ||
+                        adminClaim == 1L ||
+                        (adminClaim as? Number)?.toInt() == 1
 
                 if (!isAdmin) {
                     isAdmin = adminRepository.checkAdminDoc(user.uid)
@@ -116,13 +119,16 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
                 val serverClientId = context.getString(R.string.default_web_client_id)
                 val credentialManager = CredentialManager.create(context)
                 val googleIdOption = GetSignInWithGoogleOption.Builder(serverClientId).build()
-                val request = GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
+                val request =
+                    GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
                 val result = credentialManager.getCredential(activity, request)
                 val credential = result.credential
 
                 if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                    val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                    val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+                    val googleIdTokenCredential =
+                        GoogleIdTokenCredential.createFrom(credential.data)
+                    val firebaseCredential =
+                        GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
                     auth.signInWithCredential(firebaseCredential).await()
                     _user.value = auth.currentUser
                     checkAdminStatus()
@@ -197,9 +203,10 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
             _user.value = null
             _isAdmin.value = false
             auth.signOut()
-            
+
             try {
-                val app = context.applicationContext as io.github.languagestudy.LanguageStudyApplication
+                val app =
+                    context.applicationContext as io.github.languagestudy.LanguageStudyApplication
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     app.database.clearAllTables()
                 }
@@ -257,8 +264,12 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
                 Log.e("AuthViewModel", "Error deleting account", e)
                 when (e) {
                     is FirebaseAuthRecentLoginRequiredException -> {
-                        onComplete(false, "Please sign out and sign in again, then try deleting your account for security.")
+                        onComplete(
+                            false,
+                            "Please sign out and sign in again, then try deleting your account for security."
+                        )
                     }
+
                     else -> {
                         onComplete(false, e.message ?: "Error deleting account")
                     }
@@ -270,7 +281,8 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
     }
 }
 
-class AuthViewModelFactory(private val adminRepository: AdminRepository) : ViewModelProvider.Factory {
+class AuthViewModelFactory(private val adminRepository: AdminRepository) :
+    ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")

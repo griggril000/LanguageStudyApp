@@ -6,23 +6,73 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AddCircle
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Reorder
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -39,7 +89,6 @@ import io.github.languagestudy.ui.components.DeleteConfirmationDialog
 import io.github.languagestudy.ui.components.EmptyState
 import io.github.languagestudy.ui.components.GlobalSearchBar
 import io.github.languagestudy.ui.components.LanguageDropdown
-import io.github.languagestudy.ui.components.NoResultsState
 import io.github.languagestudy.ui.components.ProgressStatusLegend
 import io.github.languagestudy.ui.components.StatusIcon
 import io.github.languagestudy.ui.viewmodel.SearchViewModel
@@ -76,7 +125,8 @@ fun SkillsScreen(
     val haptic = LocalHapticFeedback.current
 
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
-    val canChangeStatus = !isMentorMode || mentorAccessLevel == "status" || mentorAccessLevel == "full"
+    val canChangeStatus =
+        !isMentorMode || mentorAccessLevel == "status" || mentorAccessLevel == "full"
     val isDragEnabled = searchQuery.isBlank() && selectedLanguage == null && !isMentorMode
 
     LaunchedEffect(languageOverride) {
@@ -116,7 +166,7 @@ fun SkillsScreen(
     var skillLanguage by remember { mutableStateOf("") }
     var showAddSheet by remember { mutableStateOf(false) }
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     LaunchedEffect(selectedLanguage) {
         skillLanguage = selectedLanguage ?: ""
@@ -152,12 +202,12 @@ fun SkillsScreen(
             ModalBottomSheet(
                 onDismissRequest = { showAddSheet = false },
                 sheetState = sheetState,
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentWindowInsets = { WindowInsets.navigationBars }
+                containerColor = MaterialTheme.colorScheme.surface
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                         .padding(16.dp)
                         .padding(bottom = 32.dp)
                 ) {
@@ -207,7 +257,9 @@ fun SkillsScreen(
             }
         }
 
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)) {
             GlobalSearchBar(
                 query = searchQuery,
                 onQueryChange = { searchViewModel.setQuery(it) },
@@ -216,7 +268,9 @@ fun SkillsScreen(
 
             if (availableLanguages.isNotEmpty()) {
                 ScrollableTabRow(
-                    selectedTabIndex = if (selectedLanguage == null) 0 else availableLanguages.indexOf(selectedLanguage) + 1,
+                    selectedTabIndex = if (selectedLanguage == null) 0 else availableLanguages.indexOf(
+                        selectedLanguage
+                    ) + 1,
                     edgePadding = 16.dp,
                     containerColor = Color.Transparent,
                     divider = {},
@@ -242,7 +296,9 @@ fun SkillsScreen(
             Column(modifier = Modifier.padding(16.dp)) {
                 if (allSkills.isNotEmpty()) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -274,7 +330,8 @@ fun SkillsScreen(
                 }
 
                 if (allSkills.isEmpty()) {
-                    val emptyMessage = if (isMentorMode) "This student hasn't tracked any skills yet." else "No skills tracked yet. Tap + to add one!"
+                    val emptyMessage =
+                        if (isMentorMode) "This student hasn't tracked any skills yet." else "No skills tracked yet. Tap + to add one!"
                     EmptyState(message = emptyMessage)
                 } else if (skillsList.isEmpty()) {
                     val currentLang = languageOverride ?: selectedLanguage
@@ -313,25 +370,30 @@ fun SkillsScreen(
                                     onDrag = { change, dragAmount ->
                                         change.consume()
                                         currentTouchY = change.position.y
-                                        
-                                        val currentIdx = draggedItemIndex ?: return@detectDragGesturesAfterLongPress
-                                        val itemInfo = lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == currentIdx } ?: return@detectDragGesturesAfterLongPress
-                                        
+
+                                        val currentIdx = draggedItemIndex
+                                            ?: return@detectDragGesturesAfterLongPress
+                                        val itemInfo =
+                                            lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == currentIdx }
+                                                ?: return@detectDragGesturesAfterLongPress
+
                                         // Absolute position calculation: stay locked to finger
-                                        draggingOffset = currentTouchY - itemInfo.offset - initialTouchY
-                                        
+                                        draggingOffset =
+                                            currentTouchY - itemInfo.offset - initialTouchY
+
                                         val currentItemY = itemInfo.offset + draggingOffset
                                         val currentItemCenterY = currentItemY + itemInfo.size / 2
-                                        
+
                                         // Improved swap logic: check if dragged item center crosses target item center
-                                        val targetItem = lazyListState.layoutInfo.visibleItemsInfo.find { it ->
-                                            it.index != currentIdx &&
-                                            if (it.index > currentIdx) {
-                                                currentItemCenterY > it.offset + it.size / 2
-                                            } else {
-                                                currentItemCenterY < it.offset + it.size / 2
+                                        val targetItem =
+                                            lazyListState.layoutInfo.visibleItemsInfo.find { it ->
+                                                it.index != currentIdx &&
+                                                        if (it.index > currentIdx) {
+                                                            currentItemCenterY > it.offset + it.size / 2
+                                                        } else {
+                                                            currentItemCenterY < it.offset + it.size / 2
+                                                        }
                                             }
-                                        }
 
                                         if (targetItem != null) {
                                             val targetIdx = targetItem.index
@@ -339,23 +401,31 @@ fun SkillsScreen(
                                             val item = newList.removeAt(currentIdx)
                                             newList.add(targetIdx, item)
                                             localSkillsList = newList
-                                            
+
                                             draggedItemIndex = targetIdx
                                             // Recalculate offset immediately for the new position
-                                            draggingOffset = currentTouchY - targetItem.offset - initialTouchY
+                                            draggingOffset =
+                                                currentTouchY - targetItem.offset - initialTouchY
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         }
 
                                         // Refined Auto-scroll logic with proportional speed
                                         val viewPortTop = 0
-                                        val viewPortBottom = lazyListState.layoutInfo.viewportEndOffset
+                                        val viewPortBottom =
+                                            lazyListState.layoutInfo.viewportEndOffset
                                         val scrollThreshold = 120f
-                                        
+
                                         val scrollAmount = when {
-                                            currentItemY < viewPortTop + scrollThreshold -> 
-                                                ((currentItemY - (viewPortTop + scrollThreshold)) / 4).coerceAtMost(-5f)
-                                            currentItemY + itemInfo.size > viewPortBottom - scrollThreshold -> 
-                                                ((currentItemY + itemInfo.size - (viewPortBottom - scrollThreshold)) / 4).coerceAtLeast(5f)
+                                            currentItemY < viewPortTop + scrollThreshold ->
+                                                ((currentItemY - (viewPortTop + scrollThreshold)) / 4).coerceAtMost(
+                                                    -5f
+                                                )
+
+                                            currentItemY + itemInfo.size > viewPortBottom - scrollThreshold ->
+                                                ((currentItemY + itemInfo.size - (viewPortBottom - scrollThreshold)) / 4).coerceAtLeast(
+                                                    5f
+                                                )
+
                                             else -> 0f
                                         }
 
@@ -368,7 +438,8 @@ fun SkillsScreen(
                                                         lazyListState.layoutInfo.visibleItemsInfo
                                                             .firstOrNull { it.index == draggedItemIndex }
                                                             ?.let { info ->
-                                                                draggingOffset = currentTouchY - info.offset - initialTouchY
+                                                                draggingOffset =
+                                                                    currentTouchY - info.offset - initialTouchY
                                                             }
                                                         delay(10)
                                                     }
@@ -398,9 +469,14 @@ fun SkillsScreen(
                                 )
                             }
                     ) {
-                        itemsIndexed(localSkillsList, key = { _, skill: SkillEntity -> skill.id }) { index: Int, skill: SkillEntity ->
+                        itemsIndexed(
+                            localSkillsList,
+                            key = { _, skill: SkillEntity -> skill.id }) { index: Int, skill: SkillEntity ->
                             val isDragging = index == draggedItemIndex
-                            val scale by animateFloatAsState(if (isDragging) 1.05f else 1f, label = "drag_scale")
+                            val scale by animateFloatAsState(
+                                if (isDragging) 1.05f else 1f,
+                                label = "drag_scale"
+                            )
 
                             SkillItem(
                                 skill = skill,
@@ -413,8 +489,21 @@ fun SkillsScreen(
                                 onAddSubtask = { viewModel.addSubtask(skill, it) },
                                 onSubtaskStatusCycle = { viewModel.updateSubtaskStatus(skill, it) },
                                 onSubtaskDelete = { viewModel.deleteSubtask(skill, it) },
-                                onEditSkill = { name, lang -> viewModel.updateSkill(skill.copy(name = name, language = lang)) },
-                                onEditSubtask = { subtaskId, newText -> viewModel.updateSubtaskText(skill, subtaskId, newText) },
+                                onEditSkill = { name, lang ->
+                                    viewModel.updateSkill(
+                                        skill.copy(
+                                            name = name,
+                                            language = lang
+                                        )
+                                    )
+                                },
+                                onEditSubtask = { subtaskId, newText ->
+                                    viewModel.updateSubtaskText(
+                                        skill,
+                                        subtaskId,
+                                        newText
+                                    )
+                                },
                                 modifier = (if (isDragging) Modifier else Modifier.animateItem())
                                     .graphicsLayer {
                                         translationY = if (isDragging) draggingOffset else 0f
@@ -425,7 +514,7 @@ fun SkillsScreen(
                             )
                         }
                     }
-                    
+
                     ProgressStatusLegend()
                 }
             }
@@ -559,7 +648,7 @@ fun SkillItem(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     StatusIcon(
-                        status = skill.status, 
+                        status = skill.status,
                         onClick = {
                             if (skill.subtasks.isNotEmpty()) {
                                 expanded = true
@@ -567,7 +656,7 @@ fun SkillItem(
                             } else if (canChangeStatus) {
                                 onStatusCycle()
                             }
-                        }, 
+                        },
                         size = 32.dp
                     )
 
@@ -715,7 +804,7 @@ fun SubtaskItem(
         if (hintVersion > 0) {
             // Sequential animation for a "pulse" effect
             scale.animateTo(
-                1.3f, 
+                1.3f,
                 animationSpec = androidx.compose.animation.core.spring(
                     dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
                     stiffness = androidx.compose.animation.core.Spring.StiffnessLow
@@ -739,7 +828,10 @@ fun SubtaskItem(
             onDismissRequest = { showEditDialog = false },
             title = { Text("Edit Subtask") },
             text = {
-                OutlinedTextField(value = editText, onValueChange = { editText = it }, label = { Text("Subtask") })
+                OutlinedTextField(
+                    value = editText,
+                    onValueChange = { editText = it },
+                    label = { Text("Subtask") })
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -758,17 +850,17 @@ fun SubtaskItem(
         modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
     ) {
         StatusIcon(
-            status = subtask.status, 
-            onClick = if (canChangeStatus) onStatusCycle else ({}), 
+            status = subtask.status,
+            onClick = if (canChangeStatus) onStatusCycle else ({}),
             size = 24.dp,
             modifier = Modifier.graphicsLayer {
                 scaleX = scale.value
                 scaleY = scale.value
             }
         )
-        
+
         Spacer(Modifier.width(8.dp))
-        
+
         Text(
             subtask.text,
             style = MaterialTheme.typography.bodyMedium,
@@ -780,7 +872,11 @@ fun SubtaskItem(
 
         if (canEdit) {
             IconButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Rounded.Close, contentDescription = "Delete Subtask", modifier = Modifier.size(16.dp))
+                Icon(
+                    Icons.Rounded.Close,
+                    contentDescription = "Delete Subtask",
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }

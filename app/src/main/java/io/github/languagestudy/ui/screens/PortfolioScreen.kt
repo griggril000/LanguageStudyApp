@@ -5,16 +5,56 @@ import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,7 +72,6 @@ import io.github.languagestudy.ui.components.DeleteConfirmationDialog
 import io.github.languagestudy.ui.components.EmptyState
 import io.github.languagestudy.ui.components.GlobalSearchBar
 import io.github.languagestudy.ui.components.LanguageDropdown
-import io.github.languagestudy.ui.components.NoResultsState
 import io.github.languagestudy.ui.components.SoundCloudPlayer
 import io.github.languagestudy.ui.components.YouTubePlayer
 import io.github.languagestudy.ui.viewmodel.PortfolioViewModel
@@ -60,7 +99,8 @@ fun PortfolioScreen(
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
     // Portfolio doesn't have statuses, so canChangeStatus isn't really applicable here
     // But let's assume "status" allows featuring/unfeaturing
-    val canChangeStatus = !isMentorMode || mentorAccessLevel == "status" || mentorAccessLevel == "full"
+    val canChangeStatus =
+        !isMentorMode || mentorAccessLevel == "status" || mentorAccessLevel == "full"
 
     LaunchedEffect(languageOverride) {
         if (languageOverride != null) {
@@ -77,7 +117,7 @@ fun PortfolioScreen(
     var itemLanguage by remember { mutableStateOf("") }
     var showAddSheet by remember { mutableStateOf(false) }
     var editingItem by remember { mutableStateOf<PortfolioItem?>(null) }
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(editingItem) {
@@ -132,11 +172,11 @@ fun PortfolioScreen(
     Scaffold(
         containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = { 
+        snackbarHost = {
             SnackbarHost(
                 hostState = snackbarHostState,
                 modifier = Modifier.padding(bottom = 8.dp)
-            ) 
+            )
         },
         floatingActionButton = {
             if (canEditContent) {
@@ -151,13 +191,12 @@ fun PortfolioScreen(
         if (showAddSheet) {
             ModalBottomSheet(
                 onDismissRequest = { if (!isLoading) showAddSheet = false },
-                sheetState = sheetState,
-                contentWindowInsets = { WindowInsets(0, 0, 0, 0) }
+                sheetState = sheetState
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .navigationBarsPadding()
+                        .verticalScroll(rememberScrollState())
                         .padding(16.dp)
                         .padding(bottom = 16.dp)
                 ) {
@@ -216,7 +255,9 @@ fun PortfolioScreen(
             }
         }
 
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)) {
             Column {
                 GlobalSearchBar(
                     query = searchQuery,
@@ -229,7 +270,8 @@ fun PortfolioScreen(
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 } else if (allItems.isEmpty()) {
-                    val emptyMessage = if (isMentorMode) "This student's portfolio is empty." else "Your portfolio is empty. Add your first item!"
+                    val emptyMessage =
+                        if (isMentorMode) "This student's portfolio is empty." else "Your portfolio is empty. Add your first item!"
                     EmptyState(message = emptyMessage)
                 } else if (items.isEmpty()) {
                     val currentLang = languageOverride ?: currentLanguage
@@ -247,7 +289,9 @@ fun PortfolioScreen(
                 } else {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
                         contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
                     ) {
                         val featuredItems = items.filter { it.isTop }
@@ -398,9 +442,13 @@ fun FeaturedPortfolioItem(
                         )
                     }
                 }
-                
+
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(item.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        item.title,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                     Spacer(Modifier.height(8.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -412,10 +460,14 @@ fun FeaturedPortfolioItem(
                                 shape = RoundedCornerShape(8.dp)
                             ) { Text("Unfeature") }
                         }
-                        
+
                         if (canEdit) {
                             IconButton(onClick = onEdit) {
-                                Icon(Icons.Rounded.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary)
+                                Icon(
+                                    Icons.Rounded.Edit,
+                                    contentDescription = "Edit",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
 
                             TextButton(
@@ -423,7 +475,11 @@ fun FeaturedPortfolioItem(
                                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Icon(
+                                        Icons.Rounded.Delete,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                     Spacer(Modifier.width(4.dp))
                                     Text("Delete")
                                 }
@@ -501,7 +557,10 @@ fun StandardPortfolioItem(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
             ),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant
+            )
         ) {
             Row(
                 modifier = Modifier.padding(16.dp),
@@ -512,8 +571,17 @@ fun StandardPortfolioItem(
                         .weight(1f)
                         .clickable { onPlay() }
                 ) {
-                    Text(item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(item.link, style = MaterialTheme.typography.bodySmall, maxLines = 1, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        item.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        item.link,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -523,11 +591,11 @@ fun StandardPortfolioItem(
                         TextButton(
                             onClick = onFeature,
                             enabled = canFeature
-                        ) { 
+                        ) {
                             Text(
                                 "Feature",
                                 color = if (canFeature) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                            ) 
+                            )
                         }
                     }
                     if (canEdit) {
@@ -541,7 +609,7 @@ fun StandardPortfolioItem(
                         }
                         IconButton(onClick = { showDeleteConfirm = true }) {
                             Icon(
-                                Icons.Rounded.Delete, 
+                                Icons.Rounded.Delete,
                                 contentDescription = "Delete",
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(20.dp)
