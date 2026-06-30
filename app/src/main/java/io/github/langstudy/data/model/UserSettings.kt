@@ -1,0 +1,14 @@
+package io.github.langstudy.data.model
+
+data class UserSettings(
+    val learnedLanguages: List<String> = emptyList(),
+    val languageLearning: String = "",
+    val shareCode: String = "",
+    val isPublic: Boolean = false,
+    val mentorCodeEnabled: Boolean = false,
+    val mentorAccessLevel: String = "view",
+    val mentorQuickReviewEnabled: Boolean = false,
+    val homepageTab: String = "vocab",
+    val theme: String = "system",
+    val firstLogin: Boolean = false
+)
