@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="io.github.languagestudy" />
-                  <option name="mobileSdkAppId" value="1:47054764584:android:bf6860481276efd161131d" />
-                  <option name="projectId" value="language-study-tracker" />
-                  <option name="projectNumber" value="47054764584" />
+                  <option name="appId" value="PLACEHOLDER" />
+                  <option name="mobileSdkAppId" value="" />
+                  <option name="projectId" value="" />
+                  <option name="projectNumber" value="" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
