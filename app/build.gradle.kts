@@ -18,7 +18,7 @@ val localProperties = Properties().apply {
 val githubToken = localProperties.getProperty("github.token") ?: ""
 
 android {
-    namespace = "io.github.languagestudy"
+    namespace = "io.github.langstudy"
     compileSdk = 37
 
     defaultConfig {
