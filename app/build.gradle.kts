@@ -22,7 +22,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "io.github.languagestudy"
+        applicationId = "io.github.langstudy"
         minSdk = 24
         targetSdk = 37
         versionCode = 6
