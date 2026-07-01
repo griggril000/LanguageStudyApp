@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.isImeVisible
@@ -25,7 +28,6 @@ import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.AdminPanelSettings
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.AlertDialog
@@ -47,18 +49,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -67,7 +69,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
-import androidx.window.core.layout.WindowWidthSizeClass
+import androidx.window.core.layout.WindowSizeClass
 import io.github.langstudy.navigation.NavRoute
 import io.github.langstudy.navigation.icon
 import io.github.langstudy.navigation.label
@@ -186,8 +188,6 @@ fun MainScreen(
             }
         }
 
-        val scope = rememberCoroutineScope()
-
         LaunchedEffect(currentUser) {
             if (currentUser != null) {
 //                if (currentUser?.email == "test@example.com") {
@@ -223,11 +223,9 @@ fun MainScreen(
         var showLangMenu by remember { mutableStateOf(false) }
         var showResources by remember { mutableStateOf(false) }
 
-        val adaptiveInfo = currentWindowAdaptiveInfo()
+        val adaptiveInfo = currentWindowAdaptiveInfoV2()
         val useNavRail =
-            adaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
-
-        val currentRoute = backStack.lastOrNull() as? NavRoute
+            adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
 
         val provider = remember(currentUser, effectiveUserId) {
             entryProvider<NavKey> {
@@ -454,7 +452,9 @@ fun MainScreen(
                 }
             },
             bottomBar = {
-                if (!useNavRail && currentUser != null && !WindowInsets.isImeVisible) {
+                val currentRoute = backStack.lastOrNull() as? NavRoute
+                val isFullScreen = currentRoute == NavRoute.Settings || currentRoute == NavRoute.Admin
+                if (!useNavRail && currentUser != null && !WindowInsets.isImeVisible && !isFullScreen) {
                     NavigationBar {
                         NavRoute.mainRoutes.forEach { route ->
                             NavigationBarItem(
@@ -473,12 +473,21 @@ fun MainScreen(
                 }
             }
         ) { innerPadding ->
+            val layoutDirection = LocalLayoutDirection.current
+            val currentRoute = backStack.lastOrNull() as? NavRoute
+            val isFullScreen = currentRoute == NavRoute.Settings || currentRoute == NavRoute.Admin
+
             Row(
                 Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
+                    .padding(
+                        start = innerPadding.calculateStartPadding(layoutDirection),
+                        top = if (isFullScreen) 0.dp else innerPadding.calculateTopPadding(),
+                        end = innerPadding.calculateEndPadding(layoutDirection),
+                        bottom = if (isFullScreen) 0.dp else innerPadding.calculateBottomPadding()
+                    )
             ) {
-                if (useNavRail && currentUser != null) {
+                if (useNavRail && currentUser != null && !isFullScreen) {
                     NavigationRail(
                         containerColor = MaterialTheme.colorScheme.surface,
                         modifier = Modifier.padding(top = 8.dp)
@@ -503,7 +512,10 @@ fun MainScreen(
                     onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
                     modifier = Modifier
                         .weight(1f)
-                        .background(MaterialTheme.colorScheme.background),
+                        .background(MaterialTheme.colorScheme.background)
+                        .let { 
+                            if (!isFullScreen) it.consumeWindowInsets(innerPadding) else it
+                        },
                     entryProvider = provider
                 )
             }
@@ -530,7 +542,7 @@ fun LanguageResourcesDialog(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
-                    Icons.Rounded.MenuBook,
+                    Icons.AutoMirrored.Rounded.MenuBook,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary
                 )
