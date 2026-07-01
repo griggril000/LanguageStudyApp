@@ -7,18 +7,18 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:47054764584:android:bf6860481276efd161131d",
+        "mobilesdk_app_id": "1:47054764584:android:156051afdcd36a7a61131d",
         "android_client_info": {
-          "package_name": "io.github.languagestudy"
+          "package_name": "io.github.langstudy"
         }
       },
       "oauth_client": [
         {
-          "client_id": "47054764584-pcg7alq36nvrvbl7f75phpkhkkk4960p.apps.googleusercontent.com",
+          "client_id": "47054764584-qc31jf5lsufinng7dqffllq8sfsq4c98.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "io.github.languagestudy",
-            "certificate_hash": "cede17ab66c05fafdf57fb6c6de295a0605fe62a"
+            "package_name": "io.github.langstudy",
+            "certificate_hash": "cb98ec27812856e9b150e7c0f1ceb3addafdedf9"
           }
         },
         {
@@ -28,7 +28,7 @@
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAi6Ga9Sj8A5K-fFk_TJyhFgKUMUnNe3Z0"
+          "current_key": "AIzaSyB0Sq95OplHGKleSzhf0QZx_dwzr4oi7bk"
         }
       ],
       "services": {
