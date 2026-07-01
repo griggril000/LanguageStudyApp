@@ -2,13 +2,20 @@ package io.github.langstudy.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.gson.JsonObject
 import io.github.langstudy.data.model.GitHubRelease
 import io.github.langstudy.data.model.LanguageResource
 import io.github.langstudy.data.model.UserSettings
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class SettingsRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
@@ -79,6 +86,28 @@ class SettingsRepository(
     suspend fun updateUserSettings(userId: String, settings: Map<String, Any>) {
         if (userId.isBlank()) return
         getSettingsDoc(userId).set(settings, SetOptions.merge()).await()
+    }
+
+    suspend fun submitLanguageRequest(userId: String, language: String, message: String, userEmail: String? = null) {
+        val client = OkHttpClient()
+        val json = JsonObject().apply {
+            addProperty("userId", userId)
+            userEmail?.let { addProperty("email", it) }
+            addProperty("language", language)
+            addProperty("message", message)
+        }
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val body = json.toString().toRequestBody(mediaType)
+        val request = Request.Builder()
+            .url("https://formspree.io/f/xeebrgqb")
+            .post(body)
+            .build()
+
+        withContext(Dispatchers.IO) {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw Exception("Submission failed: ${response.code}")
+            }
+        }
     }
 
     fun getAvailableLanguages(): Flow<List<String>> = callbackFlow {

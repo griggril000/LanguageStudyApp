@@ -83,6 +83,7 @@ import io.github.langstudy.navigation.NavRoute
 import io.github.langstudy.navigation.label
 import io.github.langstudy.ui.auth.AuthViewModel
 import io.github.langstudy.ui.components.DeleteConfirmationDialog
+import io.github.langstudy.ui.components.LanguageRequestDialog
 import io.github.langstudy.ui.viewmodel.SettingsViewModel
 import io.noties.markwon.Markwon
 import kotlinx.coroutines.launch
@@ -110,6 +111,7 @@ fun SettingsScreen(
     var showLearningLangsDialog by remember { mutableStateOf(false) }
     var showStartupTabDialog by remember { mutableStateOf(false) }
     var showAccessLevelDialog by remember { mutableStateOf(false) }
+    var showLanguageRequestDialog by remember { mutableStateOf(false) }
 
     var currentView by remember { mutableStateOf("main") }
 
@@ -249,6 +251,15 @@ fun SettingsScreen(
         )
     }
 
+    if (showLanguageRequestDialog) {
+        LanguageRequestDialog(
+            onDismiss = { showLanguageRequestDialog = false },
+            onSubmit = { lang, message ->
+                settingsViewModel.submitLanguageRequest(lang, message, currentUser?.email)
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -300,7 +311,8 @@ fun SettingsScreen(
                     onShowPrimaryLangDialog = { showPrimaryLangDialog = true },
                     onShowLearningLangsDialog = { showLearningLangsDialog = true },
                     onShowStartupTabDialog = { showStartupTabDialog = true },
-                    onShowAccessLevelDialog = { showAccessLevelDialog = true }
+                    onShowAccessLevelDialog = { showAccessLevelDialog = true },
+                    onShowLanguageRequestDialog = { showLanguageRequestDialog = true }
                 )
 
                 "details" -> AppDetailsView(
@@ -340,7 +352,8 @@ fun SettingsMainView(
     onShowPrimaryLangDialog: () -> Unit,
     onShowLearningLangsDialog: () -> Unit,
     onShowStartupTabDialog: () -> Unit,
-    onShowAccessLevelDialog: () -> Unit
+    onShowAccessLevelDialog: () -> Unit,
+    onShowLanguageRequestDialog: () -> Unit
 ) {
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
@@ -416,15 +429,7 @@ fun SettingsMainView(
                 title = "Request a Language",
                 summary = "Don't see your language? Let us know.",
                 icon = Icons.Default.Language,
-                onClick = {
-                    val uri = "mailto:griggriley+languagestudy@gmail.com" +
-                            "?subject=${android.net.Uri.encode("Language Study - New Language Request")}" +
-                            "&body=${android.net.Uri.encode("I would like to request support for the following language: ")}"
-                    try {
-                        uriHandler.openUri(uri)
-                    } catch (_: Exception) {
-                    }
-                }
+                onClick = onShowLanguageRequestDialog
             )
         }
 

@@ -317,6 +317,18 @@ class SettingsViewModel(
         }
     }
 
+    fun submitLanguageRequest(language: String, message: String, email: String? = null) {
+        if (userId.isBlank() || language.isBlank()) return
+        viewModelScope.launch {
+            try {
+                repository.submitLanguageRequest(userId, language, message, email)
+                _errorMessages.emit("Request submitted! Thank you.")
+            } catch (e: Exception) {
+                _errorMessages.emit("Failed to submit request: ${e.message}")
+            }
+        }
+    }
+
     private fun generateRandomCode(): String {
         val chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
         return (1..5).map { chars.random() }.joinToString("")
