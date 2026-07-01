@@ -60,6 +60,7 @@ import io.github.langstudy.ui.viewmodel.SettingsViewModel
 @Composable
 fun WelcomeWalkthrough(
     viewModel: SettingsViewModel,
+    email: String? = null,
     onDismiss: () -> Unit,
     onFinish: () -> Unit
 ) {
@@ -159,13 +160,7 @@ fun WelcomeWalkthrough(
                             },
                             availableLanguages = availableLanguages,
                             onRequestLanguage = { langName ->
-                                val uri = "mailto:griggriley+languagestudy@gmail.com" +
-                                        "?subject=${android.net.Uri.encode("Language Study - New Language Request")}" +
-                                        "&body=${android.net.Uri.encode("I would like to request support for: $langName")}"
-                                try {
-                                    uriHandler.openUri(uri)
-                                } catch (_: Exception) {
-                                }
+                                viewModel.submitLanguageRequest(langName, "Requested during onboarding.", email)
                             }
                         )
 
@@ -353,13 +348,13 @@ private fun SelectLanguageStep(
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Rounded.Send,
-                                contentDescription = "Send Email Request"
+                                contentDescription = "Submit Request"
                             )
                         }
                     }
                 )
                 Text(
-                    text = "We'll add resources for this language soon!",
+                    text = "We'll work on adding this language soon!",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(start = 4.dp, top = 4.dp)

@@ -311,6 +311,7 @@ fun MainScreen(
         if (currentUser != null && userSettings.firstLogin) {
             WelcomeWalkthrough(
                 viewModel = settingsVm,
+                email = currentUser?.email,
                 onDismiss = { settingsVm.setFirstLogin(false) },
                 onFinish = { settingsVm.setFirstLogin(false) }
             )
