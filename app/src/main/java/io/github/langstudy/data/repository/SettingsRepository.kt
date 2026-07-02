@@ -67,6 +67,9 @@ class SettingsRepository(
                 )
             } else {
                 // Document doesn't exist = brand new user
+                // Initialize the settings document with firstLogin = true to ensure
+                // partial updates (like language selection) don't lose the onboarding state.
+                docRef.set(mapOf("firstLogin" to true), SetOptions.merge())
                 trySend(UserSettings(firstLogin = true))
             }
         }

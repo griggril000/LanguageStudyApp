@@ -306,12 +306,25 @@ fun MainScreen(
             )
         }
 
-        if (currentUser != null && userSettings.firstLogin) {
+        var showWalkthrough by remember { mutableStateOf(false) }
+        LaunchedEffect(userSettings.firstLogin) {
+            if (userSettings.firstLogin) {
+                showWalkthrough = true
+            }
+        }
+
+        if (currentUser != null && showWalkthrough) {
             WelcomeWalkthrough(
                 viewModel = settingsVm,
                 email = currentUser?.email,
-                onDismiss = { settingsVm.setFirstLogin(false) },
-                onFinish = { settingsVm.setFirstLogin(false) }
+                onDismiss = {
+                    settingsVm.setFirstLogin(false)
+                    showWalkthrough = false
+                },
+                onFinish = {
+                    settingsVm.setFirstLogin(false)
+                    showWalkthrough = false
+                }
             )
         }
 
