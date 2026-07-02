@@ -120,13 +120,15 @@ fun SettingsScreen(
     val notesScrollState = rememberScrollState()
     val librariesLazyListState = rememberLazyListState()
 
-    BackHandler(enabled = true) {
-        if (currentView != "main") {
-            currentView = "main"
-        } else {
-            onBack()
+    val handleBack = {
+        when (currentView) {
+            "notes" -> currentView = "details"
+            "details", "libraries" -> currentView = "main"
+            else -> onBack()
         }
     }
+
+    BackHandler(enabled = true, onBack = handleBack)
 
     LaunchedEffect(Unit) {
         settingsViewModel.errorMessages.collect { message ->
@@ -274,13 +276,7 @@ fun SettingsScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        if (currentView != "main") {
-                            currentView = "main"
-                        } else {
-                            onBack()
-                        }
-                    }) {
+                    IconButton(onClick = handleBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -303,7 +299,6 @@ fun SettingsScreen(
                     authViewModel = authViewModel,
                     scrollState = mainScrollState,
                     onNavigateToDetails = { currentView = "details" },
-                    onNavigateToNotes = { currentView = "notes" },
                     onNavigateToLibraries = { currentView = "libraries" },
                     onShowDeleteDialog = { showDeleteDialog = true },
                     onShowJoinDialog = { showJoinDialog = true },
@@ -317,7 +312,8 @@ fun SettingsScreen(
 
                 "details" -> AppDetailsView(
                     settingsViewModel = settingsViewModel,
-                    scrollState = detailsScrollState
+                    scrollState = detailsScrollState,
+                    onNavigateToNotes = { currentView = "notes" }
                 )
 
                 "notes" -> {
@@ -344,7 +340,6 @@ fun SettingsMainView(
     authViewModel: AuthViewModel,
     scrollState: ScrollState,
     onNavigateToDetails: () -> Unit,
-    onNavigateToNotes: () -> Unit,
     onNavigateToLibraries: () -> Unit,
     onShowDeleteDialog: () -> Unit,
     onShowJoinDialog: () -> Unit,
@@ -512,10 +507,6 @@ fun SettingsMainView(
 
         PreferenceCategory(title = "Additional Info")
         PreferenceItem(
-            title = "Release Notes",
-            onClick = onNavigateToNotes
-        )
-        PreferenceItem(
             title = "App Details",
             summary = "Version ${BuildConfig.VERSION_NAME}",
             onClick = onNavigateToDetails
@@ -537,7 +528,8 @@ fun SettingsMainView(
 @Composable
 fun AppDetailsView(
     settingsViewModel: SettingsViewModel,
-    scrollState: ScrollState
+    scrollState: ScrollState,
+    onNavigateToNotes: () -> Unit
 ) {
     val vocabCount by settingsViewModel.vocabCount.collectAsState()
     val skillCount by settingsViewModel.skillCount.collectAsState()
@@ -552,6 +544,11 @@ fun AppDetailsView(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         DetailItem(label = "Language Study Version", value = BuildConfig.VERSION_NAME)
+        PreferenceItem(
+            title = "Release Notes",
+            summary = "See what's new in this version",
+            onClick = onNavigateToNotes
+        )
         DetailItem(label = "Android Version", value = android.os.Build.VERSION.RELEASE)
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
