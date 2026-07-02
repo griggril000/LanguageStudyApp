@@ -422,7 +422,7 @@ fun SettingsMainView(
         if (!isMentorMode) {
             PreferenceItem(
                 title = "Request a Language",
-                summary = "Don't see your language? Let us know.",
+                summary = "Don't see the language you are studying? Let us know.",
                 icon = Icons.Default.Language,
                 onClick = onShowLanguageRequestDialog
             )
