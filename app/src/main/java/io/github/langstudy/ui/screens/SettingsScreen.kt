@@ -164,7 +164,7 @@ fun SettingsScreen(
                             if (ownerUid == currentUser?.uid) {
                                 snackbarHostState.showSnackbar("Cannot mentor yourself")
                             } else {
-                                authViewModel.enterMentorMode(ownerUid, code)
+                                authViewModel.enterMentorMode(context, ownerUid, code)
                                 showJoinDialog = false
                             }
                         } else {
@@ -487,9 +487,9 @@ fun SettingsMainView(
                 title = "Currently Mentoring",
                 summary = "You are viewing another user's progress. Click to exit.",
                 icon = Icons.Default.School,
-                onClick = { authViewModel.exitMentorMode() },
+                onClick = { authViewModel.exitMentorMode(context) },
                 trailing = {
-                    TextButton(onClick = { authViewModel.exitMentorMode() }) {
+                    TextButton(onClick = { authViewModel.exitMentorMode(context) }) {
                         Text("Exit")
                     }
                 }

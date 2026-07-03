@@ -92,4 +92,25 @@ object MentorRepository {
             null
         }
     }
+
+    suspend fun createMentorSession(mentorUid: String, ownerUid: String, code: String) {
+        val sessionId = "${mentorUid}_$ownerUid"
+        val data = hashMapOf(
+            "mentorUid" to mentorUid,
+            "ownerUid" to ownerUid,
+            "mentorCode" to code,
+            "enabled" to true,
+            "expiresAt" to com.google.firebase.Timestamp(java.util.Date(System.currentTimeMillis() + 3600000)) // 1 hour expiry
+        )
+        firestore.collection("mentorSessions").document(sessionId).set(data).await()
+    }
+
+    suspend fun deleteMentorSession(mentorUid: String, ownerUid: String) {
+        val sessionId = "${mentorUid}_$ownerUid"
+        try {
+            firestore.collection("mentorSessions").document(sessionId).delete().await()
+        } catch (e: Exception) {
+            android.util.Log.e("MentorRepository", "Error deleting mentor session", e)
+        }
+    }
 }

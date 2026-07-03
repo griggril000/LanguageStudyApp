@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -60,7 +61,9 @@ class SkillViewModel(
         if (userId == id) return
         userId = id
         viewModelScope.launch {
-            repository.startSync(id).collect()
+            repository.startSync(id)
+                .catch { e -> _error.emit("Sync failed: ${e.message}") }
+                .collect()
         }
         viewModelScope.launch {
             settingsRepository.getUserSettings(id).collect { settings ->

@@ -39,6 +39,7 @@ class VocabRepository(
 
         val vocabListener = vocabCollectionRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
+                close(error)
                 return@addSnapshotListener
             }
 
@@ -110,22 +111,22 @@ class VocabRepository(
 
     suspend fun insert(vocab: VocabEntity, userId: String? = null) {
         vocabDao.insertVocab(vocab)
-        userId?.let { uid ->
-            pushToFirestore(uid, vocab)
+        if (!userId.isNullOrBlank()) {
+            pushToFirestore(userId, vocab)
         }
     }
 
     suspend fun update(vocab: VocabEntity, userId: String? = null) {
         vocabDao.insertVocab(vocab)
-        userId?.let { uid ->
-            pushToFirestore(uid, vocab)
+        if (!userId.isNullOrBlank()) {
+            pushToFirestore(userId, vocab)
         }
     }
 
     suspend fun delete(vocab: VocabEntity, userId: String? = null) {
         vocabDao.deleteVocab(vocab)
-        userId?.let { uid ->
-            firestore.collection("users").document(uid)
+        if (!userId.isNullOrBlank()) {
+            firestore.collection("users").document(userId)
                 .collection("vocabulary").document(vocab.id)
                 .delete()
         }
@@ -191,6 +192,7 @@ class VocabRepository(
     }
 
     private fun pushToFirestore(userId: String, vocab: VocabEntity) {
+        if (userId.isBlank()) return
         val vocabData = mapOf(
             "word" to vocab.word,
             "translation" to vocab.translation,

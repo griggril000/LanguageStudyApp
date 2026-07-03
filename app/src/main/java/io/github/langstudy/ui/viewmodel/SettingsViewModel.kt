@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -34,6 +35,7 @@ class SettingsViewModel(
 ) : ViewModel() {
 
     val userSettings: StateFlow<UserSettings> = repository.getUserSettings(userId)
+        .catch { e -> android.util.Log.e("SettingsVM", "Error collecting user settings for $userId", e) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserSettings())
 
     val vocabCount: StateFlow<Int> = vocabRepository.vocabCount
@@ -44,6 +46,7 @@ class SettingsViewModel(
 
     val portfolioCount: StateFlow<Int> = portfolioRepository.getPortfolioItems(userId, limit = 100)
         .map { it.size }
+        .catch { e -> android.util.Log.e("SettingsVM", "Error collecting portfolio count for $userId", e) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val journalCount: StateFlow<Int> = journalRepository.entryCount
@@ -91,16 +94,25 @@ class SettingsViewModel(
         // Sync mentorCode state flow with userSettings shareCode, with a fallback check
         viewModelScope.launch {
             userSettings.map { it.shareCode }.distinctUntilChanged().collect { code ->
-                if (code.isBlank()) {
-                    // Fallback: check if the user has a code in the mentorCodes collection
-                    // that hasn't been synced to their settings doc yet.
-                    val existingCode = mentorRepository.getMentorCodeIdForUser(userId)
-                    if (existingCode != null) {
-                        _mentorCode.value = existingCode
-                        // Silently sync it back to settings doc
-                        repository.updateUserSettings(userId, mapOf("shareCode" to existingCode))
-                    } else {
-                        _mentorCode.value = null
+                if (userId.isNotBlank() && code.isBlank()) {
+                    try {
+                        // Fallback: check if the user has a code in the mentorCodes collection
+                        // that hasn't been synced to their settings doc yet.
+                        val existingCode = mentorRepository.getMentorCodeIdForUser(userId)
+                        if (existingCode != null) {
+                            _mentorCode.value = existingCode
+                            
+                            // ONLY attempt to sync back to settings doc if this is the owner.
+                            // Mentors don't have permission to write to student's metadata.
+                            val currentAuthUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                            if (userId == currentAuthUid) {
+                                repository.updateUserSettings(userId, mapOf("shareCode" to existingCode))
+                            }
+                        } else {
+                            _mentorCode.value = null
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("SettingsVM", "Error syncing mentor code", e)
                     }
                 } else {
                     _mentorCode.value = code

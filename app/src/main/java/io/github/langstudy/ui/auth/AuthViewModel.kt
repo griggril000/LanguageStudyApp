@@ -37,6 +37,9 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
     private val _user = MutableStateFlow(auth.currentUser)
     val user: StateFlow<com.google.firebase.auth.FirebaseUser?> = _user.asStateFlow()
 
+    private val _sessionId = MutableStateFlow(java.util.UUID.randomUUID().toString())
+    val sessionId: StateFlow<String> = _sessionId.asStateFlow()
+
     private val _mentorUid = MutableStateFlow<String?>(null)
     val mentorUid: StateFlow<String?> = _mentorUid.asStateFlow()
 
@@ -60,7 +63,15 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
     val error: StateFlow<String?> = _error.asStateFlow()
 
     init {
-        checkAdminStatus()
+        auth.addAuthStateListener { firebaseAuth ->
+            val currentUser = firebaseAuth.currentUser
+            _user.value = currentUser
+            if (currentUser != null) {
+                checkAdminStatus()
+            } else {
+                _isAdmin.value = false
+            }
+        }
     }
 
     private fun checkAdminStatus() {
@@ -91,14 +102,68 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
         }
     }
 
-    fun enterMentorMode(ownerUid: String, code: String) {
-        _mentorUid.value = ownerUid
-        _mentorCode.value = code
+    fun enterMentorMode(context: Context, ownerUid: String, code: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val currentUid = auth.currentUser?.uid
+                if (currentUid != null) {
+                    MentorRepository.createMentorSession(currentUid, ownerUid, code)
+                }
+
+                // Ensure database is cleared BEFORE updating state to prevent race conditions
+                clearLocalDatabase(context)
+                
+                _mentorUid.value = ownerUid
+                _mentorCode.value = code
+                // Update sessionId to trigger ViewModel recreation across the app
+                _sessionId.value = java.util.UUID.randomUUID().toString()
+                
+                Log.d("AuthViewModel", "Entered mentor mode for $ownerUid")
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Error entering mentor mode", e)
+                _error.value = "Failed to switch to mentor view: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
     }
 
-    fun exitMentorMode() {
-        _mentorUid.value = null
-        _mentorCode.value = null
+    fun exitMentorMode(context: Context) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val currentUid = auth.currentUser?.uid
+                val ownerUid = _mentorUid.value
+                if (currentUid != null && ownerUid != null) {
+                    MentorRepository.deleteMentorSession(currentUid, ownerUid)
+                }
+
+                clearLocalDatabase(context)
+                
+                _mentorUid.value = null
+                _mentorCode.value = null
+                _sessionId.value = java.util.UUID.randomUUID().toString()
+                
+                Log.d("AuthViewModel", "Exited mentor mode")
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Error exiting mentor mode", e)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    private suspend fun clearLocalDatabase(context: Context) {
+        try {
+            val app = context.applicationContext as io.github.langstudy.LanguageStudyApplication
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                app.database.clearAllTables()
+            }
+            Log.d("AuthViewModel", "Local database cleared")
+        } catch (e: Exception) {
+            Log.e("AuthViewModel", "Error clearing local database", e)
+        }
     }
 
     private fun Context.findActivity(): Activity? {
@@ -130,6 +195,7 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
                     val firebaseCredential =
                         GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
                     auth.signInWithCredential(firebaseCredential).await()
+                    _sessionId.value = java.util.UUID.randomUUID().toString()
                     _user.value = auth.currentUser
                     checkAdminStatus()
                 } else if (credential is PasswordCredential) {
@@ -152,6 +218,7 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
             _error.value = null
             try {
                 auth.signInWithEmailAndPassword(email, password).await()
+                _sessionId.value = java.util.UUID.randomUUID().toString()
                 _user.value = auth.currentUser
                 checkAdminStatus()
             } catch (e: Exception) {
@@ -168,6 +235,7 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
             _error.value = null
             try {
                 auth.createUserWithEmailAndPassword(email, password).await()
+                _sessionId.value = java.util.UUID.randomUUID().toString()
                 _user.value = auth.currentUser
                 checkAdminStatus()
             } catch (e: Exception) {
@@ -199,23 +267,40 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
 
     fun signOut(context: Context) {
         viewModelScope.launch {
-            exitMentorMode()
-            _user.value = null
-            _isAdmin.value = false
-            auth.signOut()
-
+            _isLoading.value = true
             try {
-                val app =
-                    context.applicationContext as io.github.langstudy.LanguageStudyApplication
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    app.database.clearAllTables()
+                val currentUid = auth.currentUser?.uid
+                val ownerUid = _mentorUid.value
+                if (currentUid != null && ownerUid != null) {
+                    MentorRepository.deleteMentorSession(currentUid, ownerUid)
                 }
-            } catch (e: Exception) {
-                Log.e("AuthViewModel", "Error clearing database", e)
-            }
 
-            val credentialManager = CredentialManager.create(context)
-            credentialManager.clearCredentialState(ClearCredentialStateRequest())
+                // Clear DB first
+                clearLocalDatabase(context)
+                
+                // Clear mentor state
+                _mentorUid.value = null
+                _mentorCode.value = null
+                
+                // Clear user state
+                _user.value = null
+                _isAdmin.value = false
+                
+                // Reset session
+                _sessionId.value = java.util.UUID.randomUUID().toString()
+                
+                // Firebase sign out
+                auth.signOut()
+
+                val credentialManager = CredentialManager.create(context)
+                credentialManager.clearCredentialState(ClearCredentialStateRequest())
+                
+                Log.d("AuthViewModel", "Signed out successfully")
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Error during sign out", e)
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 

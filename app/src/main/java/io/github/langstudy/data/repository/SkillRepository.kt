@@ -36,8 +36,7 @@ class SkillRepository(private val skillDao: SkillDao) {
 
         val listener = collectionRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                // Close normally on error to prevent crash during sign out
-                close()
+                close(error)
                 return@addSnapshotListener
             }
 
@@ -91,28 +90,29 @@ class SkillRepository(private val skillDao: SkillDao) {
 
     suspend fun insert(skill: SkillEntity, userId: String? = null) {
         skillDao.insertSkill(skill)
-        userId?.let { uid ->
-            pushToFirestore(uid, skill)
+        if (!userId.isNullOrBlank()) {
+            pushToFirestore(userId, skill)
         }
     }
 
     suspend fun update(skill: SkillEntity, userId: String? = null) {
         skillDao.updateSkill(skill)
-        userId?.let { uid ->
-            pushToFirestore(uid, skill)
+        if (!userId.isNullOrBlank()) {
+            pushToFirestore(userId, skill)
         }
     }
 
     suspend fun delete(skill: SkillEntity, userId: String? = null) {
         skillDao.deleteSkill(skill)
-        userId?.let { uid ->
-            firestore.collection("users").document(uid)
+        if (!userId.isNullOrBlank()) {
+            firestore.collection("users").document(userId)
                 .collection("skills").document(skill.id)
                 .delete()
         }
     }
 
     private fun pushToFirestore(userId: String, skill: SkillEntity) {
+        if (userId.isBlank()) return
         val skillData = mapOf(
             "name" to skill.name,
             "language" to skill.language,
