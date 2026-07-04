@@ -75,7 +75,6 @@ import io.github.langstudy.navigation.icon
 import io.github.langstudy.navigation.label
 import io.github.langstudy.ui.auth.AuthViewModel
 import io.github.langstudy.ui.auth.AuthViewModelFactory
-import io.github.langstudy.ui.auth.EmailVerificationScreen
 import io.github.langstudy.ui.auth.LoginScreen
 import io.github.langstudy.ui.screens.AdminScreen
 import io.github.langstudy.ui.screens.JournalScreen
@@ -133,7 +132,6 @@ fun MainScreen(
     val searchViewModel: SearchViewModel = viewModel(key = "search_$sessionId")
 
     val currentUser by authViewModel.user.collectAsState()
-    val isEmailVerified by authViewModel.isEmailVerified.collectAsState()
     val isAdmin by authViewModel.isAdmin.collectAsState()
     val isMentorMode by authViewModel.isMentorMode.collectAsState()
     val effectiveUserId by authViewModel.effectiveUserId.collectAsState()
@@ -197,14 +195,8 @@ fun MainScreen(
             )
         }
 
-        val startRoute = remember(currentUser, isEmailVerified) {
-            if (currentUser == null) {
-                NavRoute.Login
-            } else if (!isEmailVerified) {
-                NavRoute.EmailVerification
-            } else {
-                NavRoute.fromString(userSettings.homepageTab)
-            }
+        val startRoute = remember(currentUser) {
+            if (currentUser == null) NavRoute.Login else NavRoute.fromString(userSettings.homepageTab)
         }
         val backStack = rememberNavBackStack(startRoute)
 
@@ -257,20 +249,10 @@ fun MainScreen(
         val useNavRail =
             adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
 
-        val provider = remember(currentUser, effectiveUserId, isEmailVerified) {
+        val provider = remember(currentUser, effectiveUserId) {
             entryProvider<NavKey> {
                 entry<NavRoute.Login> {
                     LoginScreen(onLoginSuccess = {
-                        backStack.clear()
-                        if (authViewModel.isEmailVerified.value) {
-                            backStack.add(NavRoute.fromString(userSettings.homepageTab))
-                        } else {
-                            backStack.add(NavRoute.EmailVerification)
-                        }
-                    })
-                }
-                entry<NavRoute.EmailVerification> {
-                    EmailVerificationScreen(onVerificationSuccess = {
                         backStack.clear()
                         backStack.add(NavRoute.fromString(userSettings.homepageTab))
                     })
@@ -341,11 +323,6 @@ fun MainScreen(
                 backStack.clear()
                 backStack.add(NavRoute.Login)
             }
-        } else if (currentUser != null && !isEmailVerified && backStack.lastOrNull() !is NavRoute.EmailVerification) {
-            LaunchedEffect(Unit) {
-                backStack.clear()
-                backStack.add(NavRoute.EmailVerification)
-            }
         }
 
         if (showResources) {
@@ -362,7 +339,7 @@ fun MainScreen(
             }
         }
 
-        if (currentUser != null && isEmailVerified && showWalkthrough) {
+        if (currentUser != null && showWalkthrough) {
             WelcomeWalkthrough(
                 viewModel = settingsVm,
                 email = currentUser?.email,

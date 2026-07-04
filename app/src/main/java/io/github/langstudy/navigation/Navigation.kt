@@ -18,9 +18,6 @@ sealed interface NavRoute : NavKey {
     data object Login : NavRoute
 
     @Serializable
-    data object EmailVerification : NavRoute
-
-    @Serializable
     data object Portfolio : NavRoute
 
     @Serializable
@@ -54,7 +51,6 @@ sealed interface NavRoute : NavKey {
 val NavRoute.icon: ImageVector
     get() = when (this) {
         NavRoute.Login -> Icons.AutoMirrored.Rounded.Login
-        NavRoute.EmailVerification -> Icons.Rounded.Settings // Placeholder icon
         NavRoute.Portfolio -> Icons.Rounded.Work
         NavRoute.Vocab -> Icons.Rounded.Book
         NavRoute.Skills -> Icons.Rounded.Psychology
@@ -66,7 +62,6 @@ val NavRoute.icon: ImageVector
 val NavRoute.label: String
     get() = when (this) {
         NavRoute.Login -> "Login"
-        NavRoute.EmailVerification -> "Verify Email"
         NavRoute.Portfolio -> "Portfolio"
         NavRoute.Vocab -> "Vocab"
         NavRoute.Skills -> "Skills"
