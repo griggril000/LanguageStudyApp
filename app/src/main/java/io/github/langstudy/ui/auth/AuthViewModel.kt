@@ -37,6 +37,9 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
     private val _user = MutableStateFlow(auth.currentUser)
     val user: StateFlow<com.google.firebase.auth.FirebaseUser?> = _user.asStateFlow()
 
+    private val _isEmailVerified = MutableStateFlow(auth.currentUser?.isEmailVerified ?: false)
+    val isEmailVerified: StateFlow<Boolean> = _isEmailVerified.asStateFlow()
+
     private val _sessionId = MutableStateFlow(java.util.UUID.randomUUID().toString())
     val sessionId: StateFlow<String> = _sessionId.asStateFlow()
 
@@ -70,6 +73,7 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
         auth.addAuthStateListener { firebaseAuth ->
             val currentUser = firebaseAuth.currentUser
             _user.value = currentUser
+            _isEmailVerified.value = currentUser?.isEmailVerified ?: false
             if (currentUser != null) {
                 checkAdminStatus()
             } else {
@@ -179,6 +183,38 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
         return null
     }
 
+    fun sendEmailVerification() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                auth.currentUser?.sendEmailVerification()?.await()
+                _error.value = "Verification email sent. Please check your inbox."
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Error sending verification email", e)
+                _error.value = "Failed to send verification email: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun reloadUser() {
+        viewModelScope.launch {
+            try {
+                auth.currentUser?.reload()?.await()
+                val currentUser = auth.currentUser
+                _user.value = currentUser
+                _isEmailVerified.value = currentUser?.isEmailVerified ?: false
+                if (currentUser != null) {
+                    checkAdminStatus()
+                }
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Error reloading user", e)
+            }
+        }
+    }
+
     fun signInWithGoogle(context: Context) {
         val activity = context.findActivity() ?: return
         viewModelScope.launch {
@@ -200,11 +236,15 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
                         GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
                     auth.signInWithCredential(firebaseCredential).await()
                     _sessionId.value = java.util.UUID.randomUUID().toString()
-                    _user.value = auth.currentUser
+                    val currentUser = auth.currentUser
+                    _user.value = currentUser
+                    _isEmailVerified.value = currentUser?.isEmailVerified ?: false
                     checkAdminStatus()
                 } else if (credential is PasswordCredential) {
                     auth.signInWithEmailAndPassword(credential.id, credential.password).await()
-                    _user.value = auth.currentUser
+                    val currentUser = auth.currentUser
+                    _user.value = currentUser
+                    _isEmailVerified.value = currentUser?.isEmailVerified ?: false
                     checkAdminStatus()
                 }
             } catch (e: Exception) {
@@ -223,7 +263,9 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
             try {
                 auth.signInWithEmailAndPassword(email, password).await()
                 _sessionId.value = java.util.UUID.randomUUID().toString()
-                _user.value = auth.currentUser
+                val currentUser = auth.currentUser
+                _user.value = currentUser
+                _isEmailVerified.value = currentUser?.isEmailVerified ?: false
                 checkAdminStatus()
             } catch (e: Exception) {
                 _error.value = "Login failed: ${e.message}"
@@ -240,7 +282,12 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
             try {
                 auth.createUserWithEmailAndPassword(email, password).await()
                 _sessionId.value = java.util.UUID.randomUUID().toString()
-                _user.value = auth.currentUser
+                val currentUser = auth.currentUser
+                _user.value = currentUser
+                _isEmailVerified.value = currentUser?.isEmailVerified ?: false
+                if (currentUser != null && !currentUser.isEmailVerified) {
+                    currentUser.sendEmailVerification().await()
+                }
                 checkAdminStatus()
             } catch (e: Exception) {
                 _error.value = "Sign up failed: ${e.message}"
