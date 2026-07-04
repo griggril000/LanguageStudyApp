@@ -26,6 +26,11 @@ class FirestorePortfolioRepository(
 
     override fun getPortfolioItems(userId: String, limit: Long): Flow<List<PortfolioItem>> =
         callbackFlow {
+            if (userId.isBlank()) {
+                trySend(emptyList())
+                awaitClose { }
+                return@callbackFlow
+            }
             val query = getCollection(userId)
                 .orderBy("dateAdded", Query.Direction.DESCENDING)
                 .limit(limit)
@@ -33,8 +38,7 @@ class FirestorePortfolioRepository(
             val listener = query.addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.e("FirestoreRepo", "Error fetching portfolio for user $userId", error)
-                    // Close normally on error to prevent crash during sign out
-                    close()
+                    close(error)
                     return@addSnapshotListener
                 }
                 if (snapshot != null) {
@@ -46,6 +50,7 @@ class FirestorePortfolioRepository(
         }
 
     override suspend fun addPortfolioItem(userId: String, item: PortfolioItem) {
+        if (userId.isBlank()) return
         val data = hashMapOf(
             "title" to item.title,
             "link" to item.link,
@@ -60,11 +65,12 @@ class FirestorePortfolioRepository(
     }
 
     override suspend fun deletePortfolioItem(userId: String, id: String) {
+        if (userId.isBlank() || id.isBlank()) return
         getCollection(userId).document(id).delete().await()
     }
 
     override suspend fun updatePortfolioItem(userId: String, item: PortfolioItem) {
-        if (item.id.isBlank()) return
+        if (userId.isBlank() || item.id.isBlank()) return
         val updates = mutableMapOf<String, Any?>(
             "title" to item.title,
             "link" to item.link,

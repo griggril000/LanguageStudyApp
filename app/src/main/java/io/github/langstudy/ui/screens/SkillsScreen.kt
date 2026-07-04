@@ -102,6 +102,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SkillsScreen(
     userId: String,
+    sessionId: String = "",
     searchViewModel: SearchViewModel = viewModel(),
     isMentorMode: Boolean = false,
     mentorAccessLevel: String = "view"
@@ -109,7 +110,7 @@ fun SkillsScreen(
     val context = LocalContext.current
     val app = context.applicationContext as LanguageStudyApplication
     val viewModel: SkillViewModel = viewModel(
-        key = "skills_$userId",
+        key = "skills_${userId}_$sessionId",
         factory = SkillViewModelFactory(app.skillRepository, app.settingsRepository)
     )
     val skillsList by viewModel.filteredSkills.collectAsState()
@@ -127,7 +128,7 @@ fun SkillsScreen(
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
     val canChangeStatus =
         !isMentorMode || mentorAccessLevel == "status" || mentorAccessLevel == "full"
-    val isDragEnabled = searchQuery.isBlank() && selectedLanguage == null && !isMentorMode
+    val isDragEnabled = searchQuery.isBlank() && selectedLanguage == null && canEditContent
 
     LaunchedEffect(languageOverride) {
         if (languageOverride != null) {
@@ -191,13 +192,16 @@ fun SkillsScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            AppFAB(
-                onClick = { showAddSheet = true },
-                icon = Icons.Rounded.Add,
-                contentDescription = "Add Skill"
-            )
+            if (canEditContent) {
+                AppFAB(
+                    onClick = { showAddSheet = true },
+                    icon = Icons.Rounded.Add,
+                    contentDescription = "Add Skill"
+                )
+            }
         }
-    ) { padding ->
+    )
+ { padding ->
         if (showAddSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showAddSheet = false },

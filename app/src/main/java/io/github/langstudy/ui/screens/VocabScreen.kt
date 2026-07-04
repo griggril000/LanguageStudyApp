@@ -82,6 +82,7 @@ import io.github.langstudy.ui.viewmodel.VocabViewModelFactory
 @Composable
 fun VocabScreen(
     userId: String,
+    sessionId: String = "",
     searchViewModel: SearchViewModel = viewModel(),
     isMentorMode: Boolean = false,
     mentorAccessLevel: String = "view"
@@ -89,7 +90,7 @@ fun VocabScreen(
     val context = LocalContext.current
     val app = context.applicationContext as LanguageStudyApplication
     val viewModel: VocabViewModel = viewModel(
-        key = "vocab_$userId",
+        key = "vocab_${userId}_$sessionId",
         factory = VocabViewModelFactory(app.vocabRepository, app.settingsRepository)
     )
     val vocabList by viewModel.filteredVocab.collectAsState()

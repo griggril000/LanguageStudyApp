@@ -67,6 +67,7 @@ import io.github.langstudy.ui.viewmodel.SearchViewModel
 @Composable
 fun JournalScreen(
     userId: String,
+    sessionId: String = "",
     searchViewModel: SearchViewModel = viewModel(),
     isMentorMode: Boolean = false,
     mentorAccessLevel: String = "view"
@@ -75,7 +76,7 @@ fun JournalScreen(
     val app = context.applicationContext as LanguageStudyApplication
     val repository = app.journalRepository
     val viewModel: JournalViewModel = viewModel(
-        key = "journal_$userId",
+        key = "journal_${userId}_$sessionId",
         factory = JournalViewModelFactory(repository, app.settingsRepository)
     )
     val entries by viewModel.filteredEntries.collectAsState()

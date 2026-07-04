@@ -128,15 +128,35 @@ fun MainScreen(
     val authViewModel: AuthViewModel = viewModel(
         factory = AuthViewModelFactory(app.adminRepository)
     )
-    val searchViewModel: SearchViewModel = viewModel()
+    val sessionId by authViewModel.sessionId.collectAsState()
+    val searchViewModel: SearchViewModel = viewModel(key = "search_$sessionId")
 
     val currentUser by authViewModel.user.collectAsState()
     val isAdmin by authViewModel.isAdmin.collectAsState()
     val isMentorMode by authViewModel.isMentorMode.collectAsState()
     val effectiveUserId by authViewModel.effectiveUserId.collectAsState()
-
+    
+    // Always use the ACTUAL user's ID for app-wide settings like theme and homepage.
+    // This prevents PERMISSION_DENIED errors when in Mentor Mode and keeps the mentor's
+    // own theme/preferences active.
+    val actualUserId = currentUser?.uid ?: ""
     val settingsVm: SettingsViewModel = viewModel(
-        key = "settings_$effectiveUserId",
+        key = "settings_${actualUserId}_$sessionId",
+        factory = SettingsViewModelFactory(
+            app.settingsRepository,
+            app.mentorRepository,
+            actualUserId,
+            app.vocabRepository,
+            app.skillRepository,
+            app.portfolioRepository,
+            app.journalRepository
+        )
+    )
+    
+    // We also need a version of the settings VM for the effective user to show counts/data
+    // in the UI, but we'll only use it where needed to avoid unnecessary listeners.
+    val effectiveSettingsVm: SettingsViewModel = viewModel(
+        key = "settings_data_${effectiveUserId}_$sessionId",
         factory = SettingsViewModelFactory(
             app.settingsRepository,
             app.mentorRepository,
@@ -147,7 +167,9 @@ fun MainScreen(
             app.journalRepository
         )
     )
+
     val userSettings by settingsVm.userSettings.collectAsState()
+    val effectiveUserSettings by effectiveSettingsVm.userSettings.collectAsState()
 
     val darkTheme = when (userSettings.theme) {
         "light" -> false
@@ -208,7 +230,7 @@ fun MainScreen(
                             if (code != null && code.length == 5) {
                                 val ownerUid = settingsVm.validateCode(code)
                                 if (ownerUid != null && ownerUid != currentUser?.uid) {
-                                    authViewModel.enterMentorMode(ownerUid, code)
+                                    authViewModel.enterMentorMode(context, ownerUid, code)
                                     backStack.clear()
                                     backStack.add(NavRoute.Portfolio)
                                 }
@@ -238,42 +260,46 @@ fun MainScreen(
                 entry<NavRoute.Vocab> {
                     VocabScreen(
                         userId = effectiveUserId,
+                        sessionId = sessionId,
                         searchViewModel = searchViewModel,
                         isMentorMode = isMentorMode,
-                        mentorAccessLevel = userSettings.mentorAccessLevel
+                        mentorAccessLevel = effectiveUserSettings.mentorAccessLevel
                     )
                 }
                 entry<NavRoute.Skills> {
                     SkillsScreen(
                         userId = effectiveUserId,
+                        sessionId = sessionId,
                         searchViewModel = searchViewModel,
                         isMentorMode = isMentorMode,
-                        mentorAccessLevel = userSettings.mentorAccessLevel
+                        mentorAccessLevel = effectiveUserSettings.mentorAccessLevel
                     )
                 }
                 entry<NavRoute.Portfolio> {
                     val userId = effectiveUserId
                     val portfolioVm: PortfolioViewModel = viewModel(
-                        key = "portfolio_$userId",
+                        key = "portfolio_${userId}_$sessionId",
                         factory = PortfolioViewModelFactory(userId, app.settingsRepository)
                     )
                     PortfolioScreen(
                         viewModel = portfolioVm,
                         searchViewModel = searchViewModel,
                         isMentorMode = isMentorMode,
-                        mentorAccessLevel = userSettings.mentorAccessLevel
+                        mentorAccessLevel = effectiveUserSettings.mentorAccessLevel
                     )
                 }
                 entry<NavRoute.Journal> {
                     JournalScreen(
                         userId = effectiveUserId,
+                        sessionId = sessionId,
                         searchViewModel = searchViewModel,
                         isMentorMode = isMentorMode,
-                        mentorAccessLevel = userSettings.mentorAccessLevel
+                        mentorAccessLevel = effectiveUserSettings.mentorAccessLevel
                     )
                 }
                 entry<NavRoute.Admin> {
                     val adminVm: AdminViewModel = viewModel(
+                        key = "admin_$sessionId",
                         factory = AdminViewModelFactory(app.adminRepository, app.settingsRepository)
                     )
                     adminVm.initUserId(effectiveUserId)
@@ -285,7 +311,7 @@ fun MainScreen(
                 entry<NavRoute.Settings> {
                     SettingsScreen(
                         authViewModel = authViewModel,
-                        settingsViewModel = settingsVm,
+                        settingsViewModel = effectiveSettingsVm,
                         onBack = { if (backStack.size > 1) backStack.removeLastOrNull() }
                     )
                 }
@@ -306,12 +332,25 @@ fun MainScreen(
             )
         }
 
-        if (currentUser != null && userSettings.firstLogin) {
+        var showWalkthrough by remember { mutableStateOf(false) }
+        LaunchedEffect(userSettings.firstLogin) {
+            if (userSettings.firstLogin) {
+                showWalkthrough = true
+            }
+        }
+
+        if (currentUser != null && showWalkthrough) {
             WelcomeWalkthrough(
                 viewModel = settingsVm,
                 email = currentUser?.email,
-                onDismiss = { settingsVm.setFirstLogin(false) },
-                onFinish = { settingsVm.setFirstLogin(false) }
+                onDismiss = {
+                    settingsVm.setFirstLogin(false)
+                    showWalkthrough = false
+                },
+                onFinish = {
+                    settingsVm.setFirstLogin(false)
+                    showWalkthrough = false
+                }
             )
         }
 
@@ -342,19 +381,20 @@ fun MainScreen(
                         actions = {
                             if (isMentorMode) {
                                 TextButton(onClick = {
-                                    authViewModel.exitMentorMode()
+                                    authViewModel.exitMentorMode(context)
                                     searchViewModel.setSelectedLanguage(null)
                                 }) {
                                     Text("Exit")
                                 }
                             }
 
-                            val showSwitcher = userSettings.learnedLanguages.isNotEmpty()
+                            val effectiveUserSettings by effectiveSettingsVm.userSettings.collectAsState()
+                            val showSwitcher = effectiveUserSettings.learnedLanguages.isNotEmpty()
 
                             if (showSwitcher) {
                                 val languageOverride by searchViewModel.selectedLanguage.collectAsState()
                                 val displayLanguage =
-                                    languageOverride ?: userSettings.languageLearning
+                                    languageOverride ?: effectiveUserSettings.languageLearning
                                 Box {
                                     TextButton(onClick = { showLangMenu = true }) {
                                         Text(
@@ -367,7 +407,7 @@ fun MainScreen(
                                         expanded = showLangMenu,
                                         onDismissRequest = { showLangMenu = false }
                                     ) {
-                                        userSettings.learnedLanguages.forEach { lang ->
+                                        effectiveUserSettings.learnedLanguages.forEach { lang ->
                                             DropdownMenuItem(
                                                 text = { Text(lang) },
                                                 onClick = {

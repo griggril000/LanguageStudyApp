@@ -67,7 +67,15 @@ class SettingsRepository(
                 )
             } else {
                 // Document doesn't exist = brand new user
-                trySend(UserSettings(firstLogin = true))
+                // Initialize the settings document with firstLogin = true to ensure
+                // partial updates (like language selection) don't lose the onboarding state.
+                
+                // ONLY initialize if the current user is the owner of these settings.
+                val currentAuthUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                if (userId == currentAuthUid) {
+                    docRef.set(mapOf("firstLogin" to true), SetOptions.merge())
+                }
+                trySend(UserSettings(firstLogin = userId == currentAuthUid))
             }
         }
         awaitClose { listener.remove() }

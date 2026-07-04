@@ -5,6 +5,7 @@ import android.os.Build
 import android.widget.TextView
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -100,7 +101,10 @@ fun SettingsScreen(
     val currentUser by authViewModel.user.collectAsState()
     val isMentorMode by authViewModel.isMentorMode.collectAsState()
     val userSettings by settingsViewModel.userSettings.collectAsState()
-    val mentorCode by settingsViewModel.mentorCode.collectAsState()
+    val userMentorCode by settingsViewModel.mentorCode.collectAsState()
+    val sessionMentorCode by authViewModel.mentorCode.collectAsState()
+    val mentorCode = if (isMentorMode) sessionMentorCode else userMentorCode
+
     val availableLanguages by settingsViewModel.availableLanguages.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -120,13 +124,15 @@ fun SettingsScreen(
     val notesScrollState = rememberScrollState()
     val librariesLazyListState = rememberLazyListState()
 
-    BackHandler(enabled = true) {
-        if (currentView != "main") {
-            currentView = "main"
-        } else {
-            onBack()
+    val handleBack = {
+        when (currentView) {
+            "notes" -> currentView = "details"
+            "details", "libraries" -> currentView = "main"
+            else -> onBack()
         }
     }
+
+    BackHandler(enabled = true, onBack = handleBack)
 
     LaunchedEffect(Unit) {
         settingsViewModel.errorMessages.collect { message ->
@@ -162,7 +168,7 @@ fun SettingsScreen(
                             if (ownerUid == currentUser?.uid) {
                                 snackbarHostState.showSnackbar("Cannot mentor yourself")
                             } else {
-                                authViewModel.enterMentorMode(ownerUid, code)
+                                authViewModel.enterMentorMode(context, ownerUid, code)
                                 showJoinDialog = false
                             }
                         } else {
@@ -194,7 +200,7 @@ fun SettingsScreen(
             labelProvider = {
                 when (it) {
                     "system" -> "System Default"
-                    "dynamic" -> "Dynamic (Android 12+)"
+                    "dynamic" -> "Dynamic Color"
                     else -> it.replaceFirstChar { char -> char.uppercase() }
                 }
             }
@@ -274,13 +280,7 @@ fun SettingsScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        if (currentView != "main") {
-                            currentView = "main"
-                        } else {
-                            onBack()
-                        }
-                    }) {
+                    IconButton(onClick = handleBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -303,7 +303,6 @@ fun SettingsScreen(
                     authViewModel = authViewModel,
                     scrollState = mainScrollState,
                     onNavigateToDetails = { currentView = "details" },
-                    onNavigateToNotes = { currentView = "notes" },
                     onNavigateToLibraries = { currentView = "libraries" },
                     onShowDeleteDialog = { showDeleteDialog = true },
                     onShowJoinDialog = { showJoinDialog = true },
@@ -317,7 +316,9 @@ fun SettingsScreen(
 
                 "details" -> AppDetailsView(
                     settingsViewModel = settingsViewModel,
-                    scrollState = detailsScrollState
+                    scrollState = detailsScrollState,
+                    isMentorMode = isMentorMode,
+                    onNavigateToNotes = { currentView = "notes" }
                 )
 
                 "notes" -> {
@@ -344,7 +345,6 @@ fun SettingsMainView(
     authViewModel: AuthViewModel,
     scrollState: ScrollState,
     onNavigateToDetails: () -> Unit,
-    onNavigateToNotes: () -> Unit,
     onNavigateToLibraries: () -> Unit,
     onShowDeleteDialog: () -> Unit,
     onShowJoinDialog: () -> Unit,
@@ -368,8 +368,8 @@ fun SettingsMainView(
     ) {
         PreferenceCategory(title = "Account")
         PreferenceItem(
-            title = "Signed in as",
-            summary = currentUser?.email ?: "Not signed in",
+            title = if (isMentorMode) "Mentoring Student" else "Signed in as",
+            summary = if (isMentorMode) "Code: $mentorCode" else currentUser?.email ?: "Not signed in",
             icon = Icons.Default.Person,
             onClick = {}
         )
@@ -389,6 +389,25 @@ fun SettingsMainView(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
 
+        if (isMentorMode) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .background(
+                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                        RoundedCornerShape(8.dp)
+                    )
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = "You are currently viewing a student's data. Most settings are read-only to preserve their preferences.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+        }
+
         PreferenceCategory(title = "Display")
         PreferenceItem(
             title = "Theme",
@@ -398,7 +417,7 @@ fun SettingsMainView(
                 else -> userSettings.theme.replaceFirstChar { it.uppercase() }
             },
             icon = Icons.Default.Palette,
-            onClick = onShowThemeDialog
+            onClick = if (isMentorMode) ({}) else onShowThemeDialog
         )
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
@@ -408,7 +427,7 @@ fun SettingsMainView(
             title = "Primary Language",
             summary = userSettings.languageLearning.ifBlank { "None" },
             icon = Icons.Default.Done,
-            onClick = onShowPrimaryLangDialog
+            onClick = if (isMentorMode) ({}) else onShowPrimaryLangDialog
         )
         PreferenceItem(
             title = "Languages I'm Learning",
@@ -416,18 +435,18 @@ fun SettingsMainView(
                 ", "
             ),
             icon = Icons.Default.Language,
-            onClick = onShowLearningLangsDialog
+            onClick = if (isMentorMode) ({}) else onShowLearningLangsDialog
         )
         PreferenceItem(
             title = "Startup Tab",
             summary = userSettings.homepageTab.replaceFirstChar { it.uppercase() },
             icon = Icons.Rounded.Home,
-            onClick = onShowStartupTabDialog
+            onClick = if (isMentorMode) ({}) else onShowStartupTabDialog
         )
         if (!isMentorMode) {
             PreferenceItem(
                 title = "Request a Language",
-                summary = "Don't see your language? Let us know.",
+                summary = "Don't see the language you are studying? Let us know.",
                 icon = Icons.Default.Language,
                 onClick = onShowLanguageRequestDialog
             )
@@ -438,7 +457,7 @@ fun SettingsMainView(
         PreferenceCategory(title = "Mentor Access")
         SwitchPreference(
             title = "Enable Mentor View",
-            summary = if (isMentorMode) "Settings are read-only in mentor mode." else "Allow someone with your code to view your progress.",
+            summary = if (isMentorMode) "Status of student's mentor code." else "Allow someone with your code to view your progress.",
             icon = Icons.Default.SupervisorAccount,
             checked = userSettings.mentorCodeEnabled,
             onCheckedChange = { settingsViewModel.toggleMentorCode(it) },
@@ -447,7 +466,7 @@ fun SettingsMainView(
 
         if (userSettings.mentorCodeEnabled || isMentorMode) {
             PreferenceItem(
-                title = "Mentor Share Code",
+                title = if (isMentorMode) "Student Share Code" else "Mentor Share Code",
                 summary = mentorCode ?: "Generating...",
                 icon = Icons.Rounded.Refresh,
                 onClick = {
@@ -477,10 +496,15 @@ fun SettingsMainView(
                 }
             )
             PreferenceItem(
-                title = "Mentor Access Level",
-                summary = userSettings.mentorAccessLevel.replaceFirstChar { it.uppercase() },
+                title = if (isMentorMode) "Student Access Level" else "Mentor Access Level",
+                summary = when (userSettings.mentorAccessLevel) {
+                    "view" -> "Read Only"
+                    "status" -> "Status Updates"
+                    "full" -> "Edit All"
+                    else -> userSettings.mentorAccessLevel.replaceFirstChar { it.uppercase() }
+                },
                 icon = Icons.Default.SupervisorAccount,
-                onClick = onShowAccessLevelDialog
+                onClick = if (isMentorMode) ({}) else onShowAccessLevelDialog
             )
         }
 
@@ -492,9 +516,9 @@ fun SettingsMainView(
                 title = "Currently Mentoring",
                 summary = "You are viewing another user's progress. Click to exit.",
                 icon = Icons.Default.School,
-                onClick = { authViewModel.exitMentorMode() },
+                onClick = { authViewModel.exitMentorMode(context) },
                 trailing = {
-                    TextButton(onClick = { authViewModel.exitMentorMode() }) {
+                    TextButton(onClick = { authViewModel.exitMentorMode(context) }) {
                         Text("Exit")
                     }
                 }
@@ -511,10 +535,6 @@ fun SettingsMainView(
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
 
         PreferenceCategory(title = "Additional Info")
-        PreferenceItem(
-            title = "Release Notes",
-            onClick = onNavigateToNotes
-        )
         PreferenceItem(
             title = "App Details",
             summary = "Version ${BuildConfig.VERSION_NAME}",
@@ -537,7 +557,9 @@ fun SettingsMainView(
 @Composable
 fun AppDetailsView(
     settingsViewModel: SettingsViewModel,
-    scrollState: ScrollState
+    scrollState: ScrollState,
+    isMentorMode: Boolean = false,
+    onNavigateToNotes: () -> Unit
 ) {
     val vocabCount by settingsViewModel.vocabCount.collectAsState()
     val skillCount by settingsViewModel.skillCount.collectAsState()
@@ -552,21 +574,28 @@ fun AppDetailsView(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         DetailItem(label = "Language Study Version", value = BuildConfig.VERSION_NAME)
+        PreferenceItem(
+            title = "Release Notes",
+            summary = "See what's new in this version",
+            onClick = onNavigateToNotes
+        )
         DetailItem(label = "Android Version", value = android.os.Build.VERSION.RELEASE)
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
 
-        Text(
-            "Personal Data",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
+        if (!isMentorMode) {
+            Text(
+                text = "Personal Data",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
 
-        DetailItem(label = "Vocabulary items", value = vocabCount.toString())
-        DetailItem(label = "Skills tracked", value = skillCount.toString())
-        DetailItem(label = "Portfolio entries", value = portfolioCount.toString())
-        DetailItem(label = "Journal entries", value = journalCount.toString())
+            DetailItem(label = "Vocabulary items", value = vocabCount.toString())
+            DetailItem(label = "Skills tracked", value = skillCount.toString())
+            DetailItem(label = "Portfolio entries", value = portfolioCount.toString())
+            DetailItem(label = "Journal entries", value = journalCount.toString())
+        }
     }
 }
 

@@ -30,8 +30,7 @@ class JournalRepository(private val journalDao: JournalDao) {
 
         val listener = collectionRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                // Close normally on error to prevent crash during sign out
-                close()
+                close(error)
                 return@addSnapshotListener
             }
 
@@ -71,21 +70,22 @@ class JournalRepository(private val journalDao: JournalDao) {
 
     suspend fun insert(entry: JournalEntryEntity, userId: String? = null) {
         journalDao.insertEntry(entry)
-        userId?.let { uid ->
-            pushToFirestore(uid, entry)
+        if (!userId.isNullOrBlank()) {
+            pushToFirestore(userId, entry)
         }
     }
 
     suspend fun delete(entry: JournalEntryEntity, userId: String? = null) {
         journalDao.deleteEntry(entry)
-        userId?.let { uid ->
-            firestore.collection("users").document(uid)
+        if (!userId.isNullOrBlank()) {
+            firestore.collection("users").document(userId)
                 .collection("journal").document(entry.id)
                 .delete()
         }
     }
 
     private fun pushToFirestore(userId: String, entry: JournalEntryEntity) {
+        if (userId.isBlank()) return
         val entryData = mapOf(
             "title" to entry.title,
             "content" to entry.content,
