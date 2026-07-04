@@ -101,7 +101,10 @@ fun SettingsScreen(
     val currentUser by authViewModel.user.collectAsState()
     val isMentorMode by authViewModel.isMentorMode.collectAsState()
     val userSettings by settingsViewModel.userSettings.collectAsState()
-    val mentorCode by settingsViewModel.mentorCode.collectAsState()
+    val userMentorCode by settingsViewModel.mentorCode.collectAsState()
+    val sessionMentorCode by authViewModel.mentorCode.collectAsState()
+    val mentorCode = if (isMentorMode) sessionMentorCode else userMentorCode
+
     val availableLanguages by settingsViewModel.availableLanguages.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
