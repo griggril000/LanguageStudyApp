@@ -169,6 +169,7 @@ fun MainScreen(
     )
 
     val userSettings by settingsVm.userSettings.collectAsState()
+    val effectiveUserSettings by effectiveSettingsVm.userSettings.collectAsState()
 
     val darkTheme = when (userSettings.theme) {
         "light" -> false
@@ -262,7 +263,7 @@ fun MainScreen(
                         sessionId = sessionId,
                         searchViewModel = searchViewModel,
                         isMentorMode = isMentorMode,
-                        mentorAccessLevel = userSettings.mentorAccessLevel
+                        mentorAccessLevel = effectiveUserSettings.mentorAccessLevel
                     )
                 }
                 entry<NavRoute.Skills> {
@@ -271,7 +272,7 @@ fun MainScreen(
                         sessionId = sessionId,
                         searchViewModel = searchViewModel,
                         isMentorMode = isMentorMode,
-                        mentorAccessLevel = userSettings.mentorAccessLevel
+                        mentorAccessLevel = effectiveUserSettings.mentorAccessLevel
                     )
                 }
                 entry<NavRoute.Portfolio> {
@@ -284,7 +285,7 @@ fun MainScreen(
                         viewModel = portfolioVm,
                         searchViewModel = searchViewModel,
                         isMentorMode = isMentorMode,
-                        mentorAccessLevel = userSettings.mentorAccessLevel
+                        mentorAccessLevel = effectiveUserSettings.mentorAccessLevel
                     )
                 }
                 entry<NavRoute.Journal> {
@@ -293,7 +294,7 @@ fun MainScreen(
                         sessionId = sessionId,
                         searchViewModel = searchViewModel,
                         isMentorMode = isMentorMode,
-                        mentorAccessLevel = userSettings.mentorAccessLevel
+                        mentorAccessLevel = effectiveUserSettings.mentorAccessLevel
                     )
                 }
                 entry<NavRoute.Admin> {

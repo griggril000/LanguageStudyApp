@@ -128,7 +128,7 @@ fun SkillsScreen(
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
     val canChangeStatus =
         !isMentorMode || mentorAccessLevel == "status" || mentorAccessLevel == "full"
-    val isDragEnabled = searchQuery.isBlank() && selectedLanguage == null && !isMentorMode
+    val isDragEnabled = searchQuery.isBlank() && selectedLanguage == null && canEditContent
 
     LaunchedEffect(languageOverride) {
         if (languageOverride != null) {
