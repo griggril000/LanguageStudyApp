@@ -311,7 +311,7 @@ fun MainScreen(
                 entry<NavRoute.Settings> {
                     SettingsScreen(
                         authViewModel = authViewModel,
-                        settingsViewModel = settingsVm,
+                        settingsViewModel = effectiveSettingsVm,
                         onBack = { if (backStack.size > 1) backStack.removeLastOrNull() }
                     )
                 }
