@@ -196,7 +196,7 @@ fun SettingsScreen(
             labelProvider = {
                 when (it) {
                     "system" -> "System Default"
-                    "dynamic" -> "Dynamic (Android 12+)"
+                    "dynamic" -> "Dynamic Color"
                     else -> it.replaceFirstChar { char -> char.uppercase() }
                 }
             }
