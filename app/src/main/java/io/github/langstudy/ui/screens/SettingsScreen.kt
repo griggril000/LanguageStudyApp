@@ -83,8 +83,10 @@ import io.github.langstudy.BuildConfig
 import io.github.langstudy.navigation.NavRoute
 import io.github.langstudy.navigation.label
 import io.github.langstudy.ui.auth.AuthViewModel
+import io.github.langstudy.ui.components.AccountManagementDialog
 import io.github.langstudy.ui.components.DeleteConfirmationDialog
 import io.github.langstudy.ui.components.LanguageRequestDialog
+import io.github.langstudy.ui.components.UpdateEmailDialog
 import io.github.langstudy.ui.viewmodel.SettingsViewModel
 import io.noties.markwon.Markwon
 import kotlinx.coroutines.launch
@@ -116,6 +118,8 @@ fun SettingsScreen(
     var showStartupTabDialog by remember { mutableStateOf(false) }
     var showAccessLevelDialog by remember { mutableStateOf(false) }
     var showLanguageRequestDialog by remember { mutableStateOf(false) }
+    var showAccountOptionsDialog by remember { mutableStateOf(false) }
+    var showUpdateEmailDialog by remember { mutableStateOf(false) }
 
     var currentView by remember { mutableStateOf("main") }
 
@@ -138,6 +142,49 @@ fun SettingsScreen(
         settingsViewModel.errorMessages.collect { message ->
             snackbarHostState.showSnackbar(message)
         }
+    }
+
+    LaunchedEffect(Unit) {
+        authViewModel.error.collect { message ->
+            message?.let {
+                snackbarHostState.showSnackbar(it)
+                authViewModel.clearError()
+            }
+        }
+    }
+
+    if (showAccountOptionsDialog && currentUser != null) {
+        AccountManagementDialog(
+            email = currentUser?.email,
+            onDismiss = { showAccountOptionsDialog = false },
+            onUpdateEmailClick = {
+                showAccountOptionsDialog = false
+                showUpdateEmailDialog = true
+            },
+            onResetPasswordClick = {
+                showAccountOptionsDialog = false
+                currentUser?.email?.let { email ->
+                    authViewModel.resetPassword(email)
+                }
+            }
+        )
+    }
+
+    if (showUpdateEmailDialog) {
+        UpdateEmailDialog(
+            currentEmail = currentUser?.email,
+            onDismiss = { showUpdateEmailDialog = false },
+            onConfirm = { newEmail ->
+                authViewModel.updateEmail(newEmail) { success, message ->
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message ?: (if (success) "Verification email sent" else "Failed to update email")
+                        )
+                    }
+                    if (success) showUpdateEmailDialog = false
+                }
+            }
+        )
     }
 
     if (showDeleteDialog) {
@@ -311,7 +358,8 @@ fun SettingsScreen(
                     onShowLearningLangsDialog = { showLearningLangsDialog = true },
                     onShowStartupTabDialog = { showStartupTabDialog = true },
                     onShowAccessLevelDialog = { showAccessLevelDialog = true },
-                    onShowLanguageRequestDialog = { showLanguageRequestDialog = true }
+                    onShowLanguageRequestDialog = { showLanguageRequestDialog = true },
+                    onShowAccountOptionsDialog = { showAccountOptionsDialog = true }
                 )
 
                 "details" -> AppDetailsView(
@@ -353,7 +401,8 @@ fun SettingsMainView(
     onShowLearningLangsDialog: () -> Unit,
     onShowStartupTabDialog: () -> Unit,
     onShowAccessLevelDialog: () -> Unit,
-    onShowLanguageRequestDialog: () -> Unit
+    onShowLanguageRequestDialog: () -> Unit,
+    onShowAccountOptionsDialog: () -> Unit
 ) {
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
@@ -371,7 +420,11 @@ fun SettingsMainView(
             title = if (isMentorMode) "Mentoring Student" else "Signed in as",
             summary = if (isMentorMode) "Code: $mentorCode" else currentUser?.email ?: "Not signed in",
             icon = Icons.Default.Person,
-            onClick = {}
+            onClick = {
+                if (!isMentorMode && currentUser != null) {
+                    onShowAccountOptionsDialog()
+                }
+            }
         )
         PreferenceItem(
             title = "Sign Out",

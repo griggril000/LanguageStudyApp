@@ -62,6 +62,10 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    fun clearError() {
+        _error.value = null
+    }
+
     init {
         auth.addAuthStateListener { firebaseAuth ->
             val currentUser = firebaseAuth.currentUser
@@ -256,9 +260,39 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
             _error.value = null
             try {
                 auth.sendPasswordResetEmail(email).await()
-                _error.value = "Password reset email sent"
+                _error.value = "Password reset email sent to $email"
             } catch (e: Exception) {
                 _error.value = "Reset failed: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun updateEmail(newEmail: String, onComplete: (Boolean, String?) -> Unit) {
+        val user = auth.currentUser
+        if (user == null) {
+            onComplete(false, "No user logged in")
+            return
+        }
+
+        if (newEmail.isBlank()) {
+            onComplete(false, "Email cannot be empty")
+            return
+        }
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                user.verifyBeforeUpdateEmail(newEmail).await()
+                onComplete(true, "A verification email has been sent to $newEmail. Please verify it to complete the update.")
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Error updating email", e)
+                if (e is FirebaseAuthRecentLoginRequiredException) {
+                    onComplete(false, "For security, please sign out and sign in again, then try updating your email.")
+                } else {
+                    onComplete(false, e.message ?: "Error updating email")
+                }
             } finally {
                 _isLoading.value = false
             }
