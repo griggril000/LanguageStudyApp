@@ -48,8 +48,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.github.langstudy.R
 import io.github.langstudy.data.model.LanguageResource
 import io.github.langstudy.ui.components.AppButton
 import io.github.langstudy.ui.components.LanguageDropdown
@@ -77,8 +79,8 @@ fun AdminScreen(viewModel: AdminViewModel, onBack: () -> Unit) {
     if (showDeleteLanguageDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteLanguageDialog = false },
-            title = { Text("Delete Language") },
-            text = { Text("Are you sure you want to delete \"$selectedLanguage\" and all its resource links? This action cannot be undone.") },
+            title = { Text(stringResource(R.string.delete_language_title)) },
+            text = { Text(stringResource(R.string.delete_language_message_format, selectedLanguage)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -86,10 +88,10 @@ fun AdminScreen(viewModel: AdminViewModel, onBack: () -> Unit) {
                         showDeleteLanguageDialog = false
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Delete") }
+                ) { Text(stringResource(R.string.delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteLanguageDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteLanguageDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -97,10 +99,10 @@ fun AdminScreen(viewModel: AdminViewModel, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Admin") },
+                title = { Text(stringResource(R.string.admin)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back_cd))
                     }
                 }
             )
@@ -115,7 +117,7 @@ fun AdminScreen(viewModel: AdminViewModel, onBack: () -> Unit) {
         ) {
             item {
                 Text(
-                    text = "Language Administration",
+                    text = stringResource(R.string.language_administration),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -124,7 +126,7 @@ fun AdminScreen(viewModel: AdminViewModel, onBack: () -> Unit) {
 
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SectionHeader(title = "Manage Languages", icon = Icons.Rounded.Language)
+                    SectionHeader(title = stringResource(R.string.manage_languages), icon = Icons.Rounded.Language)
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -145,13 +147,18 @@ fun AdminScreen(viewModel: AdminViewModel, onBack: () -> Unit) {
                                 colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.error),
                                 enabled = !isLoading
                             ) {
-                                Icon(Icons.Rounded.Delete, contentDescription = "Delete Language")
+                                Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.delete_language_cd))
                             }
                         }
                     }
 
                     var newLanguageName by remember { mutableStateOf("") }
                     var languageError by remember { mutableStateOf<String?>(null) }
+
+                    val newLanguageNameLabel = stringResource(R.string.new_language_name_label)
+                    val nameEmptyError = stringResource(R.string.name_cannot_be_empty)
+                    val invalidCharsError = stringResource(R.string.invalid_characters)
+                    val addText = stringResource(R.string.add)
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -164,7 +171,7 @@ fun AdminScreen(viewModel: AdminViewModel, onBack: () -> Unit) {
                                 newLanguageName = it
                                 if (it.isNotBlank()) languageError = null
                             },
-                            label = { Text("New Language Name") },
+                            label = { Text(newLanguageNameLabel) },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true,
@@ -175,16 +182,16 @@ fun AdminScreen(viewModel: AdminViewModel, onBack: () -> Unit) {
                         AppButton(
                             onClick = {
                                 if (newLanguageName.isBlank()) {
-                                    languageError = "Name cannot be empty"
+                                    languageError = nameEmptyError
                                 } else if (newLanguageName.contains("/")) {
-                                    languageError = "Invalid characters"
+                                    languageError = invalidCharsError
                                 } else {
                                     viewModel.addLanguage(newLanguageName)
                                     newLanguageName = ""
                                     languageError = null
                                 }
                             },
-                            text = "Add",
+                            text = addText,
                             loading = isLoading
                         )
                     }
@@ -196,7 +203,7 @@ fun AdminScreen(viewModel: AdminViewModel, onBack: () -> Unit) {
             if (selectedLanguage.isNotBlank()) {
                 item {
                     SectionHeader(
-                        title = "Manage Links for $selectedLanguage",
+                        title = stringResource(R.string.manage_links_format, selectedLanguage),
                         icon = Icons.Rounded.Link
                     )
                 }
@@ -210,7 +217,7 @@ fun AdminScreen(viewModel: AdminViewModel, onBack: () -> Unit) {
 
                 item {
                     Text(
-                        "Current Links",
+                        stringResource(R.string.current_links),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 8.dp)
@@ -223,8 +230,8 @@ fun AdminScreen(viewModel: AdminViewModel, onBack: () -> Unit) {
                     if (showDeleteDialog) {
                         AlertDialog(
                             onDismissRequest = { showDeleteDialog = false },
-                            title = { Text("Delete Link") },
-                            text = { Text("Are you sure you want to delete the link \"${link.name}\"?") },
+                            title = { Text(stringResource(R.string.delete_link_title)) },
+                            text = { Text(stringResource(R.string.delete_link_message_format, link.name)) },
                             confirmButton = {
                                 TextButton(
                                     onClick = {
@@ -232,12 +239,12 @@ fun AdminScreen(viewModel: AdminViewModel, onBack: () -> Unit) {
                                         showDeleteDialog = false
                                     },
                                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                                ) { Text("Delete") }
+                                ) { Text(stringResource(R.string.delete)) }
                             },
                             dismissButton = {
                                 TextButton(onClick = {
                                     showDeleteDialog = false
-                                }) { Text("Cancel") }
+                                }) { Text(stringResource(R.string.cancel)) }
                             }
                         )
                     }
@@ -253,7 +260,7 @@ fun AdminScreen(viewModel: AdminViewModel, onBack: () -> Unit) {
                 if (links.isEmpty()) {
                     item {
                         Text(
-                            "No links added yet.",
+                            stringResource(R.string.no_links_added),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 16.dp)
@@ -269,7 +276,7 @@ fun AdminScreen(viewModel: AdminViewModel, onBack: () -> Unit) {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "Select a language to manage links",
+                            stringResource(R.string.select_lang_manage_links),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -286,6 +293,13 @@ fun AddLinkSection(onAdd: (String, String) -> Unit, isLoading: Boolean) {
     var url by remember { mutableStateOf("") }
     var nameError by remember { mutableStateOf<String?>(null) }
     var urlError by remember { mutableStateOf<String?>(null) }
+
+    val nameLabel = stringResource(R.string.resource_name_label)
+    val urlLabel = stringResource(R.string.resource_url_label)
+    val nameRequiredError = stringResource(R.string.resource_name_required)
+    val urlRequiredError = stringResource(R.string.resource_url_required)
+    val invalidUrlError = stringResource(R.string.invalid_url_format)
+    val addLinkText = stringResource(R.string.add_link)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -305,7 +319,7 @@ fun AddLinkSection(onAdd: (String, String) -> Unit, isLoading: Boolean) {
                     name = it
                     if (it.isNotBlank()) nameError = null
                 },
-                label = { Text("Resource Name") },
+                label = { Text(nameLabel) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
@@ -319,7 +333,7 @@ fun AddLinkSection(onAdd: (String, String) -> Unit, isLoading: Boolean) {
                     url = it
                     if (it.isNotBlank()) urlError = null
                 },
-                label = { Text("Resource URL") },
+                label = { Text(urlLabel) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
@@ -334,11 +348,11 @@ fun AddLinkSection(onAdd: (String, String) -> Unit, isLoading: Boolean) {
                     val isValid = formattedUrl.contains(".") && !formattedUrl.contains(" ")
 
                     if (name.isBlank()) {
-                        nameError = "Name is required"
+                        nameError = nameRequiredError
                     } else if (url.isBlank()) {
-                        urlError = "URL is required"
+                        urlError = urlRequiredError
                     } else if (!isValid) {
-                        urlError = "Invalid URL (e.g. example.com)"
+                        urlError = invalidUrlError
                     } else {
                         onAdd(name, url)
                         name = ""
@@ -347,7 +361,7 @@ fun AddLinkSection(onAdd: (String, String) -> Unit, isLoading: Boolean) {
                         urlError = null
                     }
                 },
-                text = "Add Link",
+                text = addLinkText,
                 modifier = Modifier.fillMaxWidth(),
                 loading = isLoading
             )
@@ -368,6 +382,14 @@ fun EditableLinkRow(
     var urlError by remember { mutableStateOf<String?>(null) }
     var isEditing by remember { mutableStateOf(false) }
 
+    val nameLabel = stringResource(R.string.skill_name_label)
+    val urlLabel = stringResource(R.string.url_label)
+    val cancelText = stringResource(R.string.cancel)
+    val saveText = stringResource(R.string.save)
+    val nameRequiredError = stringResource(R.string.resource_name_required)
+    val urlRequiredError = stringResource(R.string.resource_url_required)
+    val invalidUrlError = stringResource(R.string.invalid_url)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -381,7 +403,7 @@ fun EditableLinkRow(
                         name = it
                         if (it.isNotBlank()) nameError = null
                     },
-                    label = { Text("Name") },
+                    label = { Text(nameLabel) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
                     isError = nameError != null,
@@ -395,7 +417,7 @@ fun EditableLinkRow(
                         url = it
                         if (it.isNotBlank()) urlError = null
                     },
-                    label = { Text("URL") },
+                    label = { Text(urlLabel) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
                     isError = urlError != null,
@@ -415,7 +437,7 @@ fun EditableLinkRow(
                         url = link.url
                         nameError = null
                         urlError = null
-                    }, enabled = !isLoading) { Text("Cancel") }
+                    }, enabled = !isLoading) { Text(cancelText) }
                     Button(
                         onClick = {
                             val formattedUrl =
@@ -423,11 +445,11 @@ fun EditableLinkRow(
                             val isValid = formattedUrl.contains(".") && !formattedUrl.contains(" ")
 
                             if (name.isBlank()) {
-                                nameError = "Name is required"
+                                nameError = nameRequiredError
                             } else if (url.isBlank()) {
-                                urlError = "URL is required"
+                                urlError = urlRequiredError
                             } else if (!isValid) {
-                                urlError = "Invalid URL"
+                                urlError = invalidUrlError
                             } else {
                                 onSave(name, url)
                                 isEditing = false
@@ -442,7 +464,7 @@ fun EditableLinkRow(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("Save")
+                            Text(saveText)
                         }
                     }
                 }
@@ -452,7 +474,7 @@ fun EditableLinkRow(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(link.name.ifBlank { "No Name" }, fontWeight = FontWeight.Bold)
+                        Text(link.name.ifBlank { stringResource(R.string.no_name) }, fontWeight = FontWeight.Bold)
                         Text(
                             link.url,
                             style = MaterialTheme.typography.bodySmall,
@@ -461,14 +483,14 @@ fun EditableLinkRow(
                         )
                     }
                     IconButton(onClick = { isEditing = true }, enabled = !isLoading) {
-                        Icon(Icons.Rounded.Edit, contentDescription = "Edit")
+                        Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit))
                     }
                     IconButton(
                         onClick = onDelete,
                         colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         enabled = !isLoading
                     ) {
-                        Icon(Icons.Rounded.Delete, contentDescription = "Delete")
+                        Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.delete))
                     }
                 }
             }

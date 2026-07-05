@@ -16,14 +16,16 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.github.langstudy.R
 
 @Composable
 fun GlobalSearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    placeholder: String = "Search..."
+    placeholder: String = stringResource(R.string.search_placeholder)
 ) {
     Surface(
         modifier = modifier
@@ -49,7 +51,7 @@ fun GlobalSearchBar(
                     IconButton(onClick = { onQueryChange("") }) {
                         Icon(
                             Icons.Rounded.Close,
-                            contentDescription = "Clear",
+                            contentDescription = stringResource(R.string.clear_cd),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

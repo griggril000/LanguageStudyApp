@@ -73,6 +73,7 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -80,6 +81,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import io.github.langstudy.BuildConfig
+import io.github.langstudy.R
 import io.github.langstudy.navigation.NavRoute
 import io.github.langstudy.navigation.label
 import io.github.langstudy.ui.auth.AuthViewModel
@@ -171,6 +173,8 @@ fun SettingsScreen(
     }
 
     if (showUpdateEmailDialog) {
+        val verificationSent = stringResource(R.string.verification_email_sent)
+        val failedUpdate = stringResource(R.string.failed_update_email)
         UpdateEmailDialog(
             currentEmail = currentUser?.email,
             onDismiss = { showUpdateEmailDialog = false },
@@ -178,7 +182,7 @@ fun SettingsScreen(
                 authViewModel.updateEmail(newEmail) { success, message ->
                     scope.launch {
                         snackbarHostState.showSnackbar(
-                            message ?: (if (success) "Verification email sent" else "Failed to update email")
+                            message ?: (if (success) verificationSent else failedUpdate)
                         )
                     }
                     if (success) showUpdateEmailDialog = false
@@ -189,8 +193,8 @@ fun SettingsScreen(
 
     if (showDeleteDialog) {
         DeleteConfirmationDialog(
-            title = "Delete Account?",
-            message = "This will permanently delete your account and all your data (vocabulary, skills, portfolio, journal, etc.). This action cannot be undone.",
+            title = stringResource(R.string.delete_account_title),
+            message = stringResource(R.string.delete_account_message),
             onConfirm = {
                 authViewModel.deleteAccount(context) { success, message ->
                     if (!success && message != null) {
@@ -205,6 +209,10 @@ fun SettingsScreen(
     }
 
     if (showJoinDialog) {
+        val cannotMentorSelf = stringResource(R.string.cannot_mentor_yourself)
+        val invalidCode = stringResource(R.string.invalid_disabled_code)
+        val errorValidating = stringResource(R.string.error_validating_code)
+
         JoinMentorDialog(
             onDismiss = { showJoinDialog = false },
             onJoin = { code ->
@@ -213,16 +221,16 @@ fun SettingsScreen(
                         val ownerUid = settingsViewModel.validateCode(code)
                         if (ownerUid != null) {
                             if (ownerUid == currentUser?.uid) {
-                                snackbarHostState.showSnackbar("Cannot mentor yourself")
+                                snackbarHostState.showSnackbar(cannotMentorSelf)
                             } else {
                                 authViewModel.enterMentorMode(context, ownerUid, code)
                                 showJoinDialog = false
                             }
                         } else {
-                            snackbarHostState.showSnackbar("Invalid or disabled code")
+                            snackbarHostState.showSnackbar(invalidCode)
                         }
                     } catch (_: Exception) {
-                        snackbarHostState.showSnackbar("Error validating code")
+                        snackbarHostState.showSnackbar(errorValidating)
                     }
                 }
             }
@@ -238,16 +246,18 @@ fun SettingsScreen(
             }
             list
         }
+        val systemDefault = stringResource(R.string.system_default)
+        val dynamicColor = stringResource(R.string.dynamic_color)
         SelectionDialog(
-            title = "Select Theme",
+            title = stringResource(R.string.select_theme),
             options = themeOptions,
             selectedOption = userSettings.theme,
             onOptionSelected = { settingsViewModel.setTheme(it) },
             onDismiss = { showThemeDialog = false },
             labelProvider = {
                 when (it) {
-                    "system" -> "System Default"
-                    "dynamic" -> "Dynamic Color"
+                    "system" -> systemDefault
+                    "dynamic" -> dynamicColor
                     else -> it.replaceFirstChar { char -> char.uppercase() }
                 }
             }
@@ -256,7 +266,7 @@ fun SettingsScreen(
 
     if (showPrimaryLangDialog) {
         SelectionDialog(
-            title = "Primary Language",
+            title = stringResource(R.string.primary_language_title),
             options = userSettings.learnedLanguages,
             selectedOption = userSettings.languageLearning,
             onOptionSelected = { settingsViewModel.setCurrentLanguage(it) },
@@ -266,7 +276,7 @@ fun SettingsScreen(
 
     if (showLearningLangsDialog) {
         MultiSelectionDialog(
-            title = "Languages I'm Learning",
+            title = stringResource(R.string.learning_langs_title),
             options = availableLanguages,
             selectedOptions = userSettings.learnedLanguages,
             onToggleOption = { settingsViewModel.toggleLanguage(it) },
@@ -276,7 +286,7 @@ fun SettingsScreen(
 
     if (showStartupTabDialog) {
         SelectionDialog(
-            title = "Startup Tab",
+            title = stringResource(R.string.startup_tab_title),
             options = NavRoute.mainRoutes,
             selectedOption = NavRoute.mainRoutes.find { it.label.lowercase() == userSettings.homepageTab }
                 ?: NavRoute.Vocab,
@@ -287,17 +297,21 @@ fun SettingsScreen(
     }
 
     if (showAccessLevelDialog) {
+        val readOnly = stringResource(R.string.read_only)
+        val statusUpdates = stringResource(R.string.status_updates)
+        val editAll = stringResource(R.string.edit_all)
+
         SelectionDialog(
-            title = "Mentor Access Level",
+            title = stringResource(R.string.mentor_access_level_title),
             options = listOf("view", "status", "full"),
             selectedOption = userSettings.mentorAccessLevel,
             onOptionSelected = { settingsViewModel.setMentorAccessLevel(it) },
             onDismiss = { showAccessLevelDialog = false },
             labelProvider = {
                 when (it) {
-                    "view" -> "Read Only"
-                    "status" -> "Status Updates"
-                    "full" -> "Edit All"
+                    "view" -> readOnly
+                    "status" -> statusUpdates
+                    "full" -> editAll
                     else -> it.replaceFirstChar { char -> char.uppercase() }
                 }
             }
@@ -319,16 +333,16 @@ fun SettingsScreen(
                 title = {
                     Text(
                         when (currentView) {
-                            "details" -> "App Details"
-                            "notes" -> "Release Notes"
-                            "libraries" -> "Libraries Used"
-                            else -> "Settings"
+                            "details" -> stringResource(R.string.app_details)
+                            "notes" -> stringResource(R.string.release_notes)
+                            "libraries" -> stringResource(R.string.libraries_used)
+                            else -> stringResource(R.string.settings_title)
                         }
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = handleBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back_cd))
                     }
                 }
             )
@@ -415,10 +429,10 @@ fun SettingsMainView(
             .verticalScroll(scrollState)
             .padding(horizontal = 16.dp)
     ) {
-        PreferenceCategory(title = "Account")
+        PreferenceCategory(title = stringResource(R.string.pref_account))
         PreferenceItem(
-            title = if (isMentorMode) "Mentoring Student" else "Signed in as",
-            summary = if (isMentorMode) "Code: $mentorCode" else currentUser?.email ?: "Not signed in",
+            title = if (isMentorMode) stringResource(R.string.mentoring_student) else stringResource(R.string.signed_in_as),
+            summary = if (isMentorMode) stringResource(R.string.mentor_code_format, mentorCode ?: "") else currentUser?.email ?: stringResource(R.string.not_signed_in),
             icon = Icons.Default.Person,
             onClick = {
                 if (!isMentorMode && currentUser != null) {
@@ -427,13 +441,13 @@ fun SettingsMainView(
             }
         )
         PreferenceItem(
-            title = "Sign Out",
+            title = stringResource(R.string.sign_out),
             icon = Icons.AutoMirrored.Filled.Logout,
             onClick = { authViewModel.signOut(context) }
         )
         if (currentUser != null && !isMentorMode) {
             PreferenceItem(
-                title = "Delete Account",
+                title = stringResource(R.string.delete_account),
                 icon = Icons.Default.DeleteForever,
                 onClick = onShowDeleteDialog,
                 isError = true
@@ -454,19 +468,21 @@ fun SettingsMainView(
                     .padding(12.dp)
             ) {
                 Text(
-                    text = "You are currently viewing a student's data. Most settings are read-only to preserve their preferences.",
+                    text = stringResource(R.string.mentor_view_info),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
         }
 
-        PreferenceCategory(title = "Display")
+        PreferenceCategory(title = stringResource(R.string.pref_display))
+        val systemDefault = stringResource(R.string.system_default)
+        val dynamicColor = stringResource(R.string.dynamic_color)
         PreferenceItem(
-            title = "Theme",
+            title = stringResource(R.string.pref_theme),
             summary = when (userSettings.theme) {
-                "system" -> "System Default"
-                "dynamic" -> "Dynamic Color"
+                "system" -> systemDefault
+                "dynamic" -> dynamicColor
                 else -> userSettings.theme.replaceFirstChar { it.uppercase() }
             },
             icon = Icons.Default.Palette,
@@ -475,31 +491,31 @@ fun SettingsMainView(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
 
-        PreferenceCategory(title = "Learning")
+        PreferenceCategory(title = stringResource(R.string.pref_learning))
         PreferenceItem(
-            title = "Primary Language",
-            summary = userSettings.languageLearning.ifBlank { "None" },
+            title = stringResource(R.string.pref_primary_lang),
+            summary = userSettings.languageLearning.ifBlank { stringResource(R.string.none) },
             icon = Icons.Default.Done,
             onClick = if (isMentorMode) ({}) else onShowPrimaryLangDialog
         )
         PreferenceItem(
-            title = "Languages I'm Learning",
-            summary = if (userSettings.learnedLanguages.isEmpty()) "None" else userSettings.learnedLanguages.joinToString(
+            title = stringResource(R.string.pref_learning_langs),
+            summary = if (userSettings.learnedLanguages.isEmpty()) stringResource(R.string.none) else userSettings.learnedLanguages.joinToString(
                 ", "
             ),
             icon = Icons.Default.Language,
             onClick = if (isMentorMode) ({}) else onShowLearningLangsDialog
         )
         PreferenceItem(
-            title = "Startup Tab",
+            title = stringResource(R.string.pref_startup_tab),
             summary = userSettings.homepageTab.replaceFirstChar { it.uppercase() },
             icon = Icons.Rounded.Home,
             onClick = if (isMentorMode) ({}) else onShowStartupTabDialog
         )
         if (!isMentorMode) {
             PreferenceItem(
-                title = "Request a Language",
-                summary = "Don't see the language you are studying? Let us know.",
+                title = stringResource(R.string.pref_request_lang),
+                summary = stringResource(R.string.pref_request_lang_summary),
                 icon = Icons.Default.Language,
                 onClick = onShowLanguageRequestDialog
             )
@@ -507,10 +523,10 @@ fun SettingsMainView(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
 
-        PreferenceCategory(title = "Mentor Access")
+        PreferenceCategory(title = stringResource(R.string.pref_mentor_access))
         SwitchPreference(
-            title = "Enable Mentor View",
-            summary = if (isMentorMode) "Status of student's mentor code." else "Allow someone with your code to view your progress.",
+            title = stringResource(R.string.enable_mentor_view),
+            summary = if (isMentorMode) stringResource(R.string.enable_mentor_view_mentor_summary) else stringResource(R.string.enable_mentor_view_summary),
             icon = Icons.Default.SupervisorAccount,
             checked = userSettings.mentorCodeEnabled,
             onCheckedChange = { settingsViewModel.toggleMentorCode(it) },
@@ -518,9 +534,11 @@ fun SettingsMainView(
         )
 
         if (userSettings.mentorCodeEnabled || isMentorMode) {
+            val generating = stringResource(R.string.generating)
+            val mentorCodeText = stringResource(R.string.mentor_code_cd)
             PreferenceItem(
-                title = if (isMentorMode) "Student Share Code" else "Mentor Share Code",
-                summary = mentorCode ?: "Generating...",
+                title = if (isMentorMode) stringResource(R.string.student_share_code) else stringResource(R.string.mentor_share_code),
+                summary = mentorCode ?: generating,
                 icon = Icons.Rounded.Refresh,
                 onClick = {
                     mentorCode?.let { code ->
@@ -528,7 +546,7 @@ fun SettingsMainView(
                             clipboard.setClipEntry(
                                 ClipEntry(
                                     ClipData.newPlainText(
-                                        "Mentor Code",
+                                        mentorCodeText,
                                         code
                                     )
                                 )
@@ -541,19 +559,22 @@ fun SettingsMainView(
                         IconButton(onClick = { settingsViewModel.regenerateMentorCode() }) {
                             Icon(
                                 Icons.Rounded.Refresh,
-                                contentDescription = "Regenerate",
+                                contentDescription = stringResource(R.string.regenerate_cd),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
                     }
                 }
             )
+            val readOnly = stringResource(R.string.read_only)
+            val statusUpdates = stringResource(R.string.status_updates)
+            val editAll = stringResource(R.string.edit_all)
             PreferenceItem(
-                title = if (isMentorMode) "Student Access Level" else "Mentor Access Level",
+                title = if (isMentorMode) stringResource(R.string.student_access_level) else stringResource(R.string.mentor_access_level),
                 summary = when (userSettings.mentorAccessLevel) {
-                    "view" -> "Read Only"
-                    "status" -> "Status Updates"
-                    "full" -> "Edit All"
+                    "view" -> readOnly
+                    "status" -> statusUpdates
+                    "full" -> editAll
                     else -> userSettings.mentorAccessLevel.replaceFirstChar { it.uppercase() }
                 },
                 icon = Icons.Default.SupervisorAccount,
@@ -563,23 +584,23 @@ fun SettingsMainView(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
 
-        PreferenceCategory(title = "Mentoring")
+        PreferenceCategory(title = stringResource(R.string.pref_mentoring))
         if (isMentorMode) {
             PreferenceItem(
-                title = "Currently Mentoring",
-                summary = "You are viewing another user's progress. Click to exit.",
+                title = stringResource(R.string.currently_mentoring),
+                summary = stringResource(R.string.currently_mentoring_summary),
                 icon = Icons.Default.School,
                 onClick = { authViewModel.exitMentorMode(context) },
                 trailing = {
                     TextButton(onClick = { authViewModel.exitMentorMode(context) }) {
-                        Text("Exit")
+                        Text(stringResource(R.string.exit))
                     }
                 }
             )
         } else {
             PreferenceItem(
-                title = "Mentor a Student",
-                summary = "Enter a share code to view their progress.",
+                title = stringResource(R.string.mentor_student_title),
+                summary = stringResource(R.string.mentor_a_student_summary),
                 icon = Icons.Default.School,
                 onClick = onShowJoinDialog
             )
@@ -587,19 +608,19 @@ fun SettingsMainView(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
 
-        PreferenceCategory(title = "Additional Info")
+        PreferenceCategory(title = stringResource(R.string.pref_additional_info))
         PreferenceItem(
-            title = "App Details",
-            summary = "Version ${BuildConfig.VERSION_NAME}",
+            title = stringResource(R.string.app_details),
+            summary = stringResource(R.string.app_details_version_format, BuildConfig.VERSION_NAME),
             onClick = onNavigateToDetails
         )
         PreferenceItem(
-            title = "Libraries Used",
+            title = stringResource(R.string.libraries_used),
             onClick = onNavigateToLibraries
         )
         PreferenceItem(
-            title = "Credits",
-            summary = "Globe icons by Techno Icons - Flaticon",
+            title = stringResource(R.string.credits),
+            summary = stringResource(R.string.credits_summary),
             onClick = { uriHandler.openUri("https://www.flaticon.com/free-icons/globe") }
         )
 
@@ -626,28 +647,28 @@ fun AppDetailsView(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        DetailItem(label = "Language Study Version", value = BuildConfig.VERSION_NAME)
+        DetailItem(label = stringResource(R.string.lang_study_version_label), value = BuildConfig.VERSION_NAME)
         PreferenceItem(
-            title = "Release Notes",
-            summary = "See what's new in this version",
+            title = stringResource(R.string.release_notes),
+            summary = stringResource(R.string.release_notes_summary),
             onClick = onNavigateToNotes
         )
-        DetailItem(label = "Android Version", value = android.os.Build.VERSION.RELEASE)
+        DetailItem(label = stringResource(R.string.android_version_label), value = android.os.Build.VERSION.RELEASE)
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
 
         if (!isMentorMode) {
             Text(
-                text = "Personal Data",
+                text = stringResource(R.string.personal_data),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
 
-            DetailItem(label = "Vocabulary items", value = vocabCount.toString())
-            DetailItem(label = "Skills tracked", value = skillCount.toString())
-            DetailItem(label = "Portfolio entries", value = portfolioCount.toString())
-            DetailItem(label = "Journal entries", value = journalCount.toString())
+            DetailItem(label = stringResource(R.string.vocab_items_label), value = vocabCount.toString())
+            DetailItem(label = stringResource(R.string.skills_tracked_label), value = skillCount.toString())
+            DetailItem(label = stringResource(R.string.portfolio_entries_label), value = portfolioCount.toString())
+            DetailItem(label = stringResource(R.string.journal_entries_label), value = journalCount.toString())
         }
     }
 }
@@ -678,7 +699,7 @@ fun ReleaseNotesView(
                 if (releaseNotes.isEmpty()) {
                     CircularProgressIndicator()
                 } else {
-                    Text("No release notes found for this version.")
+                    Text(stringResource(R.string.no_release_notes))
                 }
             }
         } else {
@@ -811,14 +832,14 @@ fun JoinMentorDialog(
     var code by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Mentor a Student") },
+        title = { Text(stringResource(R.string.mentor_student_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Enter the 5-character share code from the student's app.")
+                Text(stringResource(R.string.enter_share_code))
                 OutlinedTextField(
                     value = code,
                     onValueChange = { if (it.length <= 5) code = it.uppercase() },
-                    label = { Text("Share Code") },
+                    label = { Text(stringResource(R.string.share_code_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true
@@ -831,12 +852,12 @@ fun JoinMentorDialog(
                 enabled = code.length == 5,
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Join")
+                Text(stringResource(R.string.join))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -882,7 +903,7 @@ fun <T> SelectionDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }
@@ -924,7 +945,7 @@ fun MultiSelectionDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss) { Text("Done") }
+            Button(onClick = onDismiss) { Text(stringResource(R.string.done)) }
         }
     )
 }

@@ -17,11 +17,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import io.github.langstudy.R
 
 @Composable
 fun AccountManagementDialog(
@@ -32,10 +34,10 @@ fun AccountManagementDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Account Management") },
+        title = { Text(stringResource(R.string.account_management)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Manage your account settings for $email")
+                Text(stringResource(R.string.manage_account_format, email ?: ""))
             }
         },
         confirmButton = {
@@ -48,20 +50,20 @@ fun AccountManagementDialog(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Update Email Address")
+                    Text(stringResource(R.string.update_email))
                 }
                 Button(
                     onClick = onResetPasswordClick,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Reset Password")
+                    Text(stringResource(R.string.reset_password))
                 }
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         }
@@ -77,14 +79,14 @@ fun UpdateEmailDialog(
     var newEmail by remember { mutableStateOf(currentEmail ?: "") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Update Email Address") },
+        title = { Text(stringResource(R.string.update_email)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Enter your new email address. A verification link will be sent.")
+                Text(stringResource(R.string.update_email_info))
                 OutlinedTextField(
                     value = newEmail,
                     onValueChange = { newEmail = it },
-                    label = { Text("New Email") },
+                    label = { Text(stringResource(R.string.new_email)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .semantics { contentType = ContentType.EmailAddress },
@@ -102,12 +104,12 @@ fun UpdateEmailDialog(
                 onClick = { onConfirm(newEmail) },
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Send Verification")
+                Text(stringResource(R.string.send_verification))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

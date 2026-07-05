@@ -62,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -364,14 +365,14 @@ fun MainScreen(
                         title = {
                             Column {
                                 Text(
-                                    if (isMentorMode) "Mentor View" else "Language Study",
+                                    if (isMentorMode) stringResource(R.string.mentor_view) else stringResource(R.string.app_name),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
                                 if (isMentorMode) {
                                     val mentorCode by authViewModel.mentorCode.collectAsState()
                                     Text(
-                                        "Code: $mentorCode",
+                                        stringResource(R.string.mentor_code_format, mentorCode ?: ""),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -384,7 +385,7 @@ fun MainScreen(
                                     authViewModel.exitMentorMode(context)
                                     searchViewModel.setSelectedLanguage(null)
                                 }) {
-                                    Text("Exit")
+                                    Text(stringResource(R.string.exit))
                                 }
                             }
 
@@ -398,7 +399,7 @@ fun MainScreen(
                                 Box {
                                     TextButton(onClick = { showLangMenu = true }) {
                                         Text(
-                                            displayLanguage.ifBlank { "Select Lang" },
+                                            displayLanguage.ifBlank { stringResource(R.string.select_lang) },
                                             color = MaterialTheme.colorScheme.primary,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -429,7 +430,7 @@ fun MainScreen(
                                 IconButton(onClick = { showMenu = true }) {
                                     Icon(
                                         Icons.Rounded.MoreVert,
-                                        contentDescription = "More options"
+                                        contentDescription = stringResource(R.string.more_options_cd)
                                     )
                                 }
                                 DropdownMenu(
@@ -437,7 +438,7 @@ fun MainScreen(
                                     onDismissRequest = { showMenu = false }
                                 ) {
                                     DropdownMenuItem(
-                                        text = { Text("Study Resources") },
+                                        text = { Text(stringResource(R.string.study_resources)) },
                                         onClick = {
                                             showMenu = false
                                             showResources = true
@@ -452,7 +453,7 @@ fun MainScreen(
                                     )
                                     if (isAdmin) {
                                         DropdownMenuItem(
-                                            text = { Text("Admin") },
+                                            text = { Text(stringResource(R.string.admin)) },
                                             onClick = {
                                                 showMenu = false
                                                 if (backStack.lastOrNull() != NavRoute.Admin) {
@@ -469,7 +470,7 @@ fun MainScreen(
                                         )
                                     }
                                     DropdownMenuItem(
-                                        text = { Text("Settings") },
+                                        text = { Text(stringResource(R.string.settings)) },
                                         onClick = {
                                             showMenu = false
                                             if (backStack.lastOrNull() != NavRoute.Settings) {
@@ -586,7 +587,7 @@ fun LanguageResourcesDialog(
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary
                 )
-                Text("Study Resources")
+                Text(stringResource(R.string.study_resources))
             }
         },
         text = {
@@ -604,7 +605,7 @@ fun LanguageResourcesDialog(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                resourceLanguage.ifBlank { "Select Language" },
+                                resourceLanguage.ifBlank { stringResource(R.string.select_lang) },
                                 fontWeight = FontWeight.Bold
                             )
                             Icon(Icons.Rounded.ArrowDropDown, contentDescription = null)
@@ -631,7 +632,7 @@ fun LanguageResourcesDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "No resources found for $resourceLanguage",
+                            stringResource(R.string.no_resources_found_format, resourceLanguage),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -672,7 +673,7 @@ fun LanguageResourcesDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
         }
     )
 }

@@ -61,11 +61,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.langstudy.LanguageStudyApplication
+import io.github.langstudy.R
 import io.github.langstudy.data.local.entity.VocabEntity
 import io.github.langstudy.ui.components.SoundCloudPlayer
 import io.github.langstudy.ui.components.YouTubePlayer
@@ -106,7 +108,7 @@ fun FlashcardScreen(
     if (reviewList.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (allVocab.isEmpty()) {
-                Text("No vocabulary found to review.")
+                Text(stringResource(R.string.no_vocab_found_review))
             } else {
                 CircularProgressIndicator()
             }
@@ -119,10 +121,10 @@ fun FlashcardScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Review Mode", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.review_mode), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onClose) {
-                        Icon(Icons.Rounded.Close, contentDescription = "Close")
+                        Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.close))
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -157,7 +159,7 @@ fun FlashcardScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Card ${currentIndex + 1} of ${reviewList.size}",
+                    text = stringResource(R.string.card_step_format, currentIndex + 1, reviewList.size),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -247,7 +249,7 @@ fun FlashcardScreen(
                 ) {
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Prev")
+                    Text(stringResource(R.string.prev))
                 }
 
                 Button(
@@ -261,7 +263,7 @@ fun FlashcardScreen(
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
                 ) {
-                    Text(if (currentIndex < reviewList.size - 1) "Next" else "Finish")
+                    Text(if (currentIndex < reviewList.size - 1) stringResource(R.string.next) else stringResource(R.string.finish))
                     Spacer(Modifier.width(8.dp))
                     Icon(
                         if (currentIndex < reviewList.size - 1) Icons.AutoMirrored.Rounded.ArrowForward else Icons.Rounded.Check,
@@ -323,7 +325,7 @@ fun Flashcard(
                         )
                         Spacer(Modifier.height(24.dp))
                         Text(
-                            text = "Tap to flip",
+                            text = stringResource(R.string.tap_to_flip),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                             fontWeight = FontWeight.Medium
@@ -357,7 +359,7 @@ fun Flashcard(
                                     )
                                     Spacer(Modifier.width(4.dp))
                                     Text(
-                                        "MASTERED",
+                                        stringResource(R.string.mastered),
                                         color = Color(0xFF2E7D32),
                                         style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.Bold
@@ -383,7 +385,7 @@ fun Flashcard(
                             )
                         } else if (youtubeId == null && !isSoundCloud) {
                             Text(
-                                text = "(no translation)",
+                                text = stringResource(R.string.no_translation),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
@@ -411,7 +413,7 @@ fun Flashcard(
 
                         Spacer(Modifier.height(24.dp))
                         Text(
-                            text = "Tap to see word",
+                            text = stringResource(R.string.tap_to_see_word),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                         )
@@ -428,11 +430,12 @@ fun StatusButton(
     isActive: Boolean,
     onClick: () -> Unit
 ) {
-    val (color, label) = when (status) {
-        "PROFICIENT" -> Color(0xFF2E7D32) to "Mastered"
-        "IN_PROGRESS" -> MaterialTheme.colorScheme.primary to "Learning"
-        else -> MaterialTheme.colorScheme.outline to "Not Started"
+    val (color, labelRes) = when (status) {
+        "PROFICIENT" -> Color(0xFF2E7D32) to R.string.mastered_label
+        "IN_PROGRESS" -> MaterialTheme.colorScheme.primary to R.string.learning_label
+        else -> MaterialTheme.colorScheme.outline to R.string.not_started_label
     }
+    val label = stringResource(labelRes)
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -493,7 +496,7 @@ fun ReviewSessionStats(
         Spacer(Modifier.height(24.dp))
 
         Text(
-            text = "Session Complete!",
+            text = stringResource(R.string.session_complete),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
@@ -501,7 +504,7 @@ fun ReviewSessionStats(
         Spacer(Modifier.height(8.dp))
 
         Text(
-            text = "You reviewed ${stats.totalReviewed} words in this session.",
+            text = stringResource(R.string.session_reviewed_format, stats.totalReviewed),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -518,17 +521,17 @@ fun ReviewSessionStats(
             )
         ) {
             Column(Modifier.padding(16.dp)) {
-                StatRow("Mastered", stats.proficientCount, Color(0xFF2E7D32))
+                StatRow(stringResource(R.string.mastered_label), stats.proficientCount, Color(0xFF2E7D32))
                 HorizontalDivider(
                     Modifier.padding(vertical = 8.dp),
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
-                StatRow("Learning", stats.inProgressCount, MaterialTheme.colorScheme.primary)
+                StatRow(stringResource(R.string.learning_label), stats.inProgressCount, MaterialTheme.colorScheme.primary)
                 HorizontalDivider(
                     Modifier.padding(vertical = 8.dp),
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
-                StatRow("Not Started", stats.notStartedCount, MaterialTheme.colorScheme.outline)
+                StatRow(stringResource(R.string.not_started_label), stats.notStartedCount, MaterialTheme.colorScheme.outline)
             }
         }
 
@@ -540,7 +543,7 @@ fun ReviewSessionStats(
             shape = RoundedCornerShape(12.dp),
             contentPadding = PaddingValues(16.dp)
         ) {
-            Text("Back to Vocabulary", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.back_to_vocab), fontWeight = FontWeight.Bold)
         }
     }
 }

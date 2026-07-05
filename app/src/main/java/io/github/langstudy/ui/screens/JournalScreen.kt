@@ -47,10 +47,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.langstudy.LanguageStudyApplication
+import io.github.langstudy.R
 import io.github.langstudy.data.local.entity.JournalEntryEntity
 import io.github.langstudy.ui.components.AppButton
 import io.github.langstudy.ui.components.AppFAB
@@ -149,7 +151,7 @@ fun JournalScreen(
                 AppFAB(
                     onClick = { showSheet = true },
                     icon = Icons.Rounded.EditNote,
-                    contentDescription = "New Entry"
+                    contentDescription = stringResource(R.string.new_entry_cd)
                 )
             }
         }
@@ -167,7 +169,7 @@ fun JournalScreen(
                         .padding(bottom = 32.dp)
                 ) {
                     Text(
-                        if (editingEntry == null) "New Journal Entry" else "Edit Journal Entry",
+                        if (editingEntry == null) stringResource(R.string.new_journal_entry) else stringResource(R.string.edit_journal_entry),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -183,7 +185,7 @@ fun JournalScreen(
                     OutlinedTextField(
                         value = title,
                         onValueChange = { title = it },
-                        label = { Text("Title") },
+                        label = { Text(stringResource(R.string.title_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
@@ -191,7 +193,7 @@ fun JournalScreen(
                     OutlinedTextField(
                         value = contentText,
                         onValueChange = { contentText = it },
-                        label = { Text("Content") },
+                        label = { Text(stringResource(R.string.content_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         minLines = 5
@@ -201,7 +203,7 @@ fun JournalScreen(
                         selectedLanguage = language,
                         onLanguageSelected = { language = it },
                         availableLanguages = learnedLanguages,
-                        label = "Language (optional)",
+                        label = stringResource(R.string.language_optional),
                         includeNone = true
                     )
                     Spacer(Modifier.height(24.dp))
@@ -212,7 +214,7 @@ fun JournalScreen(
                                 showSheet = false
                             }
                         },
-                        text = "Save Entry",
+                        text = stringResource(R.string.save_entry),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -227,13 +229,13 @@ fun JournalScreen(
             GlobalSearchBar(
                 query = searchQuery,
                 onQueryChange = { searchViewModel.setQuery(it) },
-                placeholder = "Search journal..."
+                placeholder = stringResource(R.string.search_journal)
             )
 
             Column(modifier = Modifier.padding(16.dp)) {
                 if (allEntries.isEmpty()) {
                     val emptyMessage =
-                        if (isMentorMode) "This student's journal is empty." else "Your journal is empty. Tap the icon to write your first entry!"
+                        if (isMentorMode) stringResource(R.string.no_journal_mentor) else stringResource(R.string.no_journal_user)
                     EmptyState(message = emptyMessage)
                 } else if (entries.isEmpty() && searchQuery.isNotEmpty()) {
                     NoResultsState(query = searchQuery)
@@ -276,8 +278,8 @@ fun JournalItem(
         DeleteConfirmationDialog(
             onConfirm = onDelete,
             onDismiss = { showDeleteConfirm = false },
-            title = "Delete Journal Entry",
-            message = "Are you sure you want to delete \"${entry.title}\"?"
+            title = stringResource(R.string.delete_journal_entry_title),
+            message = stringResource(R.string.delete_journal_entry_message_format, entry.title)
         )
     }
 
@@ -301,7 +303,7 @@ fun JournalItem(
                 if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
                     Icon(
                         Icons.Rounded.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = stringResource(R.string.delete),
                         modifier = Modifier.padding(end = 24.dp),
                         tint = MaterialTheme.colorScheme.onErrorContainer
                     )

@@ -61,10 +61,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.langstudy.LanguageStudyApplication
+import io.github.langstudy.R
 import io.github.langstudy.data.local.entity.VocabEntity
 import io.github.langstudy.ui.components.AppButton
 import io.github.langstudy.ui.components.AppFAB
@@ -155,12 +157,12 @@ fun VocabScreen(
     if (isAddingNewCategory) {
         AlertDialog(
             onDismissRequest = { isAddingNewCategory = false },
-            title = { Text("New Category") },
+            title = { Text(stringResource(R.string.new_category)) },
             text = {
                 OutlinedTextField(
                     value = newCategoryName,
                     onValueChange = { newCategoryName = it },
-                    label = { Text("Category Name") },
+                    label = { Text(stringResource(R.string.category_name_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -176,10 +178,10 @@ fun VocabScreen(
                             isAddingNewCategory = false
                         }
                     }
-                ) { Text("Add") }
+                ) { Text(stringResource(R.string.add)) }
             },
             dismissButton = {
-                TextButton(onClick = { isAddingNewCategory = false }) { Text("Cancel") }
+                TextButton(onClick = { isAddingNewCategory = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -202,8 +204,8 @@ fun VocabScreen(
                 showDeleteCategoryConfirm = false
             },
             onDismiss = { showDeleteCategoryConfirm = false },
-            title = "Delete Category",
-            message = "Are you sure you want to delete \"$selectedCategory\"? All vocabulary in this category will be deleted."
+            title = stringResource(R.string.delete_category_title),
+            message = stringResource(R.string.delete_category_message_format, selectedCategory!!)
         )
     }
 
@@ -216,7 +218,7 @@ fun VocabScreen(
                 AppFAB(
                     onClick = { showAddSheet = true },
                     icon = Icons.Rounded.Add,
-                    contentDescription = "Add Vocabulary"
+                    contentDescription = stringResource(R.string.add_vocabulary_cd)
                 )
             }
         }
@@ -234,7 +236,7 @@ fun VocabScreen(
                         .padding(bottom = 32.dp)
                 ) {
                     Text(
-                        "Add Vocabulary",
+                        stringResource(R.string.add_vocabulary_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -250,7 +252,7 @@ fun VocabScreen(
                     OutlinedTextField(
                         value = word,
                         onValueChange = { word = it },
-                        label = { Text("Word") },
+                        label = { Text(stringResource(R.string.word_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
@@ -258,7 +260,7 @@ fun VocabScreen(
                     OutlinedTextField(
                         value = translation,
                         onValueChange = { translation = it },
-                        label = { Text("Translation") },
+                        label = { Text(stringResource(R.string.translation_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
@@ -272,7 +274,7 @@ fun VocabScreen(
                             value = category,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Category") },
+                            label = { Text(stringResource(R.string.category_label)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
                             modifier = Modifier
                                 .menuAnchor(MenuAnchorType.PrimaryNotEditable)
@@ -295,7 +297,7 @@ fun VocabScreen(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        "+ New Category",
+                                        stringResource(R.string.new_category_plus),
                                         color = MaterialTheme.colorScheme.primary,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -323,7 +325,7 @@ fun VocabScreen(
                                 showAddSheet = false
                             }
                         },
-                        text = "Add to List",
+                        text = stringResource(R.string.add_to_list),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -338,7 +340,7 @@ fun VocabScreen(
             GlobalSearchBar(
                 query = searchQuery,
                 onQueryChange = { searchViewModel.setQuery(it) },
-                placeholder = "Search vocabulary..."
+                placeholder = stringResource(R.string.search_vocab)
             )
 
             if (categories.isNotEmpty()) {
@@ -359,7 +361,7 @@ fun VocabScreen(
                         FilterChip(
                             selected = selectedCategory == null,
                             onClick = { viewModel.setSelectedCategory(null) },
-                            label = { Text("All") },
+                            label = { Text(stringResource(R.string.all)) },
                             modifier = Modifier.padding(horizontal = 4.dp)
                         )
                         categories.forEach { cat ->
@@ -385,7 +387,7 @@ fun VocabScreen(
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
-                                "Flashcards",
+                                stringResource(R.string.flashcards),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -398,7 +400,7 @@ fun VocabScreen(
                         ) {
                             Icon(
                                 Icons.Rounded.Delete,
-                                contentDescription = "Delete Category",
+                                contentDescription = stringResource(R.string.delete_category_cd),
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
@@ -409,7 +411,7 @@ fun VocabScreen(
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 if (allVocab.isNotEmpty()) {
                     Text(
-                        text = "${allVocab.size} total words | ${vocabList.size} showing",
+                        text = stringResource(R.string.total_showing_vocab_format, allVocab.size, vocabList.size),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 8.dp)
@@ -423,24 +425,24 @@ fun VocabScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         val emptyMessage =
-                            if (isMentorMode) "This student hasn't added any vocabulary yet." else "Your vocabulary list is empty. Tap + to add words!"
+                            if (isMentorMode) stringResource(R.string.no_vocab_mentor) else stringResource(R.string.no_vocab_user)
                         EmptyState(message = emptyMessage)
                         if (!isMentorMode) {
                             Spacer(Modifier.height(16.dp))
                             TextButton(onClick = { viewModel.seedSampleData() }) {
-                                Text("Seed Sample Data")
+                                Text(stringResource(R.string.seed_sample_data))
                             }
                         }
                     }
                 } else if (vocabList.isEmpty()) {
                     val currentLang = languageOverride ?: currentLanguage
                     val message = if (searchQuery.isNotEmpty()) {
-                        "No results for \"$searchQuery\""
+                        stringResource(R.string.no_results_format, searchQuery)
                     } else if (currentLang.isNotBlank()) {
-                        if (isMentorMode) "This student hasn't added any vocabulary for $currentLang yet."
-                        else "You haven't added any vocabulary for $currentLang yet."
+                        if (isMentorMode) stringResource(R.string.no_vocab_lang_mentor_format, currentLang)
+                        else stringResource(R.string.no_vocab_lang_user_format, currentLang)
                     } else {
-                        "No items found for the current filters."
+                        stringResource(R.string.no_vocab_filters)
                     }
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         EmptyState(message = message)
@@ -500,13 +502,13 @@ fun VocabItem(
     if (showEditDialog) {
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
-            title = { Text("Edit Vocabulary") },
+            title = { Text(stringResource(R.string.edit_vocabulary)) },
             text = {
                 Column {
                     OutlinedTextField(
                         value = editWord,
                         onValueChange = { editWord = it },
-                        label = { Text("Word") },
+                        label = { Text(stringResource(R.string.word_label)) },
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -514,7 +516,7 @@ fun VocabItem(
                     OutlinedTextField(
                         value = editTranslation,
                         onValueChange = { editTranslation = it },
-                        label = { Text("Translation") },
+                        label = { Text(stringResource(R.string.translation_label)) },
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -530,10 +532,10 @@ fun VocabItem(
                 TextButton(onClick = {
                     onEdit(editWord, editTranslation, editCategory, editLanguage)
                     showEditDialog = false
-                }) { Text("Save") }
+                }) { Text(stringResource(R.string.save)) }
             },
             dismissButton = {
-                TextButton(onClick = { showEditDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showEditDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -554,8 +556,8 @@ fun VocabItem(
                 showDeleteConfirm = false
                 // Reset swipe state if canceled
             },
-            title = "Delete Word",
-            message = "Delete \"${vocab.word}\" from your vocabulary list?"
+            title = stringResource(R.string.delete_word_title),
+            message = stringResource(R.string.delete_word_message_format, vocab.word)
         )
     }
 
@@ -579,7 +581,7 @@ fun VocabItem(
                 if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
                     Icon(
                         Icons.Rounded.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = stringResource(R.string.delete),
                         modifier = Modifier.padding(end = 24.dp),
                         tint = MaterialTheme.colorScheme.onErrorContainer
                     )

@@ -24,8 +24,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.github.langstudy.R
 
 @Composable
 fun ProgressStatusLegend() {
@@ -40,7 +42,7 @@ fun ProgressStatusLegend() {
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
-                "Progress Status Legend:",
+                stringResource(R.string.progress_status_legend),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -52,10 +54,10 @@ fun ProgressStatusLegend() {
                 LegendItem(
                     Icons.Rounded.RadioButtonUnchecked,
                     MaterialTheme.colorScheme.outline,
-                    "Not Started"
+                    stringResource(R.string.not_started_label)
                 )
-                LegendItem(Icons.Rounded.Schedule, MaterialTheme.colorScheme.primary, "In Progress")
-                LegendItem(Icons.Rounded.CheckCircle, Color(0xFF2E7D32), "Proficient")
+                LegendItem(Icons.Rounded.Schedule, MaterialTheme.colorScheme.primary, stringResource(R.string.in_progress_label))
+                LegendItem(Icons.Rounded.CheckCircle, Color(0xFF2E7D32), stringResource(R.string.proficient_label))
             }
         }
     }
