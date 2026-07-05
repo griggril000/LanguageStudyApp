@@ -75,12 +75,14 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.langstudy.LanguageStudyApplication
+import io.github.langstudy.R
 import io.github.langstudy.data.local.entity.SkillEntity
 import io.github.langstudy.data.local.entity.Subtask
 import io.github.langstudy.ui.components.AppButton
@@ -196,7 +198,7 @@ fun SkillsScreen(
                 AppFAB(
                     onClick = { showAddSheet = true },
                     icon = Icons.Rounded.Add,
-                    contentDescription = "Add Skill"
+                    contentDescription = stringResource(R.string.add_skill_cd)
                 )
             }
         }
@@ -216,7 +218,7 @@ fun SkillsScreen(
                         .padding(bottom = 32.dp)
                 ) {
                     Text(
-                        "Add New Skills",
+                        stringResource(R.string.add_new_skills),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -232,7 +234,7 @@ fun SkillsScreen(
                     OutlinedTextField(
                         value = skillName,
                         onValueChange = { skillName = it },
-                        label = { Text("Skill Names (one per line)") },
+                        label = { Text(stringResource(R.string.skill_names_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         minLines = 3
@@ -242,7 +244,7 @@ fun SkillsScreen(
                         selectedLanguage = skillLanguage,
                         onLanguageSelected = { skillLanguage = it },
                         availableLanguages = learnedLanguages,
-                        label = "Language (optional)",
+                        label = stringResource(R.string.language_optional),
                         includeNone = true
                     )
                     Spacer(Modifier.height(24.dp))
@@ -254,7 +256,7 @@ fun SkillsScreen(
                                 showAddSheet = false
                             }
                         },
-                        text = "Add Skills",
+                        text = stringResource(R.string.add_skills),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -269,7 +271,7 @@ fun SkillsScreen(
             GlobalSearchBar(
                 query = searchQuery,
                 onQueryChange = { searchViewModel.setQuery(it) },
-                placeholder = "Search skills..."
+                placeholder = stringResource(R.string.search_skills)
             )
 
             if (availableLanguages.isNotEmpty()) {
@@ -285,7 +287,7 @@ fun SkillsScreen(
                     FilterChip(
                         selected = selectedLanguage == null,
                         onClick = { viewModel.setSelectedLanguage(null) },
-                        label = { Text("All") },
+                        label = { Text(stringResource(R.string.all)) },
                         modifier = Modifier.padding(horizontal = 4.dp)
                     )
                     availableLanguages.forEach { lang ->
@@ -309,7 +311,7 @@ fun SkillsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "${allSkills.size} total skills | ${skillsList.size} showing",
+                            text = stringResource(R.string.total_showing_skills_format, allSkills.size, skillsList.size),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -327,7 +329,7 @@ fun SkillsScreen(
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
-                                    if (isReorderMode) "Done Sorting" else "Reorder",
+                                    if (isReorderMode) stringResource(R.string.done_sorting) else stringResource(R.string.reorder),
                                     style = MaterialTheme.typography.labelMedium
                                 )
                             }
@@ -337,17 +339,17 @@ fun SkillsScreen(
 
                 if (allSkills.isEmpty()) {
                     val emptyMessage =
-                        if (isMentorMode) "This student hasn't tracked any skills yet." else "No skills tracked yet. Tap + to add one!"
+                        if (isMentorMode) stringResource(R.string.no_skills_mentor) else stringResource(R.string.no_skills_user)
                     EmptyState(message = emptyMessage)
                 } else if (skillsList.isEmpty()) {
                     val currentLang = languageOverride ?: selectedLanguage
                     val message = if (searchQuery.isNotEmpty()) {
-                        "No results for \"$searchQuery\""
+                        stringResource(R.string.no_results_format, searchQuery)
                     } else if (currentLang != null && currentLang.isNotBlank()) {
-                        if (isMentorMode) "This student hasn't tracked any skills for $currentLang yet."
-                        else "You haven't tracked any skills for $currentLang yet."
+                        if (isMentorMode) stringResource(R.string.no_skills_lang_mentor_format, currentLang)
+                        else stringResource(R.string.no_skills_lang_user_format, currentLang)
                     } else {
-                        "No skills found for the current filters."
+                        stringResource(R.string.no_skills_filters)
                     }
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         EmptyState(message = message)
@@ -562,21 +564,21 @@ fun SkillItem(
         DeleteConfirmationDialog(
             onConfirm = onDelete,
             onDismiss = { showDeleteConfirm = false },
-            title = "Delete Skill",
-            message = "Are you sure you want to delete the skill \"${skill.name}\"?"
+            title = stringResource(R.string.delete_skill_title),
+            message = stringResource(R.string.delete_skill_message_format, skill.name)
         )
     }
 
     if (showEditDialog) {
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
-            title = { Text("Edit Skill") },
+            title = { Text(stringResource(R.string.edit_skill_title)) },
             text = {
                 Column {
                     OutlinedTextField(
                         value = editName,
                         onValueChange = { editName = it },
-                        label = { Text("Name") },
+                        label = { Text(stringResource(R.string.skill_name_label)) },
                         shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(Modifier.height(12.dp))
@@ -584,7 +586,7 @@ fun SkillItem(
                         selectedLanguage = editLang,
                         onLanguageSelected = { editLang = it },
                         availableLanguages = learnedLanguages,
-                        label = "Language",
+                        label = stringResource(R.string.skill_language_label),
                         includeNone = true
                     )
                 }
@@ -593,10 +595,10 @@ fun SkillItem(
                 TextButton(onClick = {
                     onEditSkill(editName, editLang)
                     showEditDialog = false
-                }) { Text("Save") }
+                }) { Text(stringResource(R.string.save)) }
             },
             dismissButton = {
-                TextButton(onClick = { showEditDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showEditDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -628,7 +630,7 @@ fun SkillItem(
                 if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
                     Icon(
                         Icons.Rounded.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = stringResource(R.string.delete),
                         modifier = Modifier.padding(end = 24.dp),
                         tint = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -694,7 +696,7 @@ fun SkillItem(
                         IconButton(onClick = { showEditDialog = true }) {
                             Icon(
                                 Icons.Rounded.Edit,
-                                contentDescription = "Edit",
+                                contentDescription = stringResource(R.string.edit),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -704,7 +706,7 @@ fun SkillItem(
                     if (isReorderMode) {
                         Icon(
                             Icons.Rounded.DragHandle,
-                            contentDescription = "Drag to reorder",
+                            contentDescription = stringResource(R.string.drag_to_reorder),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(24.dp)
                         )
@@ -763,7 +765,7 @@ fun SkillItem(
                                 OutlinedTextField(
                                     value = subtaskText,
                                     onValueChange = { subtaskText = it },
-                                    placeholder = { Text("Add subtask...") },
+                                    placeholder = { Text(stringResource(R.string.add_subtask_placeholder)) },
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(12.dp),
                                     singleLine = true,
@@ -777,7 +779,7 @@ fun SkillItem(
                                 }) {
                                     Icon(
                                         Icons.Rounded.AddCircle,
-                                        contentDescription = "Add",
+                                        contentDescription = stringResource(R.string.add),
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
@@ -824,29 +826,29 @@ fun SubtaskItem(
         DeleteConfirmationDialog(
             onConfirm = onDelete,
             onDismiss = { showDeleteConfirm = false },
-            title = "Delete Subtask",
-            message = "Delete subtask \"${subtask.text}\"?"
+            title = stringResource(R.string.delete_subtask_title),
+            message = stringResource(R.string.delete_subtask_message_format, subtask.text)
         )
     }
 
     if (showEditDialog) {
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
-            title = { Text("Edit Subtask") },
+            title = { Text(stringResource(R.string.edit_subtask_title)) },
             text = {
                 OutlinedTextField(
                     value = editText,
                     onValueChange = { editText = it },
-                    label = { Text("Subtask") })
+                    label = { Text(stringResource(R.string.subtask_label)) })
             },
             confirmButton = {
                 TextButton(onClick = {
                     onEdit(editText)
                     showEditDialog = false
-                }) { Text("Save") }
+                }) { Text(stringResource(R.string.save)) }
             },
             dismissButton = {
-                TextButton(onClick = { showEditDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showEditDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -880,7 +882,7 @@ fun SubtaskItem(
             IconButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.size(32.dp)) {
                 Icon(
                     Icons.Rounded.Close,
-                    contentDescription = "Delete Subtask",
+                    contentDescription = stringResource(R.string.delete_subtask_cd),
                     modifier = Modifier.size(16.dp)
                 )
             }

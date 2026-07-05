@@ -11,6 +11,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.res.stringResource
+import io.github.langstudy.R
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -28,18 +30,18 @@ fun LanguageRequestDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Request a Language") },
+        title = { Text(stringResource(R.string.request_language_title)) },
         text = {
             Column {
                 Text(
-                    "Don't see the language you're looking for? Let us know and we'll work on adding it!",
+                    stringResource(R.string.language_request_info),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = languageName,
                     onValueChange = { languageName = it },
-                    label = { Text("Language Name") },
+                    label = { Text(stringResource(R.string.language_name_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -47,7 +49,7 @@ fun LanguageRequestDialog(
                 OutlinedTextField(
                     value = message,
                     onValueChange = { message = it },
-                    label = { Text("Additional Notes (Optional)") },
+                    label = { Text(stringResource(R.string.additional_notes_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3
                 )
@@ -63,12 +65,12 @@ fun LanguageRequestDialog(
                 },
                 enabled = languageName.isNotBlank()
             ) {
-                Text("Submit")
+                Text(stringResource(R.string.submit))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

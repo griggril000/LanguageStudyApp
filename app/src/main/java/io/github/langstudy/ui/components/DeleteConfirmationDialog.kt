@@ -7,14 +7,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import io.github.langstudy.R
 
 @Composable
 fun DeleteConfirmationDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
-    title: String = "Confirm Delete",
-    message: String = "Are you sure you want to delete this item? This action cannot be undone."
+    title: String = stringResource(R.string.delete),
+    message: String = ""
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -28,12 +30,12 @@ fun DeleteConfirmationDialog(
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
-                Text("Delete")
+                Text(stringResource(R.string.delete))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

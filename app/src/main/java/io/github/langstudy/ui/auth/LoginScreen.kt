@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -49,6 +50,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.langstudy.R
 import io.github.langstudy.ui.theme.SuccessGreen
 
 @Composable
@@ -94,14 +96,14 @@ fun LoginScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    "Language Study",
+                    stringResource(R.string.app_name),
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
 
                 Text(
-                    if (isSignUp) "Create an account" else "Master a new language",
+                    if (isSignUp) stringResource(R.string.create_account) else stringResource(R.string.master_new_lang),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -111,7 +113,7 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = { Text("Email") },
+                    label = { Text(stringResource(R.string.email)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .semantics { contentType = ContentType.EmailAddress },
@@ -126,7 +128,7 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Password") },
+                    label = { Text(stringResource(R.string.password)) },
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -141,7 +143,7 @@ fun LoginScreen(
                             Icons.Filled.Visibility
                         else Icons.Filled.VisibilityOff
 
-                        val description = if (passwordVisible) "Hide password" else "Show password"
+                        val description = if (passwordVisible) stringResource(R.string.hide_password_cd) else stringResource(R.string.show_password_cd)
 
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(imageVector = image, contentDescription = description)
@@ -160,7 +162,7 @@ fun LoginScreen(
                             contentPadding = PaddingValues(0.dp)
                         ) {
                             Text(
-                                "Forgot Password?",
+                                stringResource(R.string.forgot_password),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -188,12 +190,12 @@ fun LoginScreen(
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                     } else {
-                        Text(if (isSignUp) "Sign Up" else "Login")
+                        Text(if (isSignUp) stringResource(R.string.sign_up) else stringResource(R.string.login))
                     }
                 }
 
                 TextButton(onClick = { isSignUp = !isSignUp }) {
-                    Text(if (isSignUp) "Already have an account? Login" else "Don't have an account? Sign Up")
+                    Text(if (isSignUp) stringResource(R.string.already_have_account_login) else stringResource(R.string.dont_have_account_signup))
                 }
 
                 Row(
@@ -202,7 +204,7 @@ fun LoginScreen(
                 ) {
                     HorizontalDivider(modifier = Modifier.weight(1f))
                     Text(
-                        " OR ",
+                        stringResource(R.string.or),
                         modifier = Modifier.padding(horizontal = 8.dp),
                         style = MaterialTheme.typography.labelMedium
                     )
@@ -217,7 +219,7 @@ fun LoginScreen(
                     shape = RoundedCornerShape(12.dp),
                     enabled = !isLoading
                 ) {
-                    Text("Sign in with Google")
+                    Text(stringResource(R.string.sign_in_google))
                 }
 
                 if (error != null) {

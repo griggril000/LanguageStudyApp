@@ -50,10 +50,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import io.github.langstudy.R
 import io.github.langstudy.ui.theme.SuccessGreen
 import io.github.langstudy.ui.viewmodel.SettingsViewModel
 
@@ -98,12 +100,12 @@ fun WelcomeWalkthrough(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = when (currentStep) {
-                                1 -> "Welcome to Language Study!"
-                                2 -> "Select Your Language"
-                                3 -> "Vocabulary Tracker"
-                                4 -> "Skills Tracker"
-                                5 -> "Build Your Portfolio"
-                                6 -> "Ready to Go!"
+                                1 -> stringResource(R.string.welcome_title_1)
+                                2 -> stringResource(R.string.welcome_title_2)
+                                3 -> stringResource(R.string.welcome_title_3)
+                                4 -> stringResource(R.string.welcome_title_4)
+                                5 -> stringResource(R.string.welcome_title_5)
+                                6 -> stringResource(R.string.welcome_title_6)
                                 else -> ""
                             },
                             style = MaterialTheme.typography.headlineSmall,
@@ -112,7 +114,7 @@ fun WelcomeWalkthrough(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Step $currentStep of $totalSteps",
+                            text = stringResource(R.string.welcome_step_format, currentStep, totalSteps),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
@@ -123,7 +125,7 @@ fun WelcomeWalkthrough(
                     ) {
                         Icon(
                             Icons.Rounded.Close,
-                            contentDescription = "Close",
+                            contentDescription = stringResource(R.string.close),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -185,7 +187,7 @@ fun WelcomeWalkthrough(
                             modifier = Modifier.padding(end = 8.dp)
                         ) {
                             Text(
-                                "Skip",
+                                stringResource(R.string.skip),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -213,7 +215,7 @@ fun WelcomeWalkthrough(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = if (isLastStep) "Finish & Start" else "Next",
+                                text = if (isLastStep) stringResource(R.string.welcome_finish_start) else stringResource(R.string.next),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -234,10 +236,10 @@ fun WelcomeWalkthrough(
         if (showError) {
             AlertDialog(
                 onDismissRequest = { showError = false },
-                text = { Text("Please select a language to continue.") },
+                text = { Text(stringResource(R.string.welcome_select_lang_error)) },
                 confirmButton = {
                     TextButton(onClick = { showError = false }) {
-                        Text("OK")
+                        Text(stringResource(R.string.ok))
                     }
                 }
             )
@@ -248,7 +250,7 @@ fun WelcomeWalkthrough(
 @Composable
 private fun WelcomeStep() {
     Text(
-        text = "Your personal language learning companion. Track vocabulary, monitor skills, build a portfolio, and share progress with mentors.",
+        text = stringResource(R.string.welcome_body_1),
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.2
@@ -265,7 +267,7 @@ private fun SelectLanguageStep(
 ) {
     Column {
         Text(
-            text = "Which language are you studying?",
+            text = stringResource(R.string.welcome_select_lang_title),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.SemiBold
@@ -279,7 +281,7 @@ private fun SelectLanguageStep(
             modifier = Modifier.fillMaxWidth()
         ) {
             OutlinedTextField(
-                value = selectedLang.ifBlank { "-- Select a language --" },
+                value = selectedLang.ifBlank { stringResource(R.string.welcome_select_lang_placeholder) },
                 onValueChange = {},
                 readOnly = true,
                 modifier = Modifier
@@ -311,7 +313,7 @@ private fun SelectLanguageStep(
                 DropdownMenuItem(
                     text = {
                         Text(
-                            "My language isn't listed here...",
+                            stringResource(R.string.welcome_lang_not_listed),
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold
                         )
@@ -333,7 +335,7 @@ private fun SelectLanguageStep(
                 OutlinedTextField(
                     value = requestedLang,
                     onValueChange = { requestedLang = it },
-                    label = { Text("What language are you studying?") },
+                    label = { Text(stringResource(R.string.welcome_lang_request_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     trailingIcon = {
@@ -348,13 +350,13 @@ private fun SelectLanguageStep(
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Rounded.Send,
-                                contentDescription = "Submit Request"
+                                contentDescription = stringResource(R.string.welcome_lang_request_submit)
                             )
                         }
                     }
                 )
                 Text(
-                    text = "We'll work on adding this language soon!",
+                    text = stringResource(R.string.welcome_lang_request_soon),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(start = 4.dp, top = 4.dp)
@@ -366,7 +368,7 @@ private fun SelectLanguageStep(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "Request sent for $requestedLang! You can continue the walkthrough or select another language above.",
+                        text = stringResource(R.string.welcome_lang_request_sent_format, requestedLang),
                         modifier = Modifier.padding(12.dp),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -378,17 +380,17 @@ private fun SelectLanguageStep(
         Spacer(modifier = Modifier.height(16.dp))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "When you switch languages, your progress is saved per language and reloads when you return.",
+                text = stringResource(R.string.welcome_lang_switch_info),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "Language resource links also update based on your selection.",
+                text = stringResource(R.string.welcome_lang_resource_info),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "Don't see your language? Request it in Settings.",
+                text = stringResource(R.string.welcome_lang_request_settings_info),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.Medium
@@ -401,7 +403,7 @@ private fun SelectLanguageStep(
 private fun VocabStep() {
     Column {
         Text(
-            text = "Keep track of all the new words and phrases you're learning. Categorize them and track your mastery over time.",
+            text = stringResource(R.string.welcome_vocab_info),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -412,7 +414,7 @@ private fun VocabStep() {
 private fun SkillsStep() {
     Column {
         Text(
-            text = "Track your progress across skills like listening, speaking, reading, and writing. Mark them as not started, in progress, or proficient.",
+            text = stringResource(R.string.welcome_skills_info),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -423,7 +425,7 @@ private fun SkillsStep() {
 private fun PortfolioStep() {
     Column {
         Text(
-            text = "Build a collection of your work, assignments, and achievements. Document your journey and showcase your growth.",
+            text = stringResource(R.string.welcome_portfolio_info),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -434,7 +436,7 @@ private fun PortfolioStep() {
 private fun FinalStep() {
     Column {
         Text(
-            text = "You're all set. You can adjust settings anytime in the Settings menu. Let's get started!",
+            text = stringResource(R.string.welcome_final_info),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

@@ -61,10 +61,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import io.github.langstudy.R
 import io.github.langstudy.data.model.PortfolioItem
 import io.github.langstudy.ui.components.AppButton
 import io.github.langstudy.ui.components.AppFAB
@@ -183,7 +185,7 @@ fun PortfolioScreen(
                 AppFAB(
                     onClick = { showAddSheet = true },
                     icon = Icons.Rounded.Add,
-                    contentDescription = "Add Portfolio Item"
+                    contentDescription = stringResource(R.string.add_portfolio_item_cd)
                 )
             }
         }
@@ -201,7 +203,7 @@ fun PortfolioScreen(
                         .padding(bottom = 16.dp)
                 ) {
                     Text(
-                        if (editingItem == null) "Add Portfolio Item" else "Edit Portfolio Item",
+                        if (editingItem == null) stringResource(R.string.add_portfolio_item_title) else stringResource(R.string.edit_portfolio_item_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -217,7 +219,7 @@ fun PortfolioScreen(
                     OutlinedTextField(
                         value = title,
                         onValueChange = { title = it },
-                        label = { Text("Title") },
+                        label = { Text(stringResource(R.string.title_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true
@@ -226,7 +228,7 @@ fun PortfolioScreen(
                     OutlinedTextField(
                         value = link,
                         onValueChange = { link = it },
-                        label = { Text("YouTube or SoundCloud Link") },
+                        label = { Text(stringResource(R.string.youtube_soundcloud_link)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true
@@ -236,7 +238,7 @@ fun PortfolioScreen(
                         selectedLanguage = itemLanguage,
                         onLanguageSelected = { itemLanguage = it },
                         availableLanguages = learnedLanguages,
-                        label = "Language"
+                        label = stringResource(R.string.skill_language_label)
                     )
                     Spacer(Modifier.height(24.dp))
                     AppButton(
@@ -248,7 +250,7 @@ fun PortfolioScreen(
                             }
                         },
                         loading = isLoading,
-                        text = if (editingItem == null) "Add to Portfolio" else "Save Changes",
+                        text = if (editingItem == null) stringResource(R.string.add_to_portfolio) else stringResource(R.string.save_changes),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -264,7 +266,7 @@ fun PortfolioScreen(
                 GlobalSearchBar(
                     query = searchQuery,
                     onQueryChange = { searchViewModel.setQuery(it) },
-                    placeholder = "Search portfolio..."
+                    placeholder = stringResource(R.string.search_portfolio)
                 )
 
                 if (isLoading && allItems.isEmpty()) {
@@ -273,17 +275,17 @@ fun PortfolioScreen(
                     }
                 } else if (allItems.isEmpty()) {
                     val emptyMessage =
-                        if (isMentorMode) "This student's portfolio is empty." else "Your portfolio is empty. Add your first item!"
+                        if (isMentorMode) stringResource(R.string.no_portfolio_mentor) else stringResource(R.string.no_portfolio_user)
                     EmptyState(message = emptyMessage)
                 } else if (items.isEmpty()) {
                     val currentLang = languageOverride ?: currentLanguage
                     val message = if (searchQuery.isNotEmpty()) {
-                        "No results for \"$searchQuery\""
+                        stringResource(R.string.no_results_format, searchQuery)
                     } else if (currentLang.isNotBlank()) {
-                        if (isMentorMode) "This student hasn't added any portfolio items for $currentLang yet."
-                        else "You haven't added any portfolio items for $currentLang yet."
+                        if (isMentorMode) stringResource(R.string.no_portfolio_lang_mentor_format, currentLang)
+                        else stringResource(R.string.no_portfolio_lang_user_format, currentLang)
                     } else {
-                        "No items found for the current filters."
+                        stringResource(R.string.no_portfolio_filters)
                     }
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         EmptyState(message = message)
@@ -302,7 +304,7 @@ fun PortfolioScreen(
 
                         if (featuredItems.isNotEmpty()) {
                             stickyHeader {
-                                HeaderSection("Featured Items (${featuredItems.size}/3)")
+                                HeaderSection(stringResource(R.string.featured_items_format, featuredItems.size))
                             }
                             items(featuredItems, key = { it.id }) { item ->
                                 FeaturedPortfolioItem(
@@ -318,7 +320,7 @@ fun PortfolioScreen(
 
                         if (otherItems.isNotEmpty()) {
                             stickyHeader {
-                                HeaderSection("Other Items")
+                                HeaderSection(stringResource(R.string.other_items))
                             }
                             items(otherItems, key = { it.id }) { item ->
                                 StandardPortfolioItem(
@@ -379,8 +381,8 @@ fun FeaturedPortfolioItem(
         DeleteConfirmationDialog(
             onConfirm = onDelete,
             onDismiss = { showDeleteConfirm = false },
-            title = "Delete Portfolio Item",
-            message = "Remove \"${item.title}\" from your portfolio?"
+            title = stringResource(R.string.delete_portfolio_item_title),
+            message = stringResource(R.string.delete_portfolio_item_message_format, item.title)
         )
     }
 
@@ -404,7 +406,7 @@ fun FeaturedPortfolioItem(
                 if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
                     Icon(
                         Icons.Rounded.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = stringResource(R.string.delete),
                         modifier = Modifier.padding(end = 24.dp),
                         tint = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -460,14 +462,14 @@ fun FeaturedPortfolioItem(
                             OutlinedButton(
                                 onClick = onUnfeature,
                                 shape = RoundedCornerShape(8.dp)
-                            ) { Text("Unfeature") }
+                            ) { Text(stringResource(R.string.unfeature)) }
                         }
 
                         if (canEdit) {
                             IconButton(onClick = onEdit) {
                                 Icon(
                                     Icons.Rounded.Edit,
-                                    contentDescription = "Edit",
+                                    contentDescription = stringResource(R.string.edit),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
@@ -483,7 +485,7 @@ fun FeaturedPortfolioItem(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(Modifier.width(4.dp))
-                                    Text("Delete")
+                                    Text(stringResource(R.string.delete))
                                 }
                             }
                         }
@@ -520,8 +522,8 @@ fun StandardPortfolioItem(
         DeleteConfirmationDialog(
             onConfirm = onDelete,
             onDismiss = { showDeleteConfirm = false },
-            title = "Delete Portfolio Item",
-            message = "Remove \"${item.title}\" from your portfolio?"
+            title = stringResource(R.string.delete_portfolio_item_title),
+            message = stringResource(R.string.delete_portfolio_item_message_format, item.title)
         )
     }
 
@@ -545,7 +547,7 @@ fun StandardPortfolioItem(
                 if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
                     Icon(
                         Icons.Rounded.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = stringResource(R.string.delete),
                         modifier = Modifier.padding(end = 24.dp),
                         tint = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -590,12 +592,13 @@ fun StandardPortfolioItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (canChangeStatus) {
+                        val featureText = stringResource(R.string.feature)
                         TextButton(
                             onClick = onFeature,
                             enabled = canFeature
                         ) {
                             Text(
-                                "Feature",
+                                featureText,
                                 color = if (canFeature) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                             )
                         }
@@ -604,7 +607,7 @@ fun StandardPortfolioItem(
                         IconButton(onClick = onEdit) {
                             Icon(
                                 Icons.Rounded.Edit,
-                                contentDescription = "Edit",
+                                contentDescription = stringResource(R.string.edit),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -612,7 +615,7 @@ fun StandardPortfolioItem(
                         IconButton(onClick = { showDeleteConfirm = true }) {
                             Icon(
                                 Icons.Rounded.Delete,
-                                contentDescription = "Delete",
+                                contentDescription = stringResource(R.string.delete),
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(20.dp)
                             )

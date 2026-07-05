@@ -27,7 +27,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.github.langstudy.R
 
 @Composable
 fun AppButton(
@@ -108,7 +110,7 @@ fun LanguageDropdown(
     onLanguageSelected: (String) -> Unit,
     availableLanguages: List<String>,
     modifier: Modifier = Modifier,
-    label: String = "Language",
+    label: String = stringResource(R.string.skill_language_label),
     includeNone: Boolean = false
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -119,7 +121,7 @@ fun LanguageDropdown(
         modifier = modifier
     ) {
         OutlinedTextField(
-            value = selectedLanguage.ifBlank { if (includeNone) "None" else "" },
+            value = selectedLanguage.ifBlank { if (includeNone) stringResource(R.string.none) else "" },
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
@@ -137,7 +139,7 @@ fun LanguageDropdown(
         ) {
             if (includeNone) {
                 DropdownMenuItem(
-                    text = { Text("None") },
+                    text = { Text(stringResource(R.string.none)) },
                     onClick = {
                         onLanguageSelected("")
                         expanded = false
