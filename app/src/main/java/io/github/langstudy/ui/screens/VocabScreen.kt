@@ -125,6 +125,7 @@ fun VocabScreen(
 
     var word by remember { mutableStateOf("") }
     var translation by remember { mutableStateOf("") }
+    var exampleSentence by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("General") }
     var language by remember { mutableStateOf("") }
     var showAddSheet by remember { mutableStateOf(false) }
@@ -265,6 +266,14 @@ fun VocabScreen(
                         shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = exampleSentence,
+                        onValueChange = { exampleSentence = it },
+                        label = { Text(stringResource(R.string.example_sentence_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    Spacer(Modifier.height(12.dp))
                     ExposedDropdownMenuBox(
                         expanded = categoryExpanded,
                         onExpandedChange = { categoryExpanded = !categoryExpanded },
@@ -318,10 +327,11 @@ fun VocabScreen(
                     Spacer(Modifier.height(24.dp))
                     AppButton(
                         onClick = {
-                            viewModel.addVocab(word, translation, category, language)
+                            viewModel.addVocab(word, translation, category, language, exampleSentence)
                             if (word.isNotBlank()) {
                                 word = ""
                                 translation = ""
+                                exampleSentence = ""
                                 showAddSheet = false
                             }
                         },
@@ -459,11 +469,12 @@ fun VocabScreen(
                                 canEdit = canEditContent,
                                 canChangeStatus = canChangeStatus,
                                 onDelete = { viewModel.deleteVocab(vocab) },
-                                onEdit = { w, t, c, l ->
+                                onEdit = { w, t, e, c, l ->
                                     viewModel.updateVocab(
                                         vocab.copy(
                                             word = w,
                                             translation = t,
+                                            exampleSentence = e,
                                             category = c,
                                             language = l
                                         )
@@ -488,7 +499,7 @@ fun VocabItem(
     canEdit: Boolean,
     canChangeStatus: Boolean,
     onDelete: () -> Unit,
-    onEdit: (String, String, String, String) -> Unit,
+    onEdit: (String, String, String, String, String) -> Unit,
     onStatusCycle: () -> Unit
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -496,6 +507,7 @@ fun VocabItem(
 
     var editWord by remember { mutableStateOf(vocab.word) }
     var editTranslation by remember { mutableStateOf(vocab.translation) }
+    var editExampleSentence by remember { mutableStateOf(vocab.exampleSentence) }
     var editCategory by remember { mutableStateOf(vocab.category) }
     var editLanguage by remember { mutableStateOf(vocab.language) }
 
@@ -521,6 +533,14 @@ fun VocabItem(
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = editExampleSentence,
+                        onValueChange = { editExampleSentence = it },
+                        label = { Text(stringResource(R.string.example_sentence_label)) },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
                     LanguageDropdown(
                         selectedLanguage = editLanguage,
                         onLanguageSelected = { editLanguage = it },
@@ -530,7 +550,7 @@ fun VocabItem(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    onEdit(editWord, editTranslation, editCategory, editLanguage)
+                    onEdit(editWord, editTranslation, editExampleSentence, editCategory, editLanguage)
                     showEditDialog = false
                 }) { Text(stringResource(R.string.save)) }
             },
@@ -626,6 +646,15 @@ fun VocabItem(
                             vocab.translation,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (vocab.exampleSentence.isNotBlank()) {
+                        Text(
+                            vocab.exampleSentence,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(top = 4.dp),
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                         )
                     }
                 }

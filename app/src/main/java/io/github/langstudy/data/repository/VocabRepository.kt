@@ -62,7 +62,8 @@ class VocabRepository(
                                         ?: "NOT_STARTED").uppercase(),
                                     language = data["language"] as? String ?: "en",
                                     dateAdded = (data["dateAdded"] as? com.google.firebase.Timestamp)?.toDate()?.time
-                                        ?: now
+                                        ?: now,
+                                    exampleSentence = data["exampleSentence"] as? String ?: ""
                                 )
                                 vocabDao.insertVocab(vocab)
                                 if (category != "General") {
@@ -199,7 +200,8 @@ class VocabRepository(
             "category" to vocab.category,
             "status" to vocab.status.lowercase(),
             "language" to vocab.language,
-            "dateAdded" to com.google.firebase.Timestamp(java.util.Date(vocab.dateAdded))
+            "dateAdded" to com.google.firebase.Timestamp(java.util.Date(vocab.dateAdded)),
+            "exampleSentence" to vocab.exampleSentence
         )
 
         firestore.collection("users").document(userId)
