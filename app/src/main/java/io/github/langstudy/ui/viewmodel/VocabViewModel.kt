@@ -87,7 +87,7 @@ class VocabViewModel(
         }
     }
 
-    fun addVocab(word: String, translation: String, category: String, language: String = "en") {
+    fun addVocab(word: String, translation: String, category: String, language: String = "en", exampleSentence: String = "") {
         if (word.isBlank()) {
             viewModelScope.launch { _error.emit("Word cannot be empty") }
             return
@@ -99,7 +99,8 @@ class VocabViewModel(
                         word = word.trim(),
                         translation = translation.trim(),
                         category = category,
-                        language = language
+                        language = language,
+                        exampleSentence = exampleSentence.trim()
                     ), userId
                 )
             } catch (e: Exception) {

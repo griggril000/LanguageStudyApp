@@ -122,8 +122,9 @@
     <string name="category_name_label">Category Name</string>
     <string name="word_label">Word</string>
     <string name="translation_label">Translation</string>
+    <string name="example_sentence_label">Example Sentence</string>
     <string name="category_label">Category</string>
-    <string name="search_vocab">Search vocabulary...</string>
+    <string name="search_vocab">Search vocabulary…</string>
     <string name="seed_sample_data">Seed Sample Data</string>
     <string name="edit_vocabulary">Edit Vocabulary</string>
     <string name="no_vocab_found_review">No vocabulary found to review.</string>

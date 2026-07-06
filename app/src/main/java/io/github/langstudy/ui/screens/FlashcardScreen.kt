@@ -392,6 +392,17 @@ fun Flashcard(
                             )
                         }
 
+                        if (vocab.exampleSentence.isNotBlank()) {
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                text = vocab.exampleSentence,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                            )
+                        }
+
                         if (youtubeId != null || isSoundCloud) {
                             Spacer(Modifier.height(24.dp))
                             Box(

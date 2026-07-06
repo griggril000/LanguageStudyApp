@@ -17,7 +17,7 @@ import io.github.langstudy.data.local.entity.VocabEntity
 
 @Database(
     entities = [VocabEntity::class, SkillEntity::class, JournalEntryEntity::class, CategoryEntity::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(SkillTypeConverters::class)
@@ -37,7 +37,8 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "language_study_db"
-                ).build()
+                ).fallbackToDestructiveMigration(false)
+                    .build()
                 INSTANCE = instance
                 instance
             }

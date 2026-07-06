@@ -11,5 +11,6 @@ data class VocabEntity(
     val category: String = "General",
     val status: String = "NOT_STARTED", // NOT_STARTED, IN_PROGRESS, PROFICIENT
     val language: String = "en",
-    val dateAdded: Long = System.currentTimeMillis()
+    val dateAdded: Long = System.currentTimeMillis(),
+    val exampleSentence: String = ""
 )
