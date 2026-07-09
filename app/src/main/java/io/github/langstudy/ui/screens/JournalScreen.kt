@@ -346,7 +346,7 @@ fun JournalScreen(
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(entries) { entry ->
                             val canEditThisEntry = if (isMentorMode) {
-                                entry.mentorAccessLevel == "edit" && mentorAccessLevel == "full"
+                                entry.mentorAccessLevel == "edit" || mentorAccessLevel == "full"
                             } else {
                                 true
                             }
