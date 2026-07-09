@@ -16,6 +16,9 @@ interface JournalDao {
     @Query("SELECT COUNT(*) FROM journal_entries")
     fun getEntryCount(): Flow<Int>
 
+    @Query("SELECT * FROM journal_entries WHERE id = :id")
+    suspend fun getEntryById(id: String): JournalEntryEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEntry(entry: JournalEntryEntity)
 

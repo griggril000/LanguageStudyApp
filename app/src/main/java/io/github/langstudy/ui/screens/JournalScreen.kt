@@ -11,27 +11,36 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.SupervisorAccount
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -98,7 +107,7 @@ fun JournalScreen(
     }
 
     LaunchedEffect(userId) {
-        viewModel.initUserId(userId)
+        viewModel.initUserId(userId, isMentorMode)
     }
 
     LaunchedEffect(searchQuery) {
@@ -108,6 +117,8 @@ fun JournalScreen(
     var title by remember { mutableStateOf("") }
     var contentText by remember { mutableStateOf("") }
     var language by remember { mutableStateOf("") }
+    var mentorVisible by remember { mutableStateOf(false) }
+    var mentorAccessLevelEntry by remember { mutableStateOf("view") }
     var editingEntry by remember { mutableStateOf<JournalEntryEntity?>(null) }
     var showSheet by remember { mutableStateOf(false) }
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
@@ -120,6 +131,8 @@ fun JournalScreen(
             title = ""
             contentText = ""
             language = currentLanguage
+            mentorVisible = isMentorMode // Default true if mentor creates it
+            mentorAccessLevelEntry = if (isMentorMode) "edit" else "view"
         }
     }
 
@@ -128,6 +141,8 @@ fun JournalScreen(
             title = it.title
             contentText = it.content
             language = it.language
+            mentorVisible = it.mentorVisible
+            mentorAccessLevelEntry = it.mentorAccessLevel
             showSheet = true
         }
     }
@@ -206,10 +221,98 @@ fun JournalScreen(
                         label = stringResource(R.string.language_optional),
                         includeNone = true
                     )
+                    Spacer(Modifier.height(16.dp))
+                    if (!isMentorMode) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
+                        
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.SupervisorAccount,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.mentor_visible),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = stringResource(R.string.enable_mentor_view_summary),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = mentorVisible,
+                                onCheckedChange = { mentorVisible = it },
+                                thumbContent = {
+                                    Icon(
+                                        imageVector = if (mentorVisible) Icons.Rounded.Check else Icons.Rounded.Close,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(androidx.compose.material3.SwitchDefaults.IconSize),
+                                    )
+                                },
+                                colors = androidx.compose.material3.SwitchDefaults.colors(
+                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                    checkedIconColor = MaterialTheme.colorScheme.primary,
+                                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    uncheckedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                        }
+
+                        if (mentorVisible) {
+                            Column(modifier = Modifier.padding(start = 40.dp)) {
+                                Text(
+                                    stringResource(R.string.mentor_access_level_entry),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    RadioButton(
+                                        selected = mentorAccessLevelEntry == "view",
+                                        onClick = { mentorAccessLevelEntry = "view" }
+                                    )
+                                    Text(
+                                        stringResource(R.string.view_access),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Spacer(Modifier.width(16.dp))
+                                    RadioButton(
+                                        selected = mentorAccessLevelEntry == "edit",
+                                        onClick = { mentorAccessLevelEntry = "edit" }
+                                    )
+                                    Text(
+                                        stringResource(R.string.edit_access),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(24.dp))
                     AppButton(
                         onClick = {
-                            viewModel.saveEntry(editingEntry?.id, title, contentText, language)
+                            viewModel.saveEntry(
+                                editingEntry?.id,
+                                title,
+                                contentText,
+                                language,
+                                mentorVisible,
+                                mentorAccessLevelEntry,
+                                editingEntry?.timestamp
+                            )
                             if (title.isNotBlank() && contentText.isNotBlank()) {
                                 showSheet = false
                             }
@@ -242,11 +345,17 @@ fun JournalScreen(
                 } else {
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(entries) { entry ->
+                            val canEditThisEntry = if (isMentorMode) {
+                                entry.mentorAccessLevel == "edit" && mentorAccessLevel == "full"
+                            } else {
+                                true
+                            }
                             JournalItem(
                                 entry = entry,
-                                canEdit = canEditContent,
+                                canEdit = canEditThisEntry,
+                                isMentorMode = isMentorMode,
                                 onDelete = { viewModel.deleteEntry(entry) },
-                                onClick = { if (canEditContent) editingEntry = entry }
+                                onClick = { if (canEditThisEntry) editingEntry = entry }
                             )
                         }
                     }
@@ -261,6 +370,7 @@ fun JournalScreen(
 fun JournalItem(
     entry: JournalEntryEntity,
     canEdit: Boolean,
+    isMentorMode: Boolean = false,
     onDelete: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -348,17 +458,27 @@ fun JournalItem(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.secondary
                     )
-                    if (entry.language.isNotBlank()) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer
-                        ) {
-                            Text(
-                                entry.language,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (!isMentorMode && entry.mentorVisible) {
+                            Icon(
+                                Icons.Rounded.SupervisorAccount,
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 8.dp).size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary
                             )
+                        }
+                        if (entry.language.isNotBlank()) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer
+                            ) {
+                                Text(
+                                    entry.language,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
                         }
                     }
                 }

@@ -48,8 +48,13 @@ class JournalRepository(private val journalDao: JournalDao) {
                                     title = data["title"] as? String ?: "",
                                     content = data["content"] as? String ?: "",
                                     language = data["language"] as? String ?: "",
-                                    timestamp = (data["timestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time
-                                        ?: now
+                                    timestamp = (data["dateAdded"] as? com.google.firebase.Timestamp)?.toDate()?.time
+                                        ?: (data["timestamp"] as? com.google.firebase.Timestamp)?.toDate()?.time
+                                        ?: now,
+                                    dateModified = (data["dateModified"] as? com.google.firebase.Timestamp)?.toDate()?.time
+                                        ?: now,
+                                    mentorAccessLevel = data["mentorAccessLevel"] as? String ?: "view",
+                                    mentorVisible = data["mentorVisible"] as? Boolean ?: false
                                 )
                                 journalDao.insertEntry(entry)
                             }
@@ -90,7 +95,10 @@ class JournalRepository(private val journalDao: JournalDao) {
             "title" to entry.title,
             "content" to entry.content,
             "language" to entry.language,
-            "timestamp" to com.google.firebase.Timestamp(java.util.Date(entry.timestamp))
+            "dateAdded" to com.google.firebase.Timestamp(java.util.Date(entry.timestamp)),
+            "dateModified" to com.google.firebase.Timestamp(java.util.Date(entry.dateModified)),
+            "mentorAccessLevel" to entry.mentorAccessLevel,
+            "mentorVisible" to entry.mentorVisible
         )
 
         firestore.collection("users").document(userId)
