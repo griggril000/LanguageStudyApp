@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.SupervisorAccount
 import androidx.compose.material3.Card
@@ -459,6 +460,14 @@ fun JournalItem(
                         color = MaterialTheme.colorScheme.secondary
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (isMentorMode && canEdit) {
+                            Icon(
+                                Icons.Rounded.Edit,
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 8.dp).size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                         if (!isMentorMode && entry.mentorVisible) {
                             Icon(
                                 Icons.Rounded.SupervisorAccount,
