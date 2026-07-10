@@ -256,6 +256,9 @@ fun SettingsScreen(
             android.Manifest.permission.CAMERA
         )
 
+        var isProcessing by remember { mutableStateOf(false) }
+        var lastScannedCode by remember { mutableStateOf("") }
+
         if (cameraPermissionState.status.isGranted) {
             AlertDialog(
                 onDismissRequest = { showQRScannerDialog = false },
@@ -270,6 +273,8 @@ fun SettingsScreen(
                             .background(androidx.compose.ui.graphics.Color.Black)
                     ) {
                         QRCodeScanner { scannedValue ->
+                            if (isProcessing || scannedValue == lastScannedCode) return@QRCodeScanner
+
                             val code = try {
                                 val uri = android.net.Uri.parse(scannedValue)
                                 val mentorFromUri = if (uri.scheme != null) {
@@ -289,6 +294,11 @@ fun SettingsScreen(
                             // Only proceed if it looks like a 5-char code, not a full URL we failed to parse
                             if (code.length == 5 || (code.length > 5 && !code.contains("/") && !code.contains("."))) {
                                 val sanitizedCode = code.take(5).uppercase()
+                                if (sanitizedCode == lastScannedCode) return@QRCodeScanner
+                                
+                                isProcessing = true
+                                lastScannedCode = sanitizedCode
+                                
                                 scope.launch {
                                     try {
                                         val ownerUid = settingsViewModel.validateCode(sanitizedCode)
@@ -304,6 +314,8 @@ fun SettingsScreen(
                                         }
                                     } catch (_: Exception) {
                                         snackbarHostState.showSnackbar(errorValidating)
+                                    } finally {
+                                        isProcessing = false
                                     }
                                 }
                             }
