@@ -197,6 +197,10 @@
     <string name="no_journal_user">Your journal is empty. Tap the icon to write your first entry!</string>
     <string name="delete_journal_entry_title">Delete Journal Entry</string>
     <string name="delete_journal_entry_message_format">Are you sure you want to delete \"%1$s\"?</string>
+    <string name="mentor_visible">Visible to Mentor</string>
+    <string name="mentor_access_level_entry">Mentor Access Level</string>
+    <string name="view_access">View</string>
+    <string name="edit_access">Edit</string>
 
     <!-- Portfolio Screen -->
     <string name="youtube_soundcloud_link">YouTube or SoundCloud Link</string>

@@ -9,5 +9,8 @@ data class JournalEntryEntity(
     val title: String,
     val content: String,
     val language: String = "",
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val dateModified: Long = timestamp,
+    val mentorAccessLevel: String = "view",
+    val mentorVisible: Boolean = false
 )

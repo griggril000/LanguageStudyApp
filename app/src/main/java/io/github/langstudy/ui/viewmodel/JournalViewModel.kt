@@ -24,6 +24,7 @@ class JournalViewModel(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
     private var userId: String? = null
+    private val _isMentorMode = MutableStateFlow(false)
 
     val allEntries: StateFlow<List<JournalEntryEntity>> = repository.allEntries
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -38,9 +39,14 @@ class JournalViewModel(
     val currentLanguage: StateFlow<String> = _currentLanguage.asStateFlow()
 
     val filteredEntries: StateFlow<List<JournalEntryEntity>> =
-        combine(allEntries, _searchQuery) { entries, query ->
-            if (query.isBlank()) entries
-            else entries.filter {
+        combine(allEntries, _searchQuery, _isMentorMode) { entries, query, mentorMode ->
+            val baseEntries = if (mentorMode) {
+                entries.filter { it.mentorVisible }
+            } else {
+                entries
+            }
+            if (query.isBlank()) baseEntries
+            else baseEntries.filter {
                 it.title.contains(query, ignoreCase = true) ||
                         it.content.contains(query, ignoreCase = true)
             }
@@ -49,7 +55,8 @@ class JournalViewModel(
     private val _error = MutableSharedFlow<String>()
     val error: SharedFlow<String> = _error.asSharedFlow()
 
-    fun initUserId(id: String) {
+    fun initUserId(id: String, isMentorMode: Boolean = false) {
+        _isMentorMode.value = isMentorMode
         if (userId == id) return
         userId = id
         viewModelScope.launch {
@@ -65,25 +72,42 @@ class JournalViewModel(
         }
     }
 
-    fun saveEntry(id: String? = null, title: String, content: String, language: String = "") {
+    fun saveEntry(
+        id: String? = null,
+        title: String,
+        content: String,
+        language: String = "",
+        mentorVisible: Boolean = false,
+        mentorAccessLevel: String = "view",
+        originalTimestamp: Long? = null
+    ) {
         if (title.isBlank() || content.isBlank()) {
             viewModelScope.launch { _error.emit("Title and content cannot be empty") }
             return
         }
         viewModelScope.launch {
             try {
+                val now = System.currentTimeMillis()
                 val entry = if (id != null) {
                     JournalEntryEntity(
                         id = id,
                         title = title.trim(),
                         content = content.trim(),
-                        language = language
+                        language = language,
+                        timestamp = originalTimestamp ?: now,
+                        dateModified = now,
+                        mentorVisible = mentorVisible,
+                        mentorAccessLevel = mentorAccessLevel
                     )
                 } else {
                     JournalEntryEntity(
                         title = title.trim(),
                         content = content.trim(),
-                        language = language
+                        language = language,
+                        timestamp = now,
+                        dateModified = now,
+                        mentorVisible = mentorVisible,
+                        mentorAccessLevel = mentorAccessLevel
                     )
                 }
                 repository.insert(entry, userId)
