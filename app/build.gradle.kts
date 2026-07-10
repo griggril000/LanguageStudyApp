@@ -105,6 +105,8 @@ dependencies {
     implementation(libs.aboutLibraries.compose)
     implementation(libs.play.services.location)
     implementation(libs.retrofit)
+    implementation(libs.zxing.core)
+    implementation(libs.mlkit.barcode.scanning)
     testImplementation(libs.androidx.core)
     testImplementation(libs.androidx.junit)
     testImplementation(libs.junit)

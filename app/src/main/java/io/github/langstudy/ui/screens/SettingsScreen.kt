@@ -31,6 +31,8 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.SupervisorAccount
 import androidx.compose.material.icons.rounded.Check
@@ -67,6 +69,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ClipEntry
@@ -78,6 +82,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import io.github.langstudy.BuildConfig
@@ -88,12 +96,14 @@ import io.github.langstudy.ui.auth.AuthViewModel
 import io.github.langstudy.ui.components.AccountManagementDialog
 import io.github.langstudy.ui.components.DeleteConfirmationDialog
 import io.github.langstudy.ui.components.LanguageRequestDialog
+import io.github.langstudy.ui.components.QRCodeScanner
 import io.github.langstudy.ui.components.UpdateEmailDialog
 import io.github.langstudy.ui.viewmodel.SettingsViewModel
+import io.github.langstudy.util.QRCodeGenerator
 import io.noties.markwon.Markwon
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun SettingsScreen(
     authViewModel: AuthViewModel = viewModel(),
@@ -122,6 +132,8 @@ fun SettingsScreen(
     var showLanguageRequestDialog by remember { mutableStateOf(false) }
     var showAccountOptionsDialog by remember { mutableStateOf(false) }
     var showUpdateEmailDialog by remember { mutableStateOf(false) }
+    var showQRCodeDialog by remember { mutableStateOf(false) }
+    var showQRScannerDialog by remember { mutableStateOf(false) }
 
     var currentView by remember { mutableStateOf("main") }
 
@@ -191,6 +203,132 @@ fun SettingsScreen(
         )
     }
 
+    if (showQRCodeDialog && mentorCode != null) {
+        val qrCodeUrl = "https://language-study.github.io/?mentor=$mentorCode"
+        val qrBitmap = remember(qrCodeUrl) { QRCodeGenerator.generateQRCode(qrCodeUrl, 512) }
+
+        AlertDialog(
+            onDismissRequest = { showQRCodeDialog = false },
+            title = { Text(stringResource(R.string.mentor_share_qr)) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.mentor_qr_info),
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    if (qrBitmap != null) {
+                        androidx.compose.foundation.Image(
+                            bitmap = qrBitmap.asImageBitmap(),
+                            contentDescription = "QR Code",
+                            modifier = Modifier
+                                .size(200.dp)
+                                .background(androidx.compose.ui.graphics.Color.White)
+                                .padding(8.dp)
+                        )
+                    }
+                    Text(
+                        text = mentorCode,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = { showQRCodeDialog = false }) {
+                    Text(stringResource(R.string.done))
+                }
+            }
+        )
+    }
+
+    if (showQRScannerDialog) {
+        val cannotMentorSelf = stringResource(R.string.cannot_mentor_yourself)
+        val invalidCode = stringResource(R.string.invalid_disabled_code)
+        val errorValidating = stringResource(R.string.error_validating_code)
+        val permissionDenied = stringResource(R.string.camera_permission_denied)
+
+        val cameraPermissionState = com.google.accompanist.permissions.rememberPermissionState(
+            android.Manifest.permission.CAMERA
+        )
+
+        if (cameraPermissionState.status.isGranted) {
+            AlertDialog(
+                onDismissRequest = { showQRScannerDialog = false },
+                title = { Text(stringResource(R.string.scan_mentor_qr)) },
+                text = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                            .height(300.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(androidx.compose.ui.graphics.Color.Black)
+                    ) {
+                        QRCodeScanner { scannedValue ->
+                            val code = try {
+                                val uri = android.net.Uri.parse(scannedValue)
+                                val mentorFromUri = if (uri.scheme != null) {
+                                    uri.getQueryParameter("mentor") ?: uri.getQueryParameter("returnTo")?.let {
+                                        android.net.Uri.parse(it).getQueryParameter("mentor")
+                                    }
+                                } else if (scannedValue.contains("mentor=")) {
+                                    android.net.Uri.parse("https://$scannedValue").getQueryParameter("mentor")
+                                } else {
+                                    null
+                                }
+                                mentorFromUri ?: scannedValue
+                            } catch (e: Exception) {
+                                scannedValue
+                            }
+
+                            // Only proceed if it looks like a 5-char code, not a full URL we failed to parse
+                            if (code.length == 5 || (code.length > 5 && !code.contains("/") && !code.contains("."))) {
+                                val sanitizedCode = code.take(5).uppercase()
+                                scope.launch {
+                                    try {
+                                        val ownerUid = settingsViewModel.validateCode(sanitizedCode)
+                                        if (ownerUid != null) {
+                                            if (ownerUid == currentUser?.uid) {
+                                                snackbarHostState.showSnackbar(cannotMentorSelf)
+                                            } else {
+                                                authViewModel.enterMentorMode(context, ownerUid, sanitizedCode)
+                                                showQRScannerDialog = false
+                                            }
+                                        } else {
+                                            snackbarHostState.showSnackbar(invalidCode)
+                                        }
+                                    } catch (_: Exception) {
+                                        snackbarHostState.showSnackbar(errorValidating)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showQRScannerDialog = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        } else {
+            LaunchedEffect(Unit) {
+                cameraPermissionState.launchPermissionRequest()
+            }
+            if (!cameraPermissionState.status.shouldShowRationale) {
+                showQRScannerDialog = false
+                LaunchedEffect(Unit) {
+                    snackbarHostState.showSnackbar(permissionDenied)
+                }
+            }
+        }
+    }
+
     if (showDeleteDialog) {
         DeleteConfirmationDialog(
             title = stringResource(R.string.delete_account_title),
@@ -233,6 +371,10 @@ fun SettingsScreen(
                         snackbarHostState.showSnackbar(errorValidating)
                     }
                 }
+            },
+            onScan = {
+                showJoinDialog = false
+                showQRScannerDialog = true
             }
         )
     }
@@ -373,7 +515,9 @@ fun SettingsScreen(
                     onShowStartupTabDialog = { showStartupTabDialog = true },
                     onShowAccessLevelDialog = { showAccessLevelDialog = true },
                     onShowLanguageRequestDialog = { showLanguageRequestDialog = true },
-                    onShowAccountOptionsDialog = { showAccountOptionsDialog = true }
+                    onShowAccountOptionsDialog = { showAccountOptionsDialog = true },
+                    onShowQRCodeDialog = { showQRCodeDialog = true },
+                    onShowQRScannerDialog = { showQRScannerDialog = true }
                 )
 
                 "details" -> AppDetailsView(
@@ -416,7 +560,9 @@ fun SettingsMainView(
     onShowStartupTabDialog: () -> Unit,
     onShowAccessLevelDialog: () -> Unit,
     onShowLanguageRequestDialog: () -> Unit,
-    onShowAccountOptionsDialog: () -> Unit
+    onShowAccountOptionsDialog: () -> Unit,
+    onShowQRCodeDialog: () -> Unit,
+    onShowQRScannerDialog: () -> Unit
 ) {
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
@@ -555,13 +701,22 @@ fun SettingsMainView(
                     }
                 },
                 trailing = {
-                    if (!isMentorMode) {
-                        IconButton(onClick = { settingsViewModel.regenerateMentorCode() }) {
+                    Row {
+                        IconButton(onClick = onShowQRCodeDialog) {
                             Icon(
-                                Icons.Rounded.Refresh,
-                                contentDescription = stringResource(R.string.regenerate_cd),
+                                Icons.Default.QrCode,
+                                contentDescription = stringResource(R.string.mentor_share_qr),
                                 modifier = Modifier.size(20.dp)
                             )
+                        }
+                        if (!isMentorMode) {
+                            IconButton(onClick = { settingsViewModel.regenerateMentorCode() }) {
+                                Icon(
+                                    Icons.Rounded.Refresh,
+                                    contentDescription = stringResource(R.string.regenerate_cd),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -602,7 +757,16 @@ fun SettingsMainView(
                 title = stringResource(R.string.mentor_student_title),
                 summary = stringResource(R.string.mentor_a_student_summary),
                 icon = Icons.Default.School,
-                onClick = onShowJoinDialog
+                onClick = onShowJoinDialog,
+                trailing = {
+                    IconButton(onClick = onShowQRScannerDialog) {
+                        Icon(
+                            Icons.Default.QrCodeScanner,
+                            contentDescription = stringResource(R.string.scan_mentor_qr),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             )
         }
 
@@ -827,7 +991,8 @@ fun LibrariesView(lazyListState: LazyListState) {
 @Composable
 fun JoinMentorDialog(
     onDismiss: () -> Unit,
-    onJoin: (String) -> Unit
+    onJoin: (String) -> Unit,
+    onScan: () -> Unit
 ) {
     var code by remember { mutableStateOf("") }
     AlertDialog(
@@ -842,7 +1007,12 @@ fun JoinMentorDialog(
                     label = { Text(stringResource(R.string.share_code_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    singleLine = true
+                    singleLine = true,
+                    trailingIcon = {
+                        IconButton(onClick = onScan) {
+                            Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.scan_qr))
+                        }
+                    }
                 )
             }
         },
