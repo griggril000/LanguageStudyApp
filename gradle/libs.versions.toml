@@ -52,6 +52,8 @@ material = "1.14.0"
 youtubePlayer = "13.0.0"
 markwon = "4.6.2"
 aboutLibraries = "15.0.2"
+zxing = "3.5.3"
+barcode-scanning = "17.3.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -115,6 +117,8 @@ firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
 youtube-player = { group = "com.pierfrancescosoffritti.androidyoutubeplayer", name = "core", version.ref = "youtubePlayer" }
 markwon-core = { group = "io.noties.markwon", name = "core", version.ref = "markwon" }
 aboutLibraries-compose = { group = "com.mikepenz", name = "aboutlibraries-compose-m3", version.ref = "aboutLibraries" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+mlkit-barcode-scanning = { group = "com.google.mlkit", name = "barcode-scanning", version.ref = "barcode-scanning" }
 
 [plugins]
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }

@@ -291,4 +291,9 @@
     <string name="portfolio_entries_label">Portfolio entries</string>
     <string name="journal_entries_label">Journal entries</string>
     <string name="mentor_code_cd">Mentor Code</string>
+    <string name="mentor_share_qr">Mentor Share QR Code</string>
+    <string name="mentor_qr_info">Ask your mentor to scan this QR code to view your portfolio.</string>
+    <string name="scan_mentor_qr">Scan Mentor QR Code</string>
+    <string name="camera_permission_denied">Camera permission is required to scan QR codes.</string>
+    <string name="scan_qr">Scan QR Code</string>
 </resources>
