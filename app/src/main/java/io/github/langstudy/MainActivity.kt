@@ -92,29 +92,33 @@ import io.github.langstudy.ui.viewmodel.PortfolioViewModelFactory
 import io.github.langstudy.ui.viewmodel.SearchViewModel
 import io.github.langstudy.ui.viewmodel.SettingsViewModel
 import io.github.langstudy.ui.viewmodel.SettingsViewModelFactory
+import android.util.Log
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
 
 class MainActivity : ComponentActivity() {
-    private val intentFlow = MutableSharedFlow<Intent>(extraBufferCapacity = 1)
+    private val intentChannel = Channel<Intent>(capacity = Channel.CONFLATED)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         enableEdgeToEdge()
         setContent {
-            MainScreen(intentFlow = intentFlow)
+            MainScreen(intentFlow = intentChannel.receiveAsFlow())
         }
         val currentIntent = intent
         if (currentIntent != null) {
-            intentFlow.tryEmit(currentIntent)
+            intentChannel.trySend(currentIntent)
         }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        intentFlow.tryEmit(intent)
+        intentChannel.trySend(intent)
     }
 }
 
@@ -211,30 +215,70 @@ fun MainScreen(
             }
         }
 
-        LaunchedEffect(currentUser) {
-            if (currentUser != null) {
-//                if (currentUser?.email == "test@example.com") {
-//                    val seeder = SampleDataSeeder(
-//                        app.vocabRepository,
-//                        app.skillRepository,
-//                        app.settingsRepository,
-//                        app.portfolioRepository,
-//                        app.journalRepository
-//                    )
-//                    launch { seeder.seed(currentUser!!.uid) }
-//                }
-                intentFlow.collect { intent ->
-                    if (intent.action == Intent.ACTION_VIEW) {
-                        val data = intent.data
-                        if (data?.host == "language-study.github.io" && (data.path == "/index.html" || data.path == "/")) {
-                            val code = data.getQueryParameter("mentor")
-                            if (code != null && code.length == 5) {
+        LaunchedEffect(Unit) {
+            intentFlow.collect { intent ->
+                if (intent.action == Intent.ACTION_VIEW) {
+                    val data = intent.data
+                    Log.d("DeepLink", "Received URI: $data")
+                    if (data?.host?.contains("language-study.github.io") == true || data?.scheme == "langstudy") {
+                        // Wait for user to be logged in before processing deep link
+                        authViewModel.user.filterNotNull().first()
+
+                        var mentorParam = data.getQueryParameter("mentor")
+                        var tabParam = data.getQueryParameter("tab")
+
+                        // Handle login redirect case where params are in returnTo
+                        if (mentorParam == null && tabParam == null) {
+                            data.getQueryParameter("returnTo")?.let { returnTo ->
+                                try {
+                                    val returnUri = android.net.Uri.parse(returnTo)
+                                    mentorParam = returnUri.getQueryParameter("mentor")
+                                    tabParam = returnUri.getQueryParameter("tab")
+                                } catch (e: Exception) {
+                                    Log.e("DeepLink", "Error parsing returnTo URI", e)
+                                }
+                            }
+                        }
+
+                        // Sanitize mentor code (take first 5 chars to avoid duplication issues from some sources)
+                        val code = mentorParam?.take(5)
+                        val tab = tabParam
+
+                        Log.d("DeepLink", "Final Parsed - mentor: $code (raw: $mentorParam), tab: $tab")
+
+                        if (code != null && code.length == 5) {
+                            val mentorCodeState = authViewModel.mentorCode.value
+                            val currentUid = authViewModel.user.value?.uid
+                            
+                            if (code != mentorCodeState) {
+                                Log.d("DeepLink", "New mentor code detected. Validating...")
                                 val ownerUid = settingsVm.validateCode(code)
-                                if (ownerUid != null && ownerUid != currentUser?.uid) {
+                                if (ownerUid != null && ownerUid != currentUid) {
+                                    Log.d("DeepLink", "Entering mentor mode for $ownerUid")
                                     authViewModel.enterMentorMode(context, ownerUid, code)
                                     backStack.clear()
-                                    backStack.add(NavRoute.Portfolio)
+                                    val targetRoute = if (tab != null) NavRoute.fromString(tab) else NavRoute.Portfolio
+                                    backStack.add(targetRoute)
+                                } else {
+                                    Log.w("DeepLink", "Invalid code or trying to mentor self. ownerUid: $ownerUid")
                                 }
+                            } else {
+                                Log.d("DeepLink", "Already in mentor mode with code $code. Checking tab: $tab")
+                                tab?.let {
+                                    val targetRoute = NavRoute.fromString(it)
+                                    if (backStack.lastOrNull() != targetRoute) {
+                                        Log.d("DeepLink", "Navigating to tab: $targetRoute")
+                                        backStack.clear()
+                                        backStack.add(targetRoute)
+                                    }
+                                }
+                            }
+                        } else if (tab != null) {
+                            Log.d("DeepLink", "No mentor code, navigating to tab: $tab")
+                            val targetRoute = NavRoute.fromString(tab)
+                            if (backStack.lastOrNull() != targetRoute) {
+                                backStack.clear()
+                                backStack.add(targetRoute)
                             }
                         }
                     }
