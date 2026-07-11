@@ -606,72 +606,24 @@ fun SettingsMainView(
             .verticalScroll(scrollState)
             .padding(horizontal = 16.dp)
     ) {
-        PreferenceCategory(title = stringResource(R.string.pref_account))
-        PreferenceItem(
-            title = if (isMentorMode) stringResource(R.string.mentoring_student) else stringResource(
-                R.string.signed_in_as
-            ),
-            summary = if (isMentorMode) stringResource(
-                R.string.mentor_code_format,
-                mentorCode ?: ""
-            ) else currentUser?.email ?: stringResource(R.string.not_signed_in),
-            icon = Icons.Default.Person,
-            onClick = {
-                if (!isMentorMode && currentUser != null) {
-                    onShowAccountOptionsDialog()
-                }
-            }
-        )
-        PreferenceItem(
-            title = stringResource(R.string.sign_out),
-            icon = Icons.AutoMirrored.Filled.Logout,
-            onClick = { authViewModel.signOut(context) }
-        )
-        if (currentUser != null && !isMentorMode) {
-            PreferenceItem(
-                title = stringResource(R.string.delete_account),
-                icon = Icons.Default.DeleteForever,
-                onClick = onShowDeleteDialog,
-                isError = true
-            )
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
-
         if (isMentorMode) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = 16.dp)
                     .background(
                         MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                        RoundedCornerShape(8.dp)
+                        RoundedCornerShape(12.dp)
                     )
-                    .padding(12.dp)
+                    .padding(16.dp)
             ) {
                 Text(
                     text = stringResource(R.string.mentor_view_info),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
         }
-
-        PreferenceCategory(title = stringResource(R.string.pref_display))
-        val systemDefault = stringResource(R.string.system_default)
-        val dynamicColor = stringResource(R.string.dynamic_color)
-        PreferenceItem(
-            title = stringResource(R.string.pref_theme),
-            summary = when (userSettings.theme) {
-                "system" -> systemDefault
-                "dynamic" -> dynamicColor
-                else -> userSettings.theme.replaceFirstChar { it.uppercase() }
-            },
-            icon = Icons.Default.Palette,
-            onClick = if (isMentorMode) ({}) else onShowThemeDialog
-        )
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
 
         PreferenceCategory(title = stringResource(R.string.pref_learning))
         PreferenceItem(
@@ -694,14 +646,22 @@ fun SettingsMainView(
             icon = Icons.Rounded.Home,
             onClick = if (isMentorMode) ({}) else onShowStartupTabDialog
         )
-        if (!isMentorMode) {
-            PreferenceItem(
-                title = stringResource(R.string.pref_contact),
-                summary = stringResource(R.string.pref_contact_summary),
-                icon = Icons.Default.Feedback,
-                onClick = onShowContactDialog
-            )
-        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
+
+        PreferenceCategory(title = stringResource(R.string.pref_display))
+        val systemDefault = stringResource(R.string.system_default)
+        val dynamicColor = stringResource(R.string.dynamic_color)
+        PreferenceItem(
+            title = stringResource(R.string.pref_theme),
+            summary = when (userSettings.theme) {
+                "system" -> systemDefault
+                "dynamic" -> dynamicColor
+                else -> userSettings.theme.replaceFirstChar { it.uppercase() }
+            },
+            icon = Icons.Default.Palette,
+            onClick = if (isMentorMode) ({}) else onShowThemeDialog
+        )
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
 
@@ -814,7 +774,47 @@ fun SettingsMainView(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
 
+        PreferenceCategory(title = stringResource(R.string.pref_account))
+        PreferenceItem(
+            title = if (isMentorMode) stringResource(R.string.mentoring_student) else stringResource(
+                R.string.signed_in_as
+            ),
+            summary = if (isMentorMode) stringResource(
+                R.string.mentor_code_format,
+                mentorCode ?: ""
+            ) else currentUser?.email ?: stringResource(R.string.not_signed_in),
+            icon = Icons.Default.Person,
+            onClick = {
+                if (!isMentorMode && currentUser != null) {
+                    onShowAccountOptionsDialog()
+                }
+            }
+        )
+        PreferenceItem(
+            title = stringResource(R.string.sign_out),
+            icon = Icons.AutoMirrored.Filled.Logout,
+            onClick = { authViewModel.signOut(context) }
+        )
+        if (currentUser != null && !isMentorMode) {
+            PreferenceItem(
+                title = stringResource(R.string.delete_account),
+                icon = Icons.Default.DeleteForever,
+                onClick = onShowDeleteDialog,
+                isError = true
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
+
         PreferenceCategory(title = stringResource(R.string.pref_additional_info))
+        if (!isMentorMode) {
+            PreferenceItem(
+                title = stringResource(R.string.pref_contact),
+                summary = stringResource(R.string.pref_contact_summary),
+                icon = Icons.Default.Feedback,
+                onClick = onShowContactDialog
+            )
+        }
         PreferenceItem(
             title = stringResource(R.string.app_details),
             summary = stringResource(R.string.app_details_version_format, BuildConfig.VERSION_NAME),
