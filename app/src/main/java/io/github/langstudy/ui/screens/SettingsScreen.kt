@@ -1,9 +1,12 @@
 package io.github.langstudy.ui.screens
 
 import android.content.ClipData
+import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.TextView
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -82,10 +85,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.shouldShowRationale
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import io.github.langstudy.BuildConfig
@@ -141,6 +143,31 @@ fun SettingsScreen(
     val detailsScrollState = rememberScrollState()
     val notesScrollState = rememberScrollState()
     val librariesLazyListState = rememberLazyListState()
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                showQRScannerDialog = true
+            } else {
+                scope.launch {
+                    snackbarHostState.showSnackbar(context.getString(R.string.camera_permission_denied))
+                }
+            }
+        }
+    )
+
+    val handleShowQRScanner = {
+        if (ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            showQRScannerDialog = true
+        } else {
+            cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+        }
+    }
 
     val handleBack = {
         when (currentView) {
@@ -250,104 +277,87 @@ fun SettingsScreen(
         val cannotMentorSelf = stringResource(R.string.cannot_mentor_yourself)
         val invalidCode = stringResource(R.string.invalid_disabled_code)
         val errorValidating = stringResource(R.string.error_validating_code)
-        val permissionDenied = stringResource(R.string.camera_permission_denied)
-
-        val cameraPermissionState = com.google.accompanist.permissions.rememberPermissionState(
-            android.Manifest.permission.CAMERA
-        )
 
         var isProcessing by remember { mutableStateOf(false) }
         var lastScannedCode by remember { mutableStateOf("") }
 
-        if (cameraPermissionState.status.isGranted) {
-            AlertDialog(
-                onDismissRequest = { showQRScannerDialog = false },
-                title = { Text(stringResource(R.string.scan_mentor_qr)) },
-                text = {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)
-                            .height(300.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(androidx.compose.ui.graphics.Color.Black)
-                    ) {
-                        QRCodeScanner { scannedValue ->
-                            if (isProcessing || scannedValue == lastScannedCode) return@QRCodeScanner
+        AlertDialog(
+            onDismissRequest = { showQRScannerDialog = false },
+            title = { Text(stringResource(R.string.scan_mentor_qr)) },
+            text = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                        .height(300.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(androidx.compose.ui.graphics.Color.Black)
+                ) {
+                    QRCodeScanner { scannedValue ->
+                        if (isProcessing || scannedValue == lastScannedCode) return@QRCodeScanner
 
-                            val code = try {
-                                val uri = android.net.Uri.parse(scannedValue)
-                                val mentorFromUri = if (uri.scheme != null) {
-                                    uri.getQueryParameter("mentor")
-                                        ?: uri.getQueryParameter("returnTo")?.let {
-                                            android.net.Uri.parse(it).getQueryParameter("mentor")
-                                        }
-                                } else if (scannedValue.contains("mentor=")) {
-                                    android.net.Uri.parse("https://$scannedValue")
-                                        .getQueryParameter("mentor")
-                                } else {
-                                    null
-                                }
-                                mentorFromUri ?: scannedValue
-                            } catch (e: Exception) {
-                                scannedValue
-                            }
-
-                            // Only proceed if it looks like a 5-char code, not a full URL we failed to parse
-                            if (code.length == 5 || (code.length > 5 && !code.contains("/") && !code.contains(
-                                    "."
-                                ))
-                            ) {
-                                val sanitizedCode = code.take(5).uppercase()
-                                if (sanitizedCode == lastScannedCode) return@QRCodeScanner
-
-                                isProcessing = true
-                                lastScannedCode = sanitizedCode
-
-                                scope.launch {
-                                    try {
-                                        val ownerUid = settingsViewModel.validateCode(sanitizedCode)
-                                        if (ownerUid != null) {
-                                            if (ownerUid == currentUser?.uid) {
-                                                snackbarHostState.showSnackbar(cannotMentorSelf)
-                                            } else {
-                                                authViewModel.enterMentorMode(
-                                                    context,
-                                                    ownerUid,
-                                                    sanitizedCode
-                                                )
-                                                showQRScannerDialog = false
-                                            }
-                                        } else {
-                                            snackbarHostState.showSnackbar(invalidCode)
-                                        }
-                                    } catch (_: Exception) {
-                                        snackbarHostState.showSnackbar(errorValidating)
-                                    } finally {
-                                        isProcessing = false
+                        val code = try {
+                            val uri = android.net.Uri.parse(scannedValue)
+                            val mentorFromUri = if (uri.scheme != null) {
+                                uri.getQueryParameter("mentor")
+                                    ?: uri.getQueryParameter("returnTo")?.let {
+                                        android.net.Uri.parse(it).getQueryParameter("mentor")
                                     }
+                            } else if (scannedValue.contains("mentor=")) {
+                                android.net.Uri.parse("https://$scannedValue")
+                                    .getQueryParameter("mentor")
+                            } else {
+                                null
+                            }
+                            mentorFromUri ?: scannedValue
+                        } catch (e: Exception) {
+                            scannedValue
+                        }
+
+                        // Only proceed if it looks like a 5-char code, not a full URL we failed to parse
+                        if (code.length == 5 || (code.length > 5 && !code.contains("/") && !code.contains(
+                                "."
+                            ))
+                        ) {
+                            val sanitizedCode = code.take(5).uppercase()
+                            if (sanitizedCode == lastScannedCode) return@QRCodeScanner
+
+                            isProcessing = true
+                            lastScannedCode = sanitizedCode
+
+                            scope.launch {
+                                try {
+                                    val ownerUid = settingsViewModel.validateCode(sanitizedCode)
+                                    if (ownerUid != null) {
+                                        if (ownerUid == currentUser?.uid) {
+                                            snackbarHostState.showSnackbar(cannotMentorSelf)
+                                        } else {
+                                            authViewModel.enterMentorMode(
+                                                context,
+                                                ownerUid,
+                                                sanitizedCode
+                                            )
+                                            showQRScannerDialog = false
+                                        }
+                                    } else {
+                                        snackbarHostState.showSnackbar(invalidCode)
+                                    }
+                                } catch (_: Exception) {
+                                    snackbarHostState.showSnackbar(errorValidating)
+                                } finally {
+                                    isProcessing = false
                                 }
                             }
                         }
                     }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showQRScannerDialog = false }) {
-                        Text(stringResource(R.string.cancel))
-                    }
                 }
-            )
-        } else {
-            LaunchedEffect(Unit) {
-                cameraPermissionState.launchPermissionRequest()
-            }
-            if (!cameraPermissionState.status.shouldShowRationale) {
-                showQRScannerDialog = false
-                LaunchedEffect(Unit) {
-                    snackbarHostState.showSnackbar(permissionDenied)
+            },
+            confirmButton = {
+                TextButton(onClick = { showQRScannerDialog = false }) {
+                    Text(stringResource(R.string.cancel))
                 }
             }
-        }
+        )
     }
 
     if (showDeleteDialog) {
@@ -395,7 +405,7 @@ fun SettingsScreen(
             },
             onScan = {
                 showJoinDialog = false
-                showQRScannerDialog = true
+                handleShowQRScanner()
             }
         )
     }
@@ -548,7 +558,7 @@ fun SettingsScreen(
                     onShowContactDialog = { showContactDialog = true },
                     onShowAccountOptionsDialog = { showAccountOptionsDialog = true },
                     onShowQRCodeDialog = { showQRCodeDialog = true },
-                    onShowQRScannerDialog = { showQRScannerDialog = true }
+                    onShowQRScannerDialog = handleShowQRScanner
                 )
 
                 "details" -> AppDetailsView(
