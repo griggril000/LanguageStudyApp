@@ -35,7 +35,13 @@ class SettingsViewModel(
 ) : ViewModel() {
 
     val userSettings: StateFlow<UserSettings> = repository.getUserSettings(userId)
-        .catch { e -> android.util.Log.e("SettingsVM", "Error collecting user settings for $userId", e) }
+        .catch { e ->
+            android.util.Log.e(
+                "SettingsVM",
+                "Error collecting user settings for $userId",
+                e
+            )
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserSettings())
 
     val vocabCount: StateFlow<Int> = vocabRepository.vocabCount
@@ -46,7 +52,13 @@ class SettingsViewModel(
 
     val portfolioCount: StateFlow<Int> = portfolioRepository.getPortfolioItems(userId, limit = 100)
         .map { it.size }
-        .catch { e -> android.util.Log.e("SettingsVM", "Error collecting portfolio count for $userId", e) }
+        .catch { e ->
+            android.util.Log.e(
+                "SettingsVM",
+                "Error collecting portfolio count for $userId",
+                e
+            )
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val journalCount: StateFlow<Int> = journalRepository.entryCount
@@ -101,12 +113,16 @@ class SettingsViewModel(
                         val existingCode = mentorRepository.getMentorCodeIdForUser(userId)
                         if (existingCode != null) {
                             _mentorCode.value = existingCode
-                            
+
                             // ONLY attempt to sync back to settings doc if this is the owner.
                             // Mentors don't have permission to write to student's metadata.
-                            val currentAuthUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                            val currentAuthUid =
+                                com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
                             if (userId == currentAuthUid) {
-                                repository.updateUserSettings(userId, mapOf("shareCode" to existingCode))
+                                repository.updateUserSettings(
+                                    userId,
+                                    mapOf("shareCode" to existingCode)
+                                )
                             }
                         } else {
                             _mentorCode.value = null
@@ -329,12 +345,29 @@ class SettingsViewModel(
         }
     }
 
-    fun submitLanguageRequest(language: String, message: String, email: String? = null) {
-        if (userId.isBlank() || language.isBlank()) return
+    fun submitContactRequest(
+        type: String,
+        message: String,
+        resourceName: String? = null,
+        resourceLocation: String? = null,
+        email: String? = null,
+        isMentorMode: Boolean = false
+    ) {
+        if (userId.isBlank()) return
+        val currentSettings = userSettings.value
         viewModelScope.launch {
             try {
-                repository.submitLanguageRequest(userId, language, message, email)
-                _errorMessages.emit("Request submitted! Thank you.")
+                repository.submitContactRequest(
+                    userId = userId,
+                    type = type,
+                    message = message,
+                    resourceName = resourceName,
+                    resourceLocation = resourceLocation,
+                    userEmail = email,
+                    isMentorMode = isMentorMode,
+                    settings = currentSettings
+                )
+                _errorMessages.emit("Message submitted! Thank you.")
             } catch (e: Exception) {
                 _errorMessages.emit("Failed to submit request: ${e.message}")
             }

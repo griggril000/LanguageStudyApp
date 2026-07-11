@@ -96,13 +96,41 @@ class SettingsRepository(
         getSettingsDoc(userId).set(settings, SetOptions.merge()).await()
     }
 
-    suspend fun submitLanguageRequest(userId: String, language: String, message: String, userEmail: String? = null) {
+    suspend fun submitContactRequest(
+        userId: String,
+        type: String,
+        message: String,
+        resourceName: String? = null,
+        resourceLocation: String? = null,
+        userEmail: String? = null,
+        isMentorMode: Boolean = false,
+        settings: UserSettings? = null
+    ) {
         val client = OkHttpClient()
         val json = JsonObject().apply {
             addProperty("userId", userId)
             userEmail?.let { addProperty("email", it) }
-            addProperty("language", language)
+            addProperty("type", type)
             addProperty("message", message)
+            resourceName?.let { addProperty("resourceName", it) }
+            resourceLocation?.let { addProperty("resourceLocation", it) }
+            
+            // Technical Metadata
+            addProperty("appVersion", io.github.langstudy.BuildConfig.VERSION_NAME)
+            addProperty("androidVersion", android.os.Build.VERSION.RELEASE)
+            addProperty("device", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
+            addProperty("isMentorMode", isMentorMode)
+            
+            settings?.let {
+                addProperty("primaryLanguage", it.languageLearning)
+                addProperty("learnedLanguages", it.learnedLanguages.joinToString(", "))
+                addProperty("mentorEnabled", it.mentorCodeEnabled)
+                addProperty("mentorAccessLevel", it.mentorAccessLevel)
+                addProperty("theme", it.theme)
+                addProperty("homepageTab", it.homepageTab)
+                addProperty("isPublic", it.isPublic)
+                addProperty("mentorQuickReview", it.mentorQuickReviewEnabled)
+            }
         }
         val mediaType = "application/json; charset=utf-8".toMediaType()
         val body = json.toString().toRequestBody(mediaType)

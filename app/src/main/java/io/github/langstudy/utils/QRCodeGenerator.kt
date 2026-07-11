@@ -1,4 +1,4 @@
-package io.github.langstudy.util
+package io.github.langstudy.utils
 
 import android.graphics.Bitmap
 import android.graphics.Color

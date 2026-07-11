@@ -25,8 +25,8 @@ android {
         applicationId = "io.github.langstudy"
         minSdk = 24
         targetSdk = 37
-        versionCode = 14
-        versionName = "1.6.0"
+        versionCode = 15
+        versionName = "1.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

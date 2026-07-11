@@ -15,6 +15,7 @@
     <string name="all">All</string>
     <string name="exit">Exit</string>
     <string name="none">None</string>
+    <string name="other">Other</string>
     <string name="clear_cd">Clear</string>
     <string name="search_placeholder">Search…</string>
     <string name="progress_status_legend">Progress Status Legend:</string>
@@ -41,7 +42,7 @@
     <string name="welcome_lang_request_sent_format">Request sent for %1$s! You can continue the walkthrough or select another language above.</string>
     <string name="welcome_lang_switch_info">When you switch languages, your progress is saved per language and reloads when you return.</string>
     <string name="welcome_lang_resource_info">Language resource links also update based on your selection.</string>
-    <string name="welcome_lang_request_settings_info">Don\'t see your language? Request it in Settings.</string>
+    <string name="welcome_lang_request_settings_info">Don\'t see your language? Contact us in Settings.</string>
     <string name="welcome_vocab_info">Keep track of all the new words and phrases you\'re learning. Categorize them and track your mastery over time.</string>
     <string name="welcome_skills_info">Track your progress across skills like listening, speaking, reading, and writing. Mark them as not started, in progress, or proficient.</string>
     <string name="welcome_portfolio_info">Build a collection of your work, assignments, and achievements. Document your journey and showcase your growth.</string>
@@ -110,12 +111,22 @@
     <string name="new_email">New Email</string>
     <string name="send_verification">Send Verification</string>
 
-    <!-- Language Request -->
-    <string name="request_language_title">Request a Language</string>
+    <!-- Contact Form -->
+    <string name="contact_title">Contact Us</string>
+    <string name="contact_info">Select the type of request or feedback you have and provide details below.</string>
+    <string name="contact_type_label">Request Type</string>
+    <string name="contact_type_add_language">Add a language to study</string>
+    <string name="contact_type_translate">Request translation of app into my language</string>
+    <string name="contact_type_suggest_resource">Suggest a study resource</string>
+    <string name="contact_type_bug_report">Bug report</string>
+    <string name="contact_type_feature_request">Feature request</string>
+    <string name="contact_type_other">Other</string>
+    <string name="resource_location_label">Link or Location</string>
     <string name="language_name_label">Language Name</string>
     <string name="additional_notes_label">Additional Notes (Optional)</string>
     <string name="submit">Submit</string>
-    <string name="language_request_info">Don\'t see the language you\'re looking for? Let us know and we\'ll work on adding it!</string>
+    <string name="pref_contact">Contact</string>
+    <string name="pref_contact_summary">Send feedback, report bugs, or request features.</string>
 
     <!-- Vocab Screen -->
     <string name="new_category">New Category</string>
@@ -187,7 +198,7 @@
 
     <!-- Journal Screen -->
     <string name="title_label">Title</string>
-    <string name="content_label">Content</string>
+    <string name="message_label">Message</string>
     <string name="new_entry_cd">New Entry</string>
     <string name="new_journal_entry">New Journal Entry</string>
     <string name="edit_journal_entry">Edit Journal Entry</string>
@@ -262,8 +273,6 @@
     <string name="pref_primary_lang">Primary Language</string>
     <string name="pref_learning_langs">Languages I\'m Learning</string>
     <string name="pref_startup_tab">Startup Tab</string>
-    <string name="pref_request_lang">Request a Language</string>
-    <string name="pref_request_lang_summary">Don\'t see the language you are studying? Let us know.</string>
     <string name="pref_mentor_access">Mentor Access</string>
     <string name="enable_mentor_view">Enable Mentor View</string>
     <string name="enable_mentor_view_summary">Allow someone with your code to view your progress.</string>
