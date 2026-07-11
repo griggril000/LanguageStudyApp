@@ -523,7 +523,9 @@ fun SkillsScreen(
                         }
                     }
 
-                    ProgressStatusLegend()
+                    ProgressStatusLegend(
+                        modifier = if (canEditContent) Modifier.padding(end = 80.dp) else Modifier
+                    )
                 }
             }
         }
