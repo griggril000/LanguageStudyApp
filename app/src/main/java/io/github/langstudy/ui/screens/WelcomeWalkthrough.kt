@@ -16,9 +16,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -34,7 +32,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
@@ -56,6 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.langstudy.R
+import io.github.langstudy.ui.components.ContactDialog
+import io.github.langstudy.ui.components.ContactRequestType
 import io.github.langstudy.ui.theme.SuccessGreen
 import io.github.langstudy.ui.viewmodel.SettingsViewModel
 
@@ -73,6 +72,7 @@ fun WelcomeWalkthrough(
     val availableLanguages by viewModel.availableLanguages.collectAsState(initial = emptyList())
     var selectedLang by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
+    var showContactDialog by remember { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -114,7 +114,11 @@ fun WelcomeWalkthrough(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = stringResource(R.string.welcome_step_format, currentStep, totalSteps),
+                            text = stringResource(
+                                R.string.welcome_step_format,
+                                currentStep,
+                                totalSteps
+                            ),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
@@ -161,9 +165,7 @@ fun WelcomeWalkthrough(
                                 showError = false
                             },
                             availableLanguages = availableLanguages,
-                            onRequestLanguage = { langName ->
-                                viewModel.submitLanguageRequest(langName, "Requested during onboarding.", email)
-                            }
+                            onShowContactDialog = { showContactDialog = true }
                         )
 
                         3 -> VocabStep()
@@ -215,7 +217,9 @@ fun WelcomeWalkthrough(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = if (isLastStep) stringResource(R.string.welcome_finish_start) else stringResource(R.string.next),
+                                text = if (isLastStep) stringResource(R.string.welcome_finish_start) else stringResource(
+                                    R.string.next
+                                ),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -233,13 +237,19 @@ fun WelcomeWalkthrough(
             }
         }
 
-        if (showError) {
-            AlertDialog(
-                onDismissRequest = { showError = false },
-                text = { Text(stringResource(R.string.welcome_select_lang_error)) },
-                confirmButton = {
-                    TextButton(onClick = { showError = false }) {
-                        Text(stringResource(R.string.ok))
+        if (showContactDialog) {
+            val otherLabel = stringResource(R.string.other)
+            ContactDialog(
+                initialType = ContactRequestType.ADD_LANGUAGE,
+                onDismiss = { showContactDialog = false },
+                onSubmit = { type, message, _, _ ->
+                    viewModel.submitContactRequest(
+                        type = type.name,
+                        message = message,
+                        email = email
+                    )
+                    if (type == ContactRequestType.ADD_LANGUAGE) {
+                        selectedLang = otherLabel
                     }
                 }
             )
@@ -263,7 +273,7 @@ private fun SelectLanguageStep(
     selectedLang: String,
     onLangSelected: (String) -> Unit,
     availableLanguages: List<String>,
-    onRequestLanguage: (String) -> Unit
+    onShowContactDialog: () -> Unit
 ) {
     Column {
         Text(
@@ -320,62 +330,15 @@ private fun SelectLanguageStep(
                     },
                     onClick = {
                         expanded = false
-                        onLangSelected("Unlisted")
+                        onShowContactDialog()
                     }
                 )
             }
         }
 
-        if (selectedLang == "Unlisted") {
-            var requestedLang by remember { mutableStateOf("") }
-            var requestSent by remember { mutableStateOf(false) }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            if (!requestSent) {
-                OutlinedTextField(
-                    value = requestedLang,
-                    onValueChange = { requestedLang = it },
-                    label = { Text(stringResource(R.string.welcome_lang_request_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    trailingIcon = {
-                        IconButton(
-                            onClick = {
-                                if (requestedLang.isNotBlank()) {
-                                    onRequestLanguage(requestedLang)
-                                    requestSent = true
-                                }
-                            },
-                            enabled = requestedLang.isNotBlank()
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Rounded.Send,
-                                contentDescription = stringResource(R.string.welcome_lang_request_submit)
-                            )
-                        }
-                    }
-                )
-                Text(
-                    text = stringResource(R.string.welcome_lang_request_soon),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 4.dp, top = 4.dp)
-                )
-            } else {
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = stringResource(R.string.welcome_lang_request_sent_format, requestedLang),
-                        modifier = Modifier.padding(12.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-        }
+        // Logic for handling unlisted language request is now handled via ContactDialog
+        // which is triggered by the dropdown menu item itself.
+        // We can remove the "Unlisted" specific UI block here.
 
         Spacer(modifier = Modifier.height(16.dp))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
@@ -84,7 +85,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
@@ -94,12 +94,12 @@ import io.github.langstudy.navigation.NavRoute
 import io.github.langstudy.navigation.label
 import io.github.langstudy.ui.auth.AuthViewModel
 import io.github.langstudy.ui.components.AccountManagementDialog
+import io.github.langstudy.ui.components.ContactDialog
 import io.github.langstudy.ui.components.DeleteConfirmationDialog
-import io.github.langstudy.ui.components.LanguageRequestDialog
 import io.github.langstudy.ui.components.QRCodeScanner
 import io.github.langstudy.ui.components.UpdateEmailDialog
 import io.github.langstudy.ui.viewmodel.SettingsViewModel
-import io.github.langstudy.util.QRCodeGenerator
+import io.github.langstudy.utils.QRCodeGenerator
 import io.noties.markwon.Markwon
 import kotlinx.coroutines.launch
 
@@ -129,7 +129,7 @@ fun SettingsScreen(
     var showLearningLangsDialog by remember { mutableStateOf(false) }
     var showStartupTabDialog by remember { mutableStateOf(false) }
     var showAccessLevelDialog by remember { mutableStateOf(false) }
-    var showLanguageRequestDialog by remember { mutableStateOf(false) }
+    var showContactDialog by remember { mutableStateOf(false) }
     var showAccountOptionsDialog by remember { mutableStateOf(false) }
     var showUpdateEmailDialog by remember { mutableStateOf(false) }
     var showQRCodeDialog by remember { mutableStateOf(false) }
@@ -278,11 +278,13 @@ fun SettingsScreen(
                             val code = try {
                                 val uri = android.net.Uri.parse(scannedValue)
                                 val mentorFromUri = if (uri.scheme != null) {
-                                    uri.getQueryParameter("mentor") ?: uri.getQueryParameter("returnTo")?.let {
-                                        android.net.Uri.parse(it).getQueryParameter("mentor")
-                                    }
+                                    uri.getQueryParameter("mentor")
+                                        ?: uri.getQueryParameter("returnTo")?.let {
+                                            android.net.Uri.parse(it).getQueryParameter("mentor")
+                                        }
                                 } else if (scannedValue.contains("mentor=")) {
-                                    android.net.Uri.parse("https://$scannedValue").getQueryParameter("mentor")
+                                    android.net.Uri.parse("https://$scannedValue")
+                                        .getQueryParameter("mentor")
                                 } else {
                                     null
                                 }
@@ -292,13 +294,16 @@ fun SettingsScreen(
                             }
 
                             // Only proceed if it looks like a 5-char code, not a full URL we failed to parse
-                            if (code.length == 5 || (code.length > 5 && !code.contains("/") && !code.contains("."))) {
+                            if (code.length == 5 || (code.length > 5 && !code.contains("/") && !code.contains(
+                                    "."
+                                ))
+                            ) {
                                 val sanitizedCode = code.take(5).uppercase()
                                 if (sanitizedCode == lastScannedCode) return@QRCodeScanner
-                                
+
                                 isProcessing = true
                                 lastScannedCode = sanitizedCode
-                                
+
                                 scope.launch {
                                     try {
                                         val ownerUid = settingsViewModel.validateCode(sanitizedCode)
@@ -306,7 +311,11 @@ fun SettingsScreen(
                                             if (ownerUid == currentUser?.uid) {
                                                 snackbarHostState.showSnackbar(cannotMentorSelf)
                                             } else {
-                                                authViewModel.enterMentorMode(context, ownerUid, sanitizedCode)
+                                                authViewModel.enterMentorMode(
+                                                    context,
+                                                    ownerUid,
+                                                    sanitizedCode
+                                                )
                                                 showQRScannerDialog = false
                                             }
                                         } else {
@@ -472,11 +481,18 @@ fun SettingsScreen(
         )
     }
 
-    if (showLanguageRequestDialog) {
-        LanguageRequestDialog(
-            onDismiss = { showLanguageRequestDialog = false },
-            onSubmit = { lang, message ->
-                settingsViewModel.submitLanguageRequest(lang, message, currentUser?.email)
+    if (showContactDialog) {
+        ContactDialog(
+            onDismiss = { showContactDialog = false },
+            onSubmit = { type, message, resName, resLoc ->
+                settingsViewModel.submitContactRequest(
+                    type = type.name,
+                    message = message,
+                    resourceName = resName,
+                    resourceLocation = resLoc,
+                    email = currentUser?.email,
+                    isMentorMode = isMentorMode
+                )
             }
         )
     }
@@ -496,7 +512,10 @@ fun SettingsScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = handleBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back_cd))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back_cd)
+                        )
                     }
                 }
             )
@@ -526,7 +545,7 @@ fun SettingsScreen(
                     onShowLearningLangsDialog = { showLearningLangsDialog = true },
                     onShowStartupTabDialog = { showStartupTabDialog = true },
                     onShowAccessLevelDialog = { showAccessLevelDialog = true },
-                    onShowLanguageRequestDialog = { showLanguageRequestDialog = true },
+                    onShowContactDialog = { showContactDialog = true },
                     onShowAccountOptionsDialog = { showAccountOptionsDialog = true },
                     onShowQRCodeDialog = { showQRCodeDialog = true },
                     onShowQRScannerDialog = { showQRScannerDialog = true }
@@ -571,7 +590,7 @@ fun SettingsMainView(
     onShowLearningLangsDialog: () -> Unit,
     onShowStartupTabDialog: () -> Unit,
     onShowAccessLevelDialog: () -> Unit,
-    onShowLanguageRequestDialog: () -> Unit,
+    onShowContactDialog: () -> Unit,
     onShowAccountOptionsDialog: () -> Unit,
     onShowQRCodeDialog: () -> Unit,
     onShowQRScannerDialog: () -> Unit
@@ -589,8 +608,13 @@ fun SettingsMainView(
     ) {
         PreferenceCategory(title = stringResource(R.string.pref_account))
         PreferenceItem(
-            title = if (isMentorMode) stringResource(R.string.mentoring_student) else stringResource(R.string.signed_in_as),
-            summary = if (isMentorMode) stringResource(R.string.mentor_code_format, mentorCode ?: "") else currentUser?.email ?: stringResource(R.string.not_signed_in),
+            title = if (isMentorMode) stringResource(R.string.mentoring_student) else stringResource(
+                R.string.signed_in_as
+            ),
+            summary = if (isMentorMode) stringResource(
+                R.string.mentor_code_format,
+                mentorCode ?: ""
+            ) else currentUser?.email ?: stringResource(R.string.not_signed_in),
             icon = Icons.Default.Person,
             onClick = {
                 if (!isMentorMode && currentUser != null) {
@@ -672,10 +696,10 @@ fun SettingsMainView(
         )
         if (!isMentorMode) {
             PreferenceItem(
-                title = stringResource(R.string.pref_request_lang),
-                summary = stringResource(R.string.pref_request_lang_summary),
-                icon = Icons.Default.Language,
-                onClick = onShowLanguageRequestDialog
+                title = stringResource(R.string.pref_contact),
+                summary = stringResource(R.string.pref_contact_summary),
+                icon = Icons.Default.Feedback,
+                onClick = onShowContactDialog
             )
         }
 
@@ -684,7 +708,9 @@ fun SettingsMainView(
         PreferenceCategory(title = stringResource(R.string.pref_mentor_access))
         SwitchPreference(
             title = stringResource(R.string.enable_mentor_view),
-            summary = if (isMentorMode) stringResource(R.string.enable_mentor_view_mentor_summary) else stringResource(R.string.enable_mentor_view_summary),
+            summary = if (isMentorMode) stringResource(R.string.enable_mentor_view_mentor_summary) else stringResource(
+                R.string.enable_mentor_view_summary
+            ),
             icon = Icons.Default.SupervisorAccount,
             checked = userSettings.mentorCodeEnabled,
             onCheckedChange = { settingsViewModel.toggleMentorCode(it) },
@@ -695,7 +721,9 @@ fun SettingsMainView(
             val generating = stringResource(R.string.generating)
             val mentorCodeText = stringResource(R.string.mentor_code_cd)
             PreferenceItem(
-                title = if (isMentorMode) stringResource(R.string.student_share_code) else stringResource(R.string.mentor_share_code),
+                title = if (isMentorMode) stringResource(R.string.student_share_code) else stringResource(
+                    R.string.mentor_share_code
+                ),
                 summary = mentorCode ?: generating,
                 icon = Icons.Rounded.Refresh,
                 onClick = {
@@ -737,7 +765,9 @@ fun SettingsMainView(
             val statusUpdates = stringResource(R.string.status_updates)
             val editAll = stringResource(R.string.edit_all)
             PreferenceItem(
-                title = if (isMentorMode) stringResource(R.string.student_access_level) else stringResource(R.string.mentor_access_level),
+                title = if (isMentorMode) stringResource(R.string.student_access_level) else stringResource(
+                    R.string.mentor_access_level
+                ),
                 summary = when (userSettings.mentorAccessLevel) {
                     "view" -> readOnly
                     "status" -> statusUpdates
@@ -823,13 +853,19 @@ fun AppDetailsView(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        DetailItem(label = stringResource(R.string.lang_study_version_label), value = BuildConfig.VERSION_NAME)
+        DetailItem(
+            label = stringResource(R.string.lang_study_version_label),
+            value = BuildConfig.VERSION_NAME
+        )
         PreferenceItem(
             title = stringResource(R.string.release_notes),
             summary = stringResource(R.string.release_notes_summary),
             onClick = onNavigateToNotes
         )
-        DetailItem(label = stringResource(R.string.android_version_label), value = android.os.Build.VERSION.RELEASE)
+        DetailItem(
+            label = stringResource(R.string.android_version_label),
+            value = android.os.Build.VERSION.RELEASE
+        )
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
 
@@ -841,10 +877,22 @@ fun AppDetailsView(
                 color = MaterialTheme.colorScheme.primary
             )
 
-            DetailItem(label = stringResource(R.string.vocab_items_label), value = vocabCount.toString())
-            DetailItem(label = stringResource(R.string.skills_tracked_label), value = skillCount.toString())
-            DetailItem(label = stringResource(R.string.portfolio_entries_label), value = portfolioCount.toString())
-            DetailItem(label = stringResource(R.string.journal_entries_label), value = journalCount.toString())
+            DetailItem(
+                label = stringResource(R.string.vocab_items_label),
+                value = vocabCount.toString()
+            )
+            DetailItem(
+                label = stringResource(R.string.skills_tracked_label),
+                value = skillCount.toString()
+            )
+            DetailItem(
+                label = stringResource(R.string.portfolio_entries_label),
+                value = portfolioCount.toString()
+            )
+            DetailItem(
+                label = stringResource(R.string.journal_entries_label),
+                value = journalCount.toString()
+            )
         }
     }
 }
@@ -1022,7 +1070,10 @@ fun JoinMentorDialog(
                     singleLine = true,
                     trailingIcon = {
                         IconButton(onClick = onScan) {
-                            Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.scan_qr))
+                            Icon(
+                                Icons.Default.QrCodeScanner,
+                                contentDescription = stringResource(R.string.scan_qr)
+                            )
                         }
                     }
                 )

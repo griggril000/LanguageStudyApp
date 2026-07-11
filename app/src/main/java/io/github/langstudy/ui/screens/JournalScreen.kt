@@ -30,7 +30,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -185,7 +184,9 @@ fun JournalScreen(
                         .padding(bottom = 32.dp)
                 ) {
                     Text(
-                        if (editingEntry == null) stringResource(R.string.new_journal_entry) else stringResource(R.string.edit_journal_entry),
+                        if (editingEntry == null) stringResource(R.string.new_journal_entry) else stringResource(
+                            R.string.edit_journal_entry
+                        ),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -209,7 +210,7 @@ fun JournalScreen(
                     OutlinedTextField(
                         value = contentText,
                         onValueChange = { contentText = it },
-                        label = { Text(stringResource(R.string.content_label)) },
+                        label = { Text(stringResource(R.string.message_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         minLines = 5
@@ -224,8 +225,11 @@ fun JournalScreen(
                     )
                     Spacer(Modifier.height(16.dp))
                     if (!isMentorMode) {
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
-                        
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            thickness = 0.5.dp
+                        )
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -339,7 +343,9 @@ fun JournalScreen(
             Column(modifier = Modifier.padding(16.dp)) {
                 if (allEntries.isEmpty()) {
                     val emptyMessage =
-                        if (isMentorMode) stringResource(R.string.no_journal_mentor) else stringResource(R.string.no_journal_user)
+                        if (isMentorMode) stringResource(R.string.no_journal_mentor) else stringResource(
+                            R.string.no_journal_user
+                        )
                     EmptyState(message = emptyMessage)
                 } else if (entries.isEmpty() && searchQuery.isNotEmpty()) {
                     NoResultsState(query = searchQuery)
@@ -464,7 +470,9 @@ fun JournalItem(
                             Icon(
                                 Icons.Rounded.Edit,
                                 contentDescription = null,
-                                modifier = Modifier.padding(end = 8.dp).size(14.dp),
+                                modifier = Modifier
+                                    .padding(end = 8.dp)
+                                    .size(14.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -472,7 +480,9 @@ fun JournalItem(
                             Icon(
                                 Icons.Rounded.SupervisorAccount,
                                 contentDescription = null,
-                                modifier = Modifier.padding(end = 8.dp).size(14.dp),
+                                modifier = Modifier
+                                    .padding(end = 8.dp)
+                                    .size(14.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
