@@ -21,8 +21,8 @@ fun YouTubePlayer(
 ) {
     AndroidView(
         modifier = modifier,
-        factory = { context ->
-            YouTubePlayerView(context).apply {
+        factory = { ctx ->
+            YouTubePlayerView(ctx).apply {
                 addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
                     override fun onReady(youTubePlayer: YouTubePlayer) {
                         youTubePlayer.cueVideo(videoId, 0f)

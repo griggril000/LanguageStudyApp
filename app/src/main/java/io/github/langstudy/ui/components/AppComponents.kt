@@ -1,11 +1,14 @@
 package io.github.langstudy.ui.components
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -15,6 +18,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
@@ -27,7 +31,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import io.github.langstudy.R
 
@@ -78,8 +90,8 @@ fun AppFAB(
 @Composable
 fun SectionHeader(
     title: String,
-    icon: ImageVector? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null
 ) {
     Row(
         modifier = modifier.padding(vertical = 8.dp),
@@ -157,4 +169,65 @@ fun LanguageDropdown(
             }
         }
     }
+}
+
+@Composable
+fun LinkText(
+    text: String,
+    modifier: Modifier = Modifier,
+    style: TextStyle = LocalTextStyle.current,
+    linkStyle: SpanStyle = SpanStyle(
+        color = MaterialTheme.colorScheme.primary,
+        textDecoration = TextDecoration.Underline,
+        fontWeight = FontWeight.Bold
+    ),
+    textAlign: TextAlign? = null,
+    maxLines: Int = Int.MAX_VALUE
+) {
+    val context = LocalContext.current
+    val annotatedString = remember(text) {
+        val builder = AnnotatedString.Builder()
+        // Regex to match URLs starting with http(s), www., or common TLDs
+        val urlPattern = Regex(
+            "(?:https?://|www\\.)[\\w./?#&=%+-]+|[\\w.-]+\\.(?:com|org|net|edu|io|co|me|uk|jp|de|fr|br|in|ru|ca)\\b(?:/[\\w./?#&=%+-]*)?"
+        )
+        val matches = urlPattern.findAll(text)
+        var lastIndex = 0
+        for (match in matches) {
+            builder.append(text.substring(lastIndex, match.range.first))
+            val url = match.value
+            val fullUrl = when {
+                url.startsWith("http") -> url
+                url.startsWith("www.") -> "https://$url"
+                else -> "https://$url"
+            }
+
+            builder.pushStringAnnotation(tag = "URL", annotation = fullUrl)
+            builder.withStyle(style = linkStyle) {
+                append(url)
+            }
+            builder.pop()
+            lastIndex = match.range.last + 1
+        }
+        builder.append(text.substring(lastIndex))
+        builder.toAnnotatedString()
+    }
+
+    ClickableText(
+        text = annotatedString,
+        modifier = modifier,
+        style = style.copy(textAlign = textAlign ?: TextAlign.Unspecified),
+        maxLines = maxLines,
+        onClick = { offset ->
+            annotatedString.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                .firstOrNull()?.let { annotation ->
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(annotation.item))
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        // Ignore or handle invalid URIs
+                    }
+                }
+        }
+    )
 }
