@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,12 +27,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.Button
@@ -55,6 +59,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,12 +72,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.langstudy.LanguageStudyApplication
 import io.github.langstudy.R
 import io.github.langstudy.data.local.entity.VocabEntity
 import io.github.langstudy.ui.components.SoundCloudPlayer
 import io.github.langstudy.ui.components.YouTubePlayer
+import io.github.langstudy.ui.components.LinkText
 import io.github.langstudy.ui.viewmodel.FlashcardViewModel
 import io.github.langstudy.ui.viewmodel.FlashcardViewModelFactory
 import io.github.langstudy.utils.UrlUtils
@@ -284,6 +294,39 @@ fun Flashcard(
     // key(vocab.id) ensures that the rotation animation resets immediately 
     // when we switch to a new card, preventing the "briefly showing the back" bug.
     key(vocab.id) {
+        var isVideoFullScreen by remember { mutableStateOf(false) }
+        val youtubeId = UrlUtils.getYouTubeId(vocab.translation)
+
+        if (isVideoFullScreen && youtubeId != null) {
+            Dialog(
+                onDismissRequest = { isVideoFullScreen = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black),
+                    contentAlignment = Alignment.Center
+                ) {
+                    YouTubePlayer(
+                        videoId = youtubeId,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(16 / 9f)
+                    )
+                    IconButton(
+                        onClick = { isVideoFullScreen = false },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp)
+                            .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                    ) {
+                        Icon(Icons.Rounded.Close, contentDescription = "Close", tint = Color.White)
+                    }
+                }
+            }
+        }
+
         val rotation by animateFloatAsState(
             targetValue = if (isFlipped) 180f else 0f,
             animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
@@ -337,6 +380,7 @@ fun Flashcard(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(24.dp)
+                            .verticalScroll(rememberScrollState())
                             .graphicsLayer { rotationY = 180f },
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
@@ -371,17 +415,27 @@ fun Flashcard(
                         val youtubeId = UrlUtils.getYouTubeId(vocab.translation)
                         val isSoundCloud = UrlUtils.isSoundCloudUrl(vocab.translation)
 
-                        val cleanTranslation = vocab.translation
-                            .replace(Regex("https?://\\S+"), "")
-                            .trim()
+                        // If a link is handled by embedded players, we hide it from the text display.
+                        val displayTranslation = if (youtubeId != null) {
+                            // Surgical removal of YouTube links while keeping other text
+                            val ytRegex = "(?:https?://)?(?:www\\.)?(?:youtube(?:-nocookie)?\\.com/(?:watch\\?v=|shorts/|embed/|v/)[\\w-]{11}(?:\\S*)|youtu\\.be/[\\w-]{11}(?:\\S*))".toRegex()
+                            vocab.translation.replace(ytRegex, "").trim()
+                        } else if (isSoundCloud) {
+                            // isSoundCloudUrl matches whole string, so if true, display nothing
+                            ""
+                        } else {
+                            vocab.translation
+                        }
 
-                        if (cleanTranslation.isNotBlank()) {
-                            Text(
-                                text = cleanTranslation,
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center,
-                                color = MaterialTheme.colorScheme.onSurface
+                        if (displayTranslation.isNotBlank()) {
+                            LinkText(
+                                text = displayTranslation,
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                ),
+                                textAlign = TextAlign.Center
                             )
                         } else if (youtubeId == null && !isSoundCloud) {
                             Text(
@@ -405,17 +459,38 @@ fun Flashcard(
 
                         if (youtubeId != null || isSoundCloud) {
                             Spacer(Modifier.height(24.dp))
+                            val mediaModifier = Modifier
+                                .height(140.dp) // Fixed small height for preview
+                                .aspectRatio(16 / 9f)
+
                             Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(220.dp)
-                                    .clip(RoundedCornerShape(16.dp))
+                                modifier = mediaModifier
+                                    .clip(RoundedCornerShape(12.dp))
                                     .graphicsLayer {
                                         // Ensure web content doesn't flip again
                                     }
                             ) {
                                 if (youtubeId != null) {
-                                    YouTubePlayer(videoId = youtubeId)
+                                    Box(modifier = Modifier.fillMaxSize()) {
+                                        YouTubePlayer(videoId = youtubeId)
+                                        // Overlay to intercept clicks and trigger full screen
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(Color.Transparent)
+                                                .clickable { isVideoFullScreen = true }
+                                        )
+                                        Icon(
+                                            Icons.Rounded.Fullscreen,
+                                            contentDescription = "Full Screen",
+                                            modifier = Modifier
+                                                .align(Alignment.BottomEnd)
+                                                .padding(8.dp)
+                                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                                .padding(4.dp),
+                                            tint = Color.White
+                                        )
+                                    }
                                 } else if (isSoundCloud) {
                                     SoundCloudPlayer(url = vocab.translation)
                                 }

@@ -74,6 +74,7 @@ import io.github.langstudy.ui.components.DeleteConfirmationDialog
 import io.github.langstudy.ui.components.EmptyState
 import io.github.langstudy.ui.components.GlobalSearchBar
 import io.github.langstudy.ui.components.LanguageDropdown
+import io.github.langstudy.ui.components.LinkText
 import io.github.langstudy.ui.components.ProgressStatusLegend
 import io.github.langstudy.ui.components.StatusIcon
 import io.github.langstudy.ui.viewmodel.SearchViewModel
@@ -644,10 +645,11 @@ fun VocabItem(
                         textDecoration = if (vocab.status == "PROFICIENT") androidx.compose.ui.text.style.TextDecoration.LineThrough else null
                     )
                     if (vocab.translation.isNotBlank()) {
-                        Text(
+                        LinkText(
                             vocab.translation,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         )
                     }
                     if (vocab.exampleSentence.isNotBlank()) {

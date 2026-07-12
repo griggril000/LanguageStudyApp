@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -420,10 +421,17 @@ fun FeaturedPortfolioItem(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Column {
-                Box(
-                    modifier = Modifier
+                val mediaModifier = if (item.type == "youtube") {
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16 / 9f)
+                } else {
+                    Modifier
                         .fillMaxWidth()
                         .height(220.dp)
+                }
+                Box(
+                    modifier = mediaModifier
                         .background(Color.Black)
                 ) {
                     val videoId = item.videoId
