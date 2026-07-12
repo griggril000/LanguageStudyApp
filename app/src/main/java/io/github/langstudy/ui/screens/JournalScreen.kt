@@ -553,7 +553,8 @@ fun WritingPromptsSection(onPromptClick: (String) -> Unit) {
         stringResource(R.string.prompt_2),
         stringResource(R.string.prompt_3),
         stringResource(R.string.prompt_4),
-        stringResource(R.string.prompt_5)
+        stringResource(R.string.prompt_5),
+        stringResource(R.string.prompt_6)
     )
 
     Column(

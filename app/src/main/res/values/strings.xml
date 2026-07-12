@@ -231,6 +231,7 @@
     <string name="prompt_3">What are your language learning goals for this month?</string>
     <string name="prompt_4">Talk about a place you want to visit and why.</string>
     <string name="prompt_5">Write about a hobby you enjoy.</string>
+    <string name="prompt_6">Write about your language tutoring session.</string>
 
     <!-- Portfolio Screen -->
     <string name="youtube_soundcloud_link">YouTube or SoundCloud Link</string>
