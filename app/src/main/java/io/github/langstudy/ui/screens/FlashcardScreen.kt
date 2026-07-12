@@ -89,7 +89,7 @@ import io.github.langstudy.utils.UrlUtils
 @Composable
 fun FlashcardScreen(
     userId: String,
-    allVocab: List<VocabEntity>,
+    allVocab: List<VocabEntity>? = null,
     categoryFilter: String? = null,
     languageFilter: String? = null,
     onClose: () -> Unit
@@ -117,7 +117,7 @@ fun FlashcardScreen(
 
     if (reviewList.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (allVocab.isEmpty()) {
+            if (allVocab != null && allVocab.isEmpty()) {
                 Text(stringResource(R.string.no_vocab_found_review))
             } else {
                 CircularProgressIndicator()

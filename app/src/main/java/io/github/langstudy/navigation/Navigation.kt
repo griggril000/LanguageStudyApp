@@ -7,6 +7,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Style
 import androidx.compose.material.icons.rounded.Work
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.NavKey
@@ -24,10 +25,13 @@ sealed interface NavRoute : NavKey {
     data object Vocab : NavRoute
 
     @Serializable
+    data class Flashcards(val category: String? = null, val language: String? = null) : NavRoute
+
+    @Serializable
     data object Skills : NavRoute
 
     @Serializable
-    data object Journal : NavRoute
+    data class Journal(val openEntry: Boolean = false) : NavRoute
 
     @Serializable
     data object Admin : NavRoute
@@ -36,13 +40,14 @@ sealed interface NavRoute : NavKey {
     data object Settings : NavRoute
 
     companion object {
-        val mainRoutes = listOf(Vocab, Skills, Portfolio, Journal)
+        val mainRoutes = listOf(Vocab, Skills, Portfolio, Journal())
 
         fun fromString(route: String): NavRoute = when (route.lowercase()) {
             "vocab", "vocabulary" -> Vocab
+            "flashcards", "review" -> Flashcards()
             "skills" -> Skills
             "portfolio" -> Portfolio
-            "journal" -> Journal
+            "journal" -> Journal()
             else -> Vocab
         }
     }
@@ -53,8 +58,9 @@ val NavRoute.icon: ImageVector
         NavRoute.Login -> Icons.AutoMirrored.Rounded.Login
         NavRoute.Portfolio -> Icons.Rounded.Work
         NavRoute.Vocab -> Icons.Rounded.Book
+        is NavRoute.Flashcards -> Icons.Rounded.Style
         NavRoute.Skills -> Icons.Rounded.Psychology
-        NavRoute.Journal -> Icons.Rounded.Edit
+        is NavRoute.Journal -> Icons.Rounded.Edit
         NavRoute.Admin -> Icons.Rounded.Star
         NavRoute.Settings -> Icons.Rounded.Settings
     }
@@ -64,8 +70,9 @@ val NavRoute.label: String
         NavRoute.Login -> "Login"
         NavRoute.Portfolio -> "Portfolio"
         NavRoute.Vocab -> "Vocab"
+        is NavRoute.Flashcards -> "Flashcards"
         NavRoute.Skills -> "Skills"
-        NavRoute.Journal -> "Journal"
+        is NavRoute.Journal -> "Journal"
         NavRoute.Admin -> "Admin"
         NavRoute.Settings -> "Settings"
     }

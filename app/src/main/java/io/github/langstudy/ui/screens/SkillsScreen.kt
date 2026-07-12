@@ -492,10 +492,14 @@ fun SkillsScreen(
                                 isReorderMode = isReorderMode,
                                 canEdit = canEditContent,
                                 canChangeStatus = canChangeStatus,
-                                onStatusCycle = { viewModel.cycleSkillStatus(skill) },
+                                onStatusCycle = {
+                                    viewModel.cycleSkillStatus(skill)
+                                },
                                 onDelete = { viewModel.deleteSkill(skill) },
                                 onAddSubtask = { viewModel.addSubtask(skill, it) },
-                                onSubtaskStatusCycle = { viewModel.updateSubtaskStatus(skill, it) },
+                                onSubtaskStatusCycle = {
+                                    viewModel.updateSubtaskStatus(skill, it)
+                                },
                                 onSubtaskDelete = { viewModel.deleteSubtask(skill, it) },
                                 onEditSkill = { name, lang ->
                                     viewModel.updateSkill(

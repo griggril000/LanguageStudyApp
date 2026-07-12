@@ -8,6 +8,7 @@ import io.github.langstudy.data.repository.VocabRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
 
@@ -41,12 +42,28 @@ class FlashcardViewModel(
 
     fun init(
         userId: String,
-        allVocab: List<VocabEntity>,
+        allVocab: List<VocabEntity>? = null,
         categoryFilter: String? = null,
         languageFilter: String? = null
     ) {
         this.userId = userId
-        val filtered = allVocab.filter {
+        
+        if (allVocab != null) {
+            setupReview(allVocab, categoryFilter, languageFilter)
+        } else {
+            viewModelScope.launch {
+                val vocab = repository.allVocab.first()
+                setupReview(vocab, categoryFilter, languageFilter)
+            }
+        }
+    }
+
+    private fun setupReview(
+        vocab: List<VocabEntity>,
+        categoryFilter: String?,
+        languageFilter: String?
+    ) {
+        val filtered = vocab.filter {
             (categoryFilter == null || it.category == categoryFilter) &&
                     (languageFilter == null || it.language == languageFilter)
         }

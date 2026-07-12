@@ -16,6 +16,16 @@
     <string name="exit">Exit</string>
     <string name="none">None</string>
     <string name="other">Other</string>
+    <string name="total">Total</string>
+    <string name="quick_actions">Quick Actions</string>
+    <string name="review_flashcards_subtitle">Practice your vocabulary</string>
+    <string name="write_note">Create an Entry</string>
+    <string name="write_note_subtitle">Journal your thoughts</string>
+    <string name="study_resources_subtitle">Find helpful links</string>
+    <string name="welcome_back">Welcome back,</string>
+    <string name="learning_summary">Learning Summary</string>
+    <string name="vocab_mastery">Vocabulary Mastery</string>
+    <string name="skills_progress">Skills Progress</string>
     <string name="clear_cd">Clear</string>
     <string name="search_placeholder">Search…</string>
     <string name="progress_status_legend">Progress Status Legend:</string>
@@ -212,6 +222,15 @@
     <string name="mentor_access_level_entry">Mentor Access Level</string>
     <string name="view_access">View</string>
     <string name="edit_access">Edit</string>
+    <string name="show_prompts">Show Writing Prompts</string>
+    <string name="hide_prompts">Hide Writing Prompts</string>
+
+    <!-- Writing Prompts -->
+    <string name="prompt_1">What did you do today?</string>
+    <string name="prompt_2">Describe your favorite food in the target language.</string>
+    <string name="prompt_3">What are your language learning goals for this month?</string>
+    <string name="prompt_4">Talk about a place you want to visit and why.</string>
+    <string name="prompt_5">Write about a hobby you enjoy.</string>
 
     <!-- Portfolio Screen -->
     <string name="youtube_soundcloud_link">YouTube or SoundCloud Link</string>
