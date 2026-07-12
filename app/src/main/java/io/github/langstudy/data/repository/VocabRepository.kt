@@ -11,6 +11,7 @@ import io.github.langstudy.data.local.entity.VocabEntity
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -25,6 +26,59 @@ class VocabRepository(
     val allVocab: Flow<List<VocabEntity>> = vocabDao.getAllVocab()
     val vocabCount: Flow<Int> = vocabDao.getVocabCount()
     val allCategories: Flow<List<CategoryEntity>> = categoryDao.getAllCategories()
+
+    suspend fun syncOneShot(userId: String) {
+        if (userId.isBlank()) return
+
+        try {
+            val vocabSnapshot = firestore.collection("users").document(userId)
+                .collection("vocabulary").get().await()
+
+            val now = System.currentTimeMillis()
+            val remoteVocabIds = mutableSetOf<String>()
+
+            for (doc in vocabSnapshot.documents) {
+                val data = doc.data ?: continue
+                val category = data["category"] as? String ?: "General"
+                val vocab = VocabEntity(
+                    id = doc.id,
+                    word = data["word"] as? String ?: "",
+                    translation = data["translation"] as? String ?: "",
+                    category = category,
+                    status = (data["status"] as? String ?: "NOT_STARTED").uppercase(),
+                    language = data["language"] as? String ?: "en",
+                    dateAdded = (data["dateAdded"] as? com.google.firebase.Timestamp)?.toDate()?.time ?: now,
+                    exampleSentence = data["exampleSentence"] as? String ?: ""
+                )
+                vocabDao.insertVocab(vocab)
+                remoteVocabIds.add(doc.id)
+                if (category != "General") {
+                    categoryDao.insertCategory(CategoryEntity(category))
+                }
+            }
+
+            // Full Sync: Remove local items that are not in remote
+            val allLocal = vocabDao.getAllVocab().first()
+            for (local in allLocal) {
+                if (!remoteVocabIds.contains(local.id)) {
+                    vocabDao.deleteVocab(local)
+                }
+            }
+
+            val categorySnapshot = firestore.collection("users").document(userId)
+                .collection("metadata").document("categories").get().await()
+
+            if (categorySnapshot.exists()) {
+                val list = categorySnapshot.get("list") as? List<String> ?: emptyList()
+                categoryDao.deleteAllCategories()
+                for (catName in list) {
+                    categoryDao.insertCategory(CategoryEntity(catName))
+                }
+            }
+        } catch (e: Exception) {
+            // Log error
+        }
+    }
 
     fun startSync(userId: String): Flow<Unit> = callbackFlow {
         if (userId.isBlank()) {

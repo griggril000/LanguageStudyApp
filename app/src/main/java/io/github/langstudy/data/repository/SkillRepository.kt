@@ -10,7 +10,9 @@ import io.github.langstudy.data.local.entity.Subtask
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 class SkillRepository(private val skillDao: SkillDao) {
     private val firestore = FirebaseFirestore.getInstance()
@@ -18,6 +20,51 @@ class SkillRepository(private val skillDao: SkillDao) {
 
     val allSkills: Flow<List<SkillEntity>> = skillDao.getAllSkills()
     val skillCount: Flow<Int> = skillDao.getSkillCount()
+
+    suspend fun syncOneShot(userId: String) {
+        if (userId.isBlank()) return
+        try {
+            val snapshot = firestore.collection("users").document(userId)
+                .collection("skills").get().await()
+
+            val now = System.currentTimeMillis()
+            val remoteSkillIds = mutableSetOf<String>()
+            for (doc in snapshot.documents) {
+                val data = doc.data ?: continue
+                val subtasksData = data["subtasks"] as? List<Map<String, Any>> ?: emptyList()
+                val subtasks = subtasksData.map { st ->
+                    Subtask(
+                        id = st["id"] as? String ?: "",
+                        text = st["text"] as? String ?: "",
+                        status = (st["status"] as? String ?: "NOT_STARTED").uppercase()
+                    )
+                }
+
+                val skill = SkillEntity(
+                    id = doc.id,
+                    name = data["name"] as? String ?: "",
+                    language = data["language"] as? String ?: "",
+                    progress = (data["progress"] as? Long)?.toInt() ?: 0,
+                    status = (data["status"] as? String ?: "NOT_STARTED").uppercase(),
+                    priority = (data["priority"] as? Long)?.toInt() ?: 0,
+                    subtasks = subtasks,
+                    lastUpdated = now
+                )
+                skillDao.insertSkill(skill)
+                remoteSkillIds.add(doc.id)
+            }
+
+            // Full Sync: Remove local items that are not in remote
+            val allLocal = skillDao.getAllSkills().first()
+            for (local in allLocal) {
+                if (!remoteSkillIds.contains(local.id)) {
+                    skillDao.deleteSkill(local)
+                }
+            }
+        } catch (e: Exception) {
+            // Log error
+        }
+    }
 
     /**
      * Listen for real-time updates from Firestore.
