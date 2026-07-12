@@ -68,6 +68,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.langstudy.LanguageStudyApplication
 import io.github.langstudy.R
 import io.github.langstudy.data.local.entity.VocabEntity
+import io.github.langstudy.navigation.NavRoute
 import io.github.langstudy.ui.components.AppButton
 import io.github.langstudy.ui.components.AppFAB
 import io.github.langstudy.ui.components.DeleteConfirmationDialog
@@ -85,6 +86,7 @@ import io.github.langstudy.ui.viewmodel.VocabViewModelFactory
 @Composable
 fun VocabScreen(
     userId: String,
+    onNavigate: (NavRoute) -> Unit = {},
     sessionId: String = "",
     searchViewModel: SearchViewModel = viewModel(),
     isMentorMode: Boolean = false,
@@ -134,7 +136,6 @@ fun VocabScreen(
     var newCategoryName by remember { mutableStateOf("") }
     var categoryExpanded by remember { mutableStateOf(false) }
     var showDeleteCategoryConfirm by remember { mutableStateOf(false) }
-    var showFlashcards by remember { mutableStateOf(false) }
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -186,17 +187,6 @@ fun VocabScreen(
                 TextButton(onClick = { isAddingNewCategory = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
-    }
-
-    if (showFlashcards) {
-        FlashcardScreen(
-            userId = userId,
-            allVocab = allVocab,
-            categoryFilter = selectedCategory,
-            languageFilter = currentLanguage,
-            onClose = { showFlashcards = false }
-        )
-        return
     }
 
     if (showDeleteCategoryConfirm && selectedCategory != null) {
@@ -386,7 +376,14 @@ fun VocabScreen(
                     }
                     if (allVocab.isNotEmpty()) {
                         TextButton(
-                            onClick = { showFlashcards = true },
+                            onClick = {
+                                onNavigate(
+                                    NavRoute.Flashcards(
+                                        category = selectedCategory,
+                                        language = currentLanguage
+                                    )
+                                )
+                            },
                             modifier = Modifier.padding(horizontal = 4.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp)
                         ) {

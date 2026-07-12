@@ -59,8 +59,16 @@ fun ProgressStatusLegend(modifier: Modifier = Modifier) {
                     MaterialTheme.colorScheme.outline,
                     stringResource(R.string.not_started_label)
                 )
-                LegendItem(Icons.Rounded.Schedule, MaterialTheme.colorScheme.primary, stringResource(R.string.in_progress_label))
-                LegendItem(Icons.Rounded.CheckCircle, Color(0xFF2E7D32), stringResource(R.string.proficient_label))
+                LegendItem(
+                    Icons.Rounded.Schedule,
+                    MaterialTheme.colorScheme.primary,
+                    stringResource(R.string.in_progress_label)
+                )
+                LegendItem(
+                    Icons.Rounded.CheckCircle,
+                    Color(0xFF2E7D32),
+                    stringResource(R.string.proficient_label)
+                )
             }
         }
     }

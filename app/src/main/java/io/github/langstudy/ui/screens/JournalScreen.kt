@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +26,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.SupervisorAccount
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -42,6 +45,7 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -56,6 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -81,7 +86,8 @@ fun JournalScreen(
     sessionId: String = "",
     searchViewModel: SearchViewModel = viewModel(),
     isMentorMode: Boolean = false,
-    mentorAccessLevel: String = "view"
+    mentorAccessLevel: String = "view",
+    openEntry: Boolean = false
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as LanguageStudyApplication
@@ -120,8 +126,9 @@ fun JournalScreen(
     var mentorVisible by remember { mutableStateOf(false) }
     var mentorAccessLevelEntry by remember { mutableStateOf("view") }
     var editingEntry by remember { mutableStateOf<JournalEntryEntity?>(null) }
-    var showSheet by remember { mutableStateOf(false) }
+    var showSheet by remember { mutableStateOf(openEntry) }
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
+    var showPrompts by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     LaunchedEffect(showSheet) {
@@ -340,6 +347,36 @@ fun JournalScreen(
                 placeholder = stringResource(R.string.search_journal)
             )
 
+            if (searchQuery.isEmpty() && !isMentorMode) {
+                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    TextButton(
+                        onClick = { showPrompts = !showPrompts },
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.Lightbulb,
+                            contentDescription = null,
+                            tint = if (showPrompts) Color(0xFFFF9800) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (showPrompts) stringResource(R.string.hide_prompts) else stringResource(
+                                R.string.show_prompts
+                            ),
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                    if (showPrompts) {
+                        WritingPromptsSection(onPromptClick = { prompt ->
+                            title = "Journal Entry"
+                            contentText = prompt
+                            showSheet = true
+                        })
+                    }
+                }
+            }
+
             Column(modifier = Modifier.padding(16.dp)) {
                 if (allEntries.isEmpty()) {
                     val emptyMessage =
@@ -458,7 +495,10 @@ fun JournalItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val date =
-                        java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+                        java.text.SimpleDateFormat(
+                            "MMM dd, yyyy",
+                            LocalLocale.current.platformLocale
+                        )
                             .format(java.util.Date(entry.timestamp))
                     Text(
                         date,
@@ -500,6 +540,49 @@ fun JournalItem(
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WritingPromptsSection(onPromptClick: (String) -> Unit) {
+    val prompts = listOf(
+        stringResource(R.string.prompt_1),
+        stringResource(R.string.prompt_2),
+        stringResource(R.string.prompt_3),
+        stringResource(R.string.prompt_4),
+        stringResource(R.string.prompt_5),
+        stringResource(R.string.prompt_6)
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp)
+    ) {
+        Spacer(Modifier.height(8.dp))
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(prompts) { prompt ->
+                Card(
+                    onClick = { onPromptClick(prompt) },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
+                    ),
+                    modifier = Modifier.width(200.dp)
+                ) {
+                    Text(
+                        text = prompt,
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 3,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
                 }
             }
         }

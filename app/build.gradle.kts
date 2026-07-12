@@ -25,8 +25,8 @@ android {
         applicationId = "io.github.langstudy"
         minSdk = 24
         targetSdk = 37
-        versionCode = 18
-        versionName = "1.8.0"
+        versionCode = 19
+        versionName = "1.9.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -107,6 +107,9 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.zxing.core)
     implementation(libs.mlkit.barcode.scanning)
+
+    // WorkManager
+    implementation(libs.androidx.work.runtime.ktx)
     testImplementation(libs.androidx.core)
     testImplementation(libs.androidx.junit)
     testImplementation(libs.junit)

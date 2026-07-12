@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:targetApi="25">
+    <shortcut
+        android:shortcutId="review_flashcards"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/flashcards"
+        android:shortcutLongLabel="@string/flashcards">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="langstudy://app?tab=flashcards"
+            android:targetPackage="io.github.langstudy"
+            android:targetClass="io.github.langstudy.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="new_journal_entry"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/new_entry_cd"
+        android:shortcutLongLabel="@string/new_journal_entry">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="langstudy://app?tab=journal&amp;openEntry=true"
+            android:targetPackage="io.github.langstudy"
+            android:targetClass="io.github.langstudy.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="study_resources"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/study_resources"
+        android:shortcutLongLabel="@string/study_resources">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="langstudy://app?action=resources"
+            android:targetPackage="io.github.langstudy"
+            android:targetClass="io.github.langstudy.MainActivity" />
+    </shortcut>
+</shortcuts>

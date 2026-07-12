@@ -21,7 +21,6 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.LanguageStudy"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize">
@@ -46,7 +45,12 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="langstudy" />
             </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
+
     </application>
 
 </manifest>

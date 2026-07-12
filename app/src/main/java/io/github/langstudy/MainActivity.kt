@@ -2,6 +2,7 @@ package io.github.langstudy
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -65,6 +66,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -78,6 +80,7 @@ import io.github.langstudy.ui.auth.AuthViewModel
 import io.github.langstudy.ui.auth.AuthViewModelFactory
 import io.github.langstudy.ui.auth.LoginScreen
 import io.github.langstudy.ui.screens.AdminScreen
+import io.github.langstudy.ui.screens.FlashcardScreen
 import io.github.langstudy.ui.screens.JournalScreen
 import io.github.langstudy.ui.screens.PortfolioScreen
 import io.github.langstudy.ui.screens.SettingsScreen
@@ -92,7 +95,6 @@ import io.github.langstudy.ui.viewmodel.PortfolioViewModelFactory
 import io.github.langstudy.ui.viewmodel.SearchViewModel
 import io.github.langstudy.ui.viewmodel.SettingsViewModel
 import io.github.langstudy.ui.viewmodel.SettingsViewModelFactory
-import android.util.Log
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -140,7 +142,7 @@ fun MainScreen(
     val isAdmin by authViewModel.isAdmin.collectAsState()
     val isMentorMode by authViewModel.isMentorMode.collectAsState()
     val effectiveUserId by authViewModel.effectiveUserId.collectAsState()
-    
+
     // Always use the ACTUAL user's ID for app-wide settings like theme and homepage.
     // This prevents PERMISSION_DENIED errors when in Mentor Mode and keeps the mentor's
     // own theme/preferences active.
@@ -157,7 +159,7 @@ fun MainScreen(
             app.journalRepository
         )
     )
-    
+
     // We also need a version of the settings VM for the effective user to show counts/data
     // in the UI, but we'll only use it where needed to avoid unnecessary listeners.
     val effectiveSettingsVm: SettingsViewModel = viewModel(
@@ -205,6 +207,10 @@ fun MainScreen(
         }
         val backStack = rememberNavBackStack(startRoute)
 
+        var showMenu by remember { mutableStateOf(false) }
+        var showLangMenu by remember { mutableStateOf(false) }
+        var showResources by remember { mutableStateOf(false) }
+
         LaunchedEffect(userSettings.homepageTab) {
             if (currentUser != null && backStack.size == 1 && backStack.lastOrNull() == NavRoute.Vocab) {
                 val preferred = NavRoute.fromString(userSettings.homepageTab)
@@ -231,7 +237,7 @@ fun MainScreen(
                         if (mentorParam == null && tabParam == null) {
                             data.getQueryParameter("returnTo")?.let { returnTo ->
                                 try {
-                                    val returnUri = android.net.Uri.parse(returnTo)
+                                    val returnUri = returnTo.toUri()
                                     mentorParam = returnUri.getQueryParameter("mentor")
                                     tabParam = returnUri.getQueryParameter("tab")
                                 } catch (e: Exception) {
@@ -243,13 +249,21 @@ fun MainScreen(
                         // Sanitize mentor code (take first 5 chars to avoid duplication issues from some sources)
                         val code = mentorParam?.take(5)
                         val tab = tabParam
+                        val action = data.getQueryParameter("action")
 
-                        Log.d("DeepLink", "Final Parsed - mentor: $code (raw: $mentorParam), tab: $tab")
+                        Log.d(
+                            "DeepLink",
+                            "Final Parsed - mentor: $code (raw: $mentorParam), tab: $tab, action: $action"
+                        )
+
+                        if (action == "resources") {
+                            showResources = true
+                        }
 
                         if (code != null && code.length == 5) {
                             val mentorCodeState = authViewModel.mentorCode.value
                             val currentUid = authViewModel.user.value?.uid
-                            
+
                             if (code != mentorCodeState) {
                                 Log.d("DeepLink", "New mentor code detected. Validating...")
                                 val ownerUid = settingsVm.validateCode(code)
@@ -257,15 +271,39 @@ fun MainScreen(
                                     Log.d("DeepLink", "Entering mentor mode for $ownerUid")
                                     authViewModel.enterMentorMode(context, ownerUid, code)
                                     backStack.clear()
-                                    val targetRoute = if (tab != null) NavRoute.fromString(tab) else NavRoute.Portfolio
+                                    val targetRoute =
+                                        if (tab != null) {
+                                            if (tab.lowercase() == "journal") {
+                                                NavRoute.Journal(
+                                                    openEntry = data.getBooleanQueryParameter(
+                                                        "openEntry",
+                                                        false
+                                                    )
+                                                )
+                                            } else NavRoute.fromString(tab)
+                                        } else NavRoute.Portfolio
                                     backStack.add(targetRoute)
                                 } else {
-                                    Log.w("DeepLink", "Invalid code or trying to mentor self. ownerUid: $ownerUid")
+                                    Log.w(
+                                        "DeepLink",
+                                        "Invalid code or trying to mentor self. ownerUid: $ownerUid"
+                                    )
                                 }
                             } else {
-                                Log.d("DeepLink", "Already in mentor mode with code $code. Checking tab: $tab")
+                                Log.d(
+                                    "DeepLink",
+                                    "Already in mentor mode with code $code. Checking tab: $tab"
+                                )
                                 tab?.let {
-                                    val targetRoute = NavRoute.fromString(it)
+                                    val targetRoute = if (it.lowercase() == "journal") {
+                                        NavRoute.Journal(
+                                            openEntry = data.getBooleanQueryParameter(
+                                                "openEntry",
+                                                false
+                                            )
+                                        )
+                                    } else NavRoute.fromString(it)
+
                                     if (backStack.lastOrNull() != targetRoute) {
                                         Log.d("DeepLink", "Navigating to tab: $targetRoute")
                                         backStack.clear()
@@ -275,7 +313,15 @@ fun MainScreen(
                             }
                         } else if (tab != null) {
                             Log.d("DeepLink", "No mentor code, navigating to tab: $tab")
-                            val targetRoute = NavRoute.fromString(tab)
+                            val targetRoute = if (tab.lowercase() == "journal") {
+                                NavRoute.Journal(
+                                    openEntry = data.getBooleanQueryParameter(
+                                        "openEntry",
+                                        false
+                                    )
+                                )
+                            } else NavRoute.fromString(tab)
+
                             if (backStack.lastOrNull() != targetRoute) {
                                 backStack.clear()
                                 backStack.add(targetRoute)
@@ -285,10 +331,6 @@ fun MainScreen(
                 }
             }
         }
-
-        var showMenu by remember { mutableStateOf(false) }
-        var showLangMenu by remember { mutableStateOf(false) }
-        var showResources by remember { mutableStateOf(false) }
 
         val adaptiveInfo = currentWindowAdaptiveInfoV2()
         val useNavRail =
@@ -305,10 +347,30 @@ fun MainScreen(
                 entry<NavRoute.Vocab> {
                     VocabScreen(
                         userId = effectiveUserId,
+                        onNavigate = { route ->
+                            if (backStack.lastOrNull() != route) {
+                                backStack.add(route)
+                            }
+                        },
                         sessionId = sessionId,
                         searchViewModel = searchViewModel,
                         isMentorMode = isMentorMode,
                         mentorAccessLevel = effectiveUserSettings.mentorAccessLevel
+                    )
+                }
+                entry<NavRoute.Flashcards> { route ->
+                    FlashcardScreen(
+                        userId = effectiveUserId,
+                        categoryFilter = route.category,
+                        languageFilter = route.language,
+                        onClose = {
+                            if (backStack.size > 1) {
+                                backStack.removeLastOrNull()
+                            } else {
+                                backStack.clear()
+                                backStack.add(NavRoute.Vocab)
+                            }
+                        }
                     )
                 }
                 entry<NavRoute.Skills> {
@@ -333,13 +395,14 @@ fun MainScreen(
                         mentorAccessLevel = effectiveUserSettings.mentorAccessLevel
                     )
                 }
-                entry<NavRoute.Journal> {
+                entry<NavRoute.Journal> { route ->
                     JournalScreen(
                         userId = effectiveUserId,
                         sessionId = sessionId,
                         searchViewModel = searchViewModel,
                         isMentorMode = isMentorMode,
-                        mentorAccessLevel = effectiveUserSettings.mentorAccessLevel
+                        mentorAccessLevel = effectiveUserSettings.mentorAccessLevel,
+                        openEntry = route.openEntry
                     )
                 }
                 entry<NavRoute.Admin> {
@@ -409,14 +472,19 @@ fun MainScreen(
                         title = {
                             Column {
                                 Text(
-                                    if (isMentorMode) stringResource(R.string.mentor_view) else stringResource(R.string.app_name),
+                                    if (isMentorMode) stringResource(R.string.mentor_view) else stringResource(
+                                        R.string.app_name
+                                    ),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
                                 if (isMentorMode) {
                                     val mentorCode by authViewModel.mentorCode.collectAsState()
                                     Text(
-                                        stringResource(R.string.mentor_code_format, mentorCode ?: ""),
+                                        stringResource(
+                                            R.string.mentor_code_format,
+                                            mentorCode ?: ""
+                                        ),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -470,6 +538,7 @@ fun MainScreen(
                                     }
                                 }
                             }
+
                             Box {
                                 IconButton(onClick = { showMenu = true }) {
                                     Icon(
@@ -538,7 +607,8 @@ fun MainScreen(
             },
             bottomBar = {
                 val currentRoute = backStack.lastOrNull() as? NavRoute
-                val isFullScreen = currentRoute == NavRoute.Settings || currentRoute == NavRoute.Admin
+                val isFullScreen =
+                    currentRoute == NavRoute.Settings || currentRoute == NavRoute.Admin
                 if (!useNavRail && currentUser != null && !WindowInsets.isImeVisible && !isFullScreen) {
                     NavigationBar {
                         NavRoute.mainRoutes.forEach { route ->
@@ -598,7 +668,7 @@ fun MainScreen(
                     modifier = Modifier
                         .weight(1f)
                         .background(MaterialTheme.colorScheme.background)
-                        .let { 
+                        .let {
                             if (!isFullScreen) it.consumeWindowInsets(innerPadding) else it
                         },
                     entryProvider = provider
