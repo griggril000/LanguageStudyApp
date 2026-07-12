@@ -108,10 +108,6 @@ dependencies {
     implementation(libs.zxing.core)
     implementation(libs.mlkit.barcode.scanning)
 
-    // Glance & Widgets
-    implementation(libs.androidx.glance.appwidget)
-    implementation(libs.androidx.glance.material3)
-
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
     testImplementation(libs.androidx.core)
