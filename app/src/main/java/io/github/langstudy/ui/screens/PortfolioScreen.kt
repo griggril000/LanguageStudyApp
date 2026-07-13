@@ -2,6 +2,7 @@ package io.github.langstudy.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,8 +41,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -97,7 +96,6 @@ fun PortfolioScreen(
     val currentLanguage by viewModel.currentLanguage.collectAsState()
     val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
     // Portfolio doesn't have statuses, so canChangeStatus isn't really applicable here
@@ -152,7 +150,7 @@ fun PortfolioScreen(
             if (showAddSheet) {
                 localErrorMessage = message
             } else {
-                snackbarHostState.showSnackbar(message)
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -175,12 +173,6 @@ fun PortfolioScreen(
     Scaffold(
         containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        },
         floatingActionButton = {
             if (canEditContent) {
                 AppFAB(

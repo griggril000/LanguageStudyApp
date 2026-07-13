@@ -4,6 +4,8 @@ import android.content.ClipData
 import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.TextView
+import android.widget.Toast
+import android.widget.Toast.makeText
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -57,8 +59,6 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -122,7 +122,6 @@ fun SettingsScreen(
     val mentorCode = if (isMentorMode) sessionMentorCode else userMentorCode
 
     val availableLanguages by settingsViewModel.availableLanguages.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showJoinDialog by remember { mutableStateOf(false) }
@@ -150,9 +149,11 @@ fun SettingsScreen(
             if (isGranted) {
                 showQRScannerDialog = true
             } else {
-                scope.launch {
-                    snackbarHostState.showSnackbar(context.getString(R.string.camera_permission_denied))
-                }
+                makeText(
+                    context,
+                    context.getString(R.string.camera_permission_denied),
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     )
@@ -181,14 +182,14 @@ fun SettingsScreen(
 
     LaunchedEffect(Unit) {
         settingsViewModel.errorMessages.collect { message ->
-            snackbarHostState.showSnackbar(message)
+            makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
 
     LaunchedEffect(Unit) {
         authViewModel.error.collect { message ->
             message?.let {
-                snackbarHostState.showSnackbar(it)
+                makeText(context, it, Toast.LENGTH_SHORT).show()
                 authViewModel.clearError()
             }
         }
@@ -219,11 +220,11 @@ fun SettingsScreen(
             onDismiss = { showUpdateEmailDialog = false },
             onConfirm = { newEmail ->
                 authViewModel.updateEmail(newEmail) { success, message ->
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            message ?: (if (success) verificationSent else failedUpdate)
-                        )
-                    }
+                    makeText(
+                        context,
+                        message ?: (if (success) verificationSent else failedUpdate),
+                        Toast.LENGTH_LONG
+                    ).show()
                     if (success) showUpdateEmailDialog = false
                 }
             }
@@ -330,7 +331,11 @@ fun SettingsScreen(
                                     val ownerUid = settingsViewModel.validateCode(sanitizedCode)
                                     if (ownerUid != null) {
                                         if (ownerUid == currentUser?.uid) {
-                                            snackbarHostState.showSnackbar(cannotMentorSelf)
+                                            makeText(
+                                                context,
+                                                cannotMentorSelf,
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         } else {
                                             authViewModel.enterMentorMode(
                                                 context,
@@ -340,10 +345,12 @@ fun SettingsScreen(
                                             showQRScannerDialog = false
                                         }
                                     } else {
-                                        snackbarHostState.showSnackbar(invalidCode)
+                                        makeText(context, invalidCode, Toast.LENGTH_SHORT)
+                                            .show()
                                     }
                                 } catch (_: Exception) {
-                                    snackbarHostState.showSnackbar(errorValidating)
+                                    makeText(context, errorValidating, Toast.LENGTH_SHORT)
+                                        .show()
                                 } finally {
                                     isProcessing = false
                                 }
@@ -367,9 +374,7 @@ fun SettingsScreen(
             onConfirm = {
                 authViewModel.deleteAccount(context) { success, message ->
                     if (!success && message != null) {
-                        scope.launch {
-                            snackbarHostState.showSnackbar(message)
-                        }
+                        makeText(context, message, Toast.LENGTH_SHORT).show()
                     }
                 }
             },
@@ -390,16 +395,16 @@ fun SettingsScreen(
                         val ownerUid = settingsViewModel.validateCode(code)
                         if (ownerUid != null) {
                             if (ownerUid == currentUser?.uid) {
-                                snackbarHostState.showSnackbar(cannotMentorSelf)
+                                makeText(context, cannotMentorSelf, Toast.LENGTH_SHORT).show()
                             } else {
                                 authViewModel.enterMentorMode(context, ownerUid, code)
                                 showJoinDialog = false
                             }
                         } else {
-                            snackbarHostState.showSnackbar(invalidCode)
+                            makeText(context, invalidCode, Toast.LENGTH_SHORT).show()
                         }
                     } catch (_: Exception) {
-                        snackbarHostState.showSnackbar(errorValidating)
+                        makeText(context, errorValidating, Toast.LENGTH_SHORT).show()
                     }
                 }
             },
@@ -530,7 +535,6 @@ fun SettingsScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Box(
             modifier = Modifier

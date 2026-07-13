@@ -1,5 +1,6 @@
 package io.github.langstudy.ui.screens
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -50,8 +51,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -122,7 +121,6 @@ fun SkillsScreen(
     val selectedLanguage by viewModel.selectedLanguage.collectAsState()
     val searchQuery by searchViewModel.query.collectAsState()
     val languageOverride by searchViewModel.selectedLanguage.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
     val haptic = LocalHapticFeedback.current
@@ -180,7 +178,7 @@ fun SkillsScreen(
             if (showAddSheet) {
                 localErrorMessage = message
             } else {
-                snackbarHostState.showSnackbar(message)
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -192,7 +190,6 @@ fun SkillsScreen(
     Scaffold(
         containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             if (canEditContent) {
                 AppFAB(

@@ -1,5 +1,6 @@
 package io.github.langstudy.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,8 +39,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -102,7 +101,6 @@ fun JournalScreen(
     val languageOverride by searchViewModel.selectedLanguage.collectAsState()
     val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
 
@@ -159,7 +157,7 @@ fun JournalScreen(
             if (showSheet) {
                 localErrorMessage = message
             } else {
-                snackbarHostState.showSnackbar(message)
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -167,7 +165,6 @@ fun JournalScreen(
     Scaffold(
         containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             if (canEditContent) {
                 AppFAB(
