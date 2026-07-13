@@ -1,5 +1,6 @@
 package io.github.langstudy.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -71,7 +72,7 @@ fun WelcomeWalkthrough(
     val uriHandler = LocalUriHandler.current
     val availableLanguages by viewModel.availableLanguages.collectAsState(initial = emptyList())
     var selectedLang by remember { mutableStateOf("") }
-    var showError by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
     var showContactDialog by remember { mutableStateOf(false) }
 
     Dialog(
@@ -162,7 +163,6 @@ fun WelcomeWalkthrough(
                             selectedLang = selectedLang,
                             onLangSelected = {
                                 selectedLang = it
-                                showError = false
                             },
                             availableLanguages = availableLanguages,
                             onShowContactDialog = { showContactDialog = true }
@@ -199,7 +199,11 @@ fun WelcomeWalkthrough(
                     Button(
                         onClick = {
                             if (currentStep == 2 && selectedLang.isEmpty()) {
-                                showError = true
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.welcome_select_lang_error),
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             } else if (currentStep < totalSteps) {
                                 if (currentStep == 2) {
                                     viewModel.setCurrentLanguage(selectedLang)
