@@ -475,13 +475,13 @@ fun MainScreen(
         }
 
         var showWalkthrough by remember { mutableStateOf(false) }
-        LaunchedEffect(userSettings.firstLogin) {
-            if (userSettings.firstLogin) {
+        LaunchedEffect(userSettings.firstLogin, isEmailVerified) {
+            if (userSettings.firstLogin && isEmailVerified) {
                 showWalkthrough = true
             }
         }
 
-        if (currentUser != null && showWalkthrough) {
+        if (currentUser != null && isEmailVerified && showWalkthrough) {
             WelcomeWalkthrough(
                 viewModel = settingsVm,
                 email = currentUser?.email,
