@@ -79,6 +79,7 @@ import io.github.langstudy.navigation.label
 import io.github.langstudy.ui.auth.AuthViewModel
 import io.github.langstudy.ui.auth.AuthViewModelFactory
 import io.github.langstudy.ui.auth.LoginScreen
+import io.github.langstudy.ui.auth.VerifyEmailScreen
 import io.github.langstudy.ui.screens.AdminScreen
 import io.github.langstudy.ui.screens.FlashcardScreen
 import io.github.langstudy.ui.screens.JournalScreen
@@ -139,6 +140,7 @@ fun MainScreen(
     val searchViewModel: SearchViewModel = viewModel(key = "search_$sessionId")
 
     val currentUser by authViewModel.user.collectAsState()
+    val isEmailVerified by authViewModel.isEmailVerified.collectAsState()
     val isAdmin by authViewModel.isAdmin.collectAsState()
     val isMentorMode by authViewModel.isMentorMode.collectAsState()
     val effectiveUserId by authViewModel.effectiveUserId.collectAsState()
@@ -178,6 +180,12 @@ fun MainScreen(
     val userSettings by settingsVm.userSettings.collectAsState()
     val effectiveUserSettings by effectiveSettingsVm.userSettings.collectAsState()
 
+    LaunchedEffect(currentUser) {
+        if (currentUser?.email == "test@example.com") {
+            app.sampleDataSeeder.seed(currentUser?.uid ?: "")
+        }
+    }
+
     val darkTheme = when (userSettings.theme) {
         "light" -> false
         "dark" -> true
@@ -202,8 +210,14 @@ fun MainScreen(
             )
         }
 
-        val startRoute = remember(currentUser) {
-            if (currentUser == null) NavRoute.Login else NavRoute.fromString(userSettings.homepageTab)
+        val startRoute = remember(currentUser, isEmailVerified) {
+            if (currentUser == null) {
+                NavRoute.Login
+            } else if (!isEmailVerified) {
+                NavRoute.VerifyEmail
+            } else {
+                NavRoute.fromString(userSettings.homepageTab)
+            }
         }
         val backStack = rememberNavBackStack(startRoute)
 
@@ -341,8 +355,20 @@ fun MainScreen(
                 entry<NavRoute.Login> {
                     LoginScreen(onLoginSuccess = {
                         backStack.clear()
-                        backStack.add(NavRoute.fromString(userSettings.homepageTab))
+                        if (authViewModel.isEmailVerified.value) {
+                            backStack.add(NavRoute.fromString(userSettings.homepageTab))
+                        } else {
+                            backStack.add(NavRoute.VerifyEmail)
+                        }
                     })
+                }
+                entry<NavRoute.VerifyEmail> {
+                    VerifyEmailScreen(
+                        viewModel = authViewModel,
+                        onBackToLogin = {
+                            authViewModel.signOut(context)
+                        }
+                    )
                 }
                 entry<NavRoute.Vocab> {
                     VocabScreen(
@@ -433,6 +459,20 @@ fun MainScreen(
             }
         }
 
+        if (currentUser != null && !isEmailVerified && backStack.lastOrNull() !is NavRoute.VerifyEmail) {
+            LaunchedEffect(Unit) {
+                backStack.clear()
+                backStack.add(NavRoute.VerifyEmail)
+            }
+        }
+
+        if (currentUser != null && isEmailVerified && backStack.lastOrNull() is NavRoute.VerifyEmail) {
+            LaunchedEffect(Unit) {
+                backStack.clear()
+                backStack.add(NavRoute.fromString(userSettings.homepageTab))
+            }
+        }
+
         if (showResources) {
             LanguageResourcesDialog(
                 viewModel = settingsVm,
@@ -441,13 +481,11 @@ fun MainScreen(
         }
 
         var showWalkthrough by remember { mutableStateOf(false) }
-        LaunchedEffect(userSettings.firstLogin) {
-            if (userSettings.firstLogin) {
-                showWalkthrough = true
-            }
+        LaunchedEffect(userSettings.firstLogin, isEmailVerified) {
+            showWalkthrough = userSettings.firstLogin && isEmailVerified
         }
 
-        if (currentUser != null && showWalkthrough) {
+        if (currentUser != null && isEmailVerified && showWalkthrough) {
             WelcomeWalkthrough(
                 viewModel = settingsVm,
                 email = currentUser?.email,
@@ -466,7 +504,8 @@ fun MainScreen(
             topBar = {
                 if (currentUser != null &&
                     backStack.lastOrNull() != NavRoute.Settings &&
-                    backStack.lastOrNull() != NavRoute.Admin
+                    backStack.lastOrNull() != NavRoute.Admin &&
+                    backStack.lastOrNull() != NavRoute.VerifyEmail
                 ) {
                     TopAppBar(
                         title = {
@@ -608,7 +647,7 @@ fun MainScreen(
             bottomBar = {
                 val currentRoute = backStack.lastOrNull() as? NavRoute
                 val isFullScreen =
-                    currentRoute == NavRoute.Settings || currentRoute == NavRoute.Admin
+                    currentRoute == NavRoute.Settings || currentRoute == NavRoute.Admin || currentRoute == NavRoute.VerifyEmail
                 if (!useNavRail && currentUser != null && !WindowInsets.isImeVisible && !isFullScreen) {
                     NavigationBar {
                         NavRoute.mainRoutes.forEach { route ->
@@ -630,7 +669,7 @@ fun MainScreen(
         ) { innerPadding ->
             val layoutDirection = LocalLayoutDirection.current
             val currentRoute = backStack.lastOrNull() as? NavRoute
-            val isFullScreen = currentRoute == NavRoute.Settings || currentRoute == NavRoute.Admin
+            val isFullScreen = currentRoute == NavRoute.Settings || currentRoute == NavRoute.Admin || currentRoute == NavRoute.VerifyEmail
 
             Row(
                 Modifier

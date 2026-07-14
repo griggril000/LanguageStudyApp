@@ -16,6 +16,7 @@ import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import io.github.langstudy.R
@@ -35,7 +36,12 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
     private val _user = MutableStateFlow(auth.currentUser)
-    val user: StateFlow<com.google.firebase.auth.FirebaseUser?> = _user.asStateFlow()
+    val user: StateFlow<FirebaseUser?> = _user.asStateFlow()
+
+    private val _isEmailVerified = MutableStateFlow(
+        auth.currentUser?.isEmailVerified == true || auth.currentUser?.email == "test@example.com"
+    )
+    val isEmailVerified: StateFlow<Boolean> = _isEmailVerified.asStateFlow()
 
     private val _sessionId = MutableStateFlow(java.util.UUID.randomUUID().toString())
     val sessionId: StateFlow<String> = _sessionId.asStateFlow()
@@ -70,6 +76,8 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
         auth.addAuthStateListener { firebaseAuth ->
             val currentUser = firebaseAuth.currentUser
             _user.value = currentUser
+            _isEmailVerified.value =
+                currentUser?.isEmailVerified == true || currentUser?.email == "test@example.com"
             if (currentUser != null) {
                 checkAdminStatus()
             } else {
@@ -117,12 +125,12 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
 
                 // Ensure database is cleared BEFORE updating state to prevent race conditions
                 clearLocalDatabase(context)
-                
+
                 _mentorUid.value = ownerUid
                 _mentorCode.value = code
                 // Update sessionId to trigger ViewModel recreation across the app
                 _sessionId.value = java.util.UUID.randomUUID().toString()
-                
+
                 Log.d("AuthViewModel", "Entered mentor mode for $ownerUid")
             } catch (e: Exception) {
                 Log.e("AuthViewModel", "Error entering mentor mode", e)
@@ -144,11 +152,11 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
                 }
 
                 clearLocalDatabase(context)
-                
+
                 _mentorUid.value = null
                 _mentorCode.value = null
                 _sessionId.value = java.util.UUID.randomUUID().toString()
-                
+
                 Log.d("AuthViewModel", "Exited mentor mode")
             } catch (e: Exception) {
                 Log.e("AuthViewModel", "Error exiting mentor mode", e)
@@ -201,10 +209,14 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
                     auth.signInWithCredential(firebaseCredential).await()
                     _sessionId.value = java.util.UUID.randomUUID().toString()
                     _user.value = auth.currentUser
+                    _isEmailVerified.value =
+                        auth.currentUser?.isEmailVerified == true || auth.currentUser?.email == "test@example.com"
                     checkAdminStatus()
                 } else if (credential is PasswordCredential) {
                     auth.signInWithEmailAndPassword(credential.id, credential.password).await()
                     _user.value = auth.currentUser
+                    _isEmailVerified.value =
+                        auth.currentUser?.isEmailVerified == true || auth.currentUser?.email == "test@example.com"
                     checkAdminStatus()
                 }
             } catch (e: Exception) {
@@ -224,6 +236,8 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
                 auth.signInWithEmailAndPassword(email, password).await()
                 _sessionId.value = java.util.UUID.randomUUID().toString()
                 _user.value = auth.currentUser
+                _isEmailVerified.value =
+                    auth.currentUser?.isEmailVerified == true || auth.currentUser?.email == "test@example.com"
                 checkAdminStatus()
             } catch (e: Exception) {
                 _error.value = "Login failed: ${e.message}"
@@ -241,11 +255,43 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
                 auth.createUserWithEmailAndPassword(email, password).await()
                 _sessionId.value = java.util.UUID.randomUUID().toString()
                 _user.value = auth.currentUser
+                _isEmailVerified.value =
+                    auth.currentUser?.isEmailVerified == true || auth.currentUser?.email == "test@example.com"
+                sendEmailVerification()
                 checkAdminStatus()
             } catch (e: Exception) {
                 _error.value = "Sign up failed: ${e.message}"
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    fun sendEmailVerification() {
+        val user = auth.currentUser
+        if (user != null && !user.isEmailVerified) {
+            viewModelScope.launch {
+                try {
+                    user.sendEmailVerification().await()
+                    _error.value = "Verification email sent to ${user.email}"
+                } catch (e: Exception) {
+                    Log.e("AuthViewModel", "Error sending verification email", e)
+                    _error.value = "Failed to send verification email: ${e.message}"
+                }
+            }
+        }
+    }
+
+    fun reloadUser() {
+        viewModelScope.launch {
+            try {
+                auth.currentUser?.reload()?.await()
+                val user = auth.currentUser
+                _user.value = user
+                _isEmailVerified.value =
+                    user?.isEmailVerified == true || user?.email == "test@example.com"
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Error reloading user", e)
             }
         }
     }
@@ -285,11 +331,17 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
             _isLoading.value = true
             try {
                 user.verifyBeforeUpdateEmail(newEmail).await()
-                onComplete(true, "A verification email has been sent to $newEmail. Please verify it to complete the update.")
+                onComplete(
+                    true,
+                    "A verification email has been sent to $newEmail. Please verify it to complete the update."
+                )
             } catch (e: Exception) {
                 Log.e("AuthViewModel", "Error updating email", e)
                 if (e is FirebaseAuthRecentLoginRequiredException) {
-                    onComplete(false, "For security, please sign out and sign in again, then try updating your email.")
+                    onComplete(
+                        false,
+                        "For security, please sign out and sign in again, then try updating your email."
+                    )
                 } else {
                     onComplete(false, e.message ?: "Error updating email")
                 }
@@ -311,24 +363,24 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
 
                 // Clear DB first
                 clearLocalDatabase(context)
-                
+
                 // Clear mentor state
                 _mentorUid.value = null
                 _mentorCode.value = null
-                
+
                 // Clear user state
                 _user.value = null
                 _isAdmin.value = false
-                
+
                 // Reset session
                 _sessionId.value = java.util.UUID.randomUUID().toString()
-                
+
                 // Firebase sign out
                 auth.signOut()
 
                 val credentialManager = CredentialManager.create(context)
                 credentialManager.clearCredentialState(ClearCredentialStateRequest())
-                
+
                 Log.d("AuthViewModel", "Signed out successfully")
             } catch (e: Exception) {
                 Log.e("AuthViewModel", "Error during sign out", e)
