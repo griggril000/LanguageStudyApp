@@ -7,6 +7,7 @@ import io.github.langstudy.data.repository.FirestorePortfolioRepository
 import io.github.langstudy.data.repository.GitHubService
 import io.github.langstudy.data.repository.JournalRepository
 import io.github.langstudy.data.repository.MentorRepository
+import io.github.langstudy.data.repository.SampleDataSeeder
 import io.github.langstudy.data.repository.SettingsRepository
 import io.github.langstudy.data.repository.SkillRepository
 import io.github.langstudy.data.repository.VocabRepository
@@ -22,6 +23,16 @@ class LanguageStudyApplication : Application() {
     val settingsRepository by lazy { SettingsRepository(githubService = githubService) }
     val mentorRepository by lazy { MentorRepository }
     val adminRepository by lazy { AdminRepository() }
+    
+    val sampleDataSeeder by lazy {
+        SampleDataSeeder(
+            vocabRepository,
+            skillRepository,
+            settingsRepository,
+            portfolioRepository,
+            journalRepository
+        )
+    }
 
     val githubService by lazy {
         Retrofit.Builder()

@@ -180,6 +180,12 @@ fun MainScreen(
     val userSettings by settingsVm.userSettings.collectAsState()
     val effectiveUserSettings by effectiveSettingsVm.userSettings.collectAsState()
 
+    LaunchedEffect(currentUser) {
+        if (currentUser?.email == "test@example.com") {
+            app.sampleDataSeeder.seed(currentUser?.uid ?: "")
+        }
+    }
+
     val darkTheme = when (userSettings.theme) {
         "light" -> false
         "dark" -> true

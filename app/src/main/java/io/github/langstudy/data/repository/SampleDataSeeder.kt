@@ -193,7 +193,7 @@ class SampleDataSeeder(
                 val journals = listOf(
                     JournalEntryEntity(
                         title = "First Spanish Lesson",
-                        content = "Learned how to say hello and thank you today. Spanish sounds very musical!",
+                        content = "Learned how to say hello and thank you today. Spanish sounds wonderful!",
                         language = "Spanish"
                     ),
                     JournalEntryEntity(
