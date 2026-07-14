@@ -476,9 +476,7 @@ fun MainScreen(
 
         var showWalkthrough by remember { mutableStateOf(false) }
         LaunchedEffect(userSettings.firstLogin, isEmailVerified) {
-            if (userSettings.firstLogin && isEmailVerified) {
-                showWalkthrough = true
-            }
+            showWalkthrough = userSettings.firstLogin && isEmailVerified
         }
 
         if (currentUser != null && isEmailVerified && showWalkthrough) {
