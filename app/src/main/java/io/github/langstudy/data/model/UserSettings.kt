@@ -10,5 +10,5 @@ data class UserSettings(
     val mentorQuickReviewEnabled: Boolean = false,
     val homepageTab: String = "vocab",
     val theme: String = "system",
-    val firstLogin: Boolean = true
+    val firstLogin: Boolean = false
 )

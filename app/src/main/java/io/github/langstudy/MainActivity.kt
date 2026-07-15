@@ -488,10 +488,7 @@ fun MainScreen(
             )
         }
 
-        var showWalkthrough by remember { mutableStateOf(false) }
-        LaunchedEffect(userSettings.firstLogin, isEmailVerified) {
-            showWalkthrough = userSettings.firstLogin && isEmailVerified
-        }
+        val showWalkthrough = userSettings.firstLogin && isEmailVerified
 
         if (currentUser != null && isEmailVerified && showWalkthrough) {
             WelcomeWalkthrough(
@@ -499,11 +496,9 @@ fun MainScreen(
                 email = currentUser?.email,
                 onDismiss = {
                     settingsVm.setFirstLogin(false)
-                    showWalkthrough = false
                 },
                 onFinish = {
                     settingsVm.setFirstLogin(false)
-                    showWalkthrough = false
                 }
             )
         }
