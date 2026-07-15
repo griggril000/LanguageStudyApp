@@ -9,6 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.github.langstudy.ui.theme.SuccessGreen
 
 @Composable
 fun VerifyEmailScreen(
@@ -85,10 +86,11 @@ fun VerifyEmailScreen(
         }
 
         error?.let {
+            val isSuccess = it.contains("verified", ignoreCase = true) || it.contains("sent", ignoreCase = true)
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = it,
-                color = MaterialTheme.colorScheme.error,
+                color = if (isSuccess) SuccessGreen else MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center
             )
