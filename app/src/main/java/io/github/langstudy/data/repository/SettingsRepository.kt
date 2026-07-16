@@ -49,7 +49,7 @@ class SettingsRepository(
                     snapshot.getBoolean("mentorQuickReviewEnabled") ?: false
                 val homepageTab = snapshot.getString("homepageTab") ?: "vocab"
                 val theme = snapshot.getString("theme") ?: "system"
-                val firstLogin = snapshot.getBoolean("firstLogin") ?: true
+                val firstLogin = snapshot.getBoolean("firstLogin") ?: false
 
                 trySend(
                     UserSettings(

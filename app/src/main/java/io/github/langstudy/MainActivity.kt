@@ -241,6 +241,14 @@ fun MainScreen(
                     val data = intent.data
                     Log.d("DeepLink", "Received URI: $data")
                     if (data?.host?.contains("language-study.github.io") == true || data?.scheme == "langstudy") {
+                        val mode = data.getQueryParameter("mode")
+                        val oobCode = data.getQueryParameter("oobCode")
+
+                        if (mode == "verifyEmail" && oobCode != null) {
+                            Log.d("DeepLink", "Verifying email with code: $oobCode")
+                            authViewModel.verifyEmail(oobCode)
+                        }
+
                         // Wait for user to be logged in before processing deep link
                         authViewModel.user.filterNotNull().first()
 
@@ -267,7 +275,7 @@ fun MainScreen(
 
                         Log.d(
                             "DeepLink",
-                            "Final Parsed - mentor: $code (raw: $mentorParam), tab: $tab, action: $action"
+                            "Final Parsed - mentor: $code, tab: $tab, action: $action, mode: $mode"
                         )
 
                         if (action == "resources") {
@@ -480,10 +488,7 @@ fun MainScreen(
             )
         }
 
-        var showWalkthrough by remember { mutableStateOf(false) }
-        LaunchedEffect(userSettings.firstLogin, isEmailVerified) {
-            showWalkthrough = userSettings.firstLogin && isEmailVerified
-        }
+        val showWalkthrough = userSettings.firstLogin && isEmailVerified
 
         if (currentUser != null && isEmailVerified && showWalkthrough) {
             WelcomeWalkthrough(
@@ -491,11 +496,9 @@ fun MainScreen(
                 email = currentUser?.email,
                 onDismiss = {
                     settingsVm.setFirstLogin(false)
-                    showWalkthrough = false
                 },
                 onFinish = {
                     settingsVm.setFirstLogin(false)
-                    showWalkthrough = false
                 }
             )
         }

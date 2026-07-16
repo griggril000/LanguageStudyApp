@@ -223,7 +223,8 @@ fun LoginScreen(
                 }
 
                 if (error != null) {
-                    val isSuccess = error?.contains("sent", ignoreCase = true) == true
+                    val isSuccess = error?.contains("sent", ignoreCase = true) == true || 
+                                   error?.contains("verified", ignoreCase = true) == true
                     Text(
                         text = error!!,
                         color = if (isSuccess) SuccessGreen else MaterialTheme.colorScheme.error,

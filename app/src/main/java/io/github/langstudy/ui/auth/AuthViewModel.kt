@@ -296,6 +296,23 @@ class AuthViewModel(private val adminRepository: AdminRepository) : ViewModel() 
         }
     }
 
+    fun verifyEmail(oobCode: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                auth.applyActionCode(oobCode).await()
+                reloadUser()
+                _error.value = "Email verified successfully!"
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Error verifying email", e)
+                _error.value = "Verification failed: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun resetPassword(email: String) {
         if (email.isBlank()) {
             _error.value = "Please enter your email to reset password"
