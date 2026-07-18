@@ -17,7 +17,7 @@ import io.github.langstudy.data.local.entity.VocabEntity
 
 @Database(
     entities = [VocabEntity::class, SkillEntity::class, JournalEntryEntity::class, CategoryEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(SkillTypeConverters::class)

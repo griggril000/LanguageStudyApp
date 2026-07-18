@@ -32,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
@@ -83,6 +84,7 @@ import io.github.langstudy.ui.components.YouTubePlayer
 import io.github.langstudy.ui.components.LinkText
 import io.github.langstudy.ui.viewmodel.FlashcardViewModel
 import io.github.langstudy.ui.viewmodel.FlashcardViewModelFactory
+import io.github.langstudy.utils.LocalTtsManager
 import io.github.langstudy.utils.UrlUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -291,6 +293,8 @@ fun Flashcard(
     isFlipped: Boolean,
     onFlip: () -> Unit
 ) {
+    val ttsManager = LocalTtsManager.current
+
     // key(vocab.id) ensures that the rotation animation resets immediately 
     // when we switch to a new card, preventing the "briefly showing the back" bug.
     key(vocab.id) {
@@ -359,13 +363,26 @@ fun Flashcard(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(32.dp)
                     ) {
-                        Text(
-                            text = vocab.word,
-                            style = MaterialTheme.typography.displaySmall,
-                            fontWeight = FontWeight.ExtraBold,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = vocab.word,
+                                style = MaterialTheme.typography.displaySmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            IconButton(onClick = {
+                                ttsManager?.speak(vocab.word, vocab.language)
+                            }) {
+                                Icon(
+                                    Icons.AutoMirrored.Rounded.VolumeUp,
+                                    contentDescription = "Speak",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                         Spacer(Modifier.height(24.dp))
                         Text(
                             text = stringResource(R.string.tap_to_flip),
@@ -448,13 +465,31 @@ fun Flashcard(
 
                         if (vocab.exampleSentence.isNotBlank()) {
                             Spacer(Modifier.height(16.dp))
-                            Text(
-                                text = vocab.exampleSentence,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = vocab.exampleSentence,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                                IconButton(onClick = {
+                                    ttsManager?.speak(
+                                        vocab.exampleSentence,
+                                        vocab.language
+                                    )
+                                }) {
+                                    Icon(
+                                        Icons.AutoMirrored.Rounded.VolumeUp,
+                                        contentDescription = "Speak Example",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                         }
 
                         if (youtubeId != null || isSoundCloud) {
