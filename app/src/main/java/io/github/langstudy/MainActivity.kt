@@ -96,6 +96,8 @@ import io.github.langstudy.ui.viewmodel.PortfolioViewModelFactory
 import io.github.langstudy.ui.viewmodel.SearchViewModel
 import io.github.langstudy.ui.viewmodel.SettingsViewModel
 import io.github.langstudy.ui.viewmodel.SettingsViewModelFactory
+import io.github.langstudy.utils.LocalTtsManager
+import io.github.langstudy.utils.TtsManager
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -105,13 +107,17 @@ import kotlinx.coroutines.flow.receiveAsFlow
 
 class MainActivity : ComponentActivity() {
     private val intentChannel = Channel<Intent>(capacity = Channel.CONFLATED)
+    private lateinit var ttsManager: TtsManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ttsManager = TtsManager(this)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         enableEdgeToEdge()
         setContent {
-            MainScreen(intentFlow = intentChannel.receiveAsFlow())
+            androidx.compose.runtime.CompositionLocalProvider(LocalTtsManager provides ttsManager) {
+                MainScreen(intentFlow = intentChannel.receiveAsFlow())
+            }
         }
         val currentIntent = intent
         if (currentIntent != null) {
@@ -122,6 +128,11 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         intentChannel.trySend(intent)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        ttsManager.shutdown()
     }
 }
 

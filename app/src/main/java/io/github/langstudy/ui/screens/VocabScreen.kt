@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Style
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -80,6 +81,7 @@ import io.github.langstudy.ui.components.StatusIcon
 import io.github.langstudy.ui.viewmodel.SearchViewModel
 import io.github.langstudy.ui.viewmodel.VocabViewModel
 import io.github.langstudy.ui.viewmodel.VocabViewModelFactory
+import io.github.langstudy.utils.LocalTtsManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -501,6 +503,7 @@ fun VocabItem(
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
+    val ttsManager = LocalTtsManager.current
 
     var editWord by remember { mutableStateOf(vocab.word) }
     var editTranslation by remember { mutableStateOf(vocab.translation) }
@@ -632,12 +635,26 @@ fun VocabItem(
                             showEditDialog = true
                         } else Modifier)
                 ) {
-                    Text(
-                        vocab.word,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        textDecoration = if (vocab.status == "PROFICIENT") androidx.compose.ui.text.style.TextDecoration.LineThrough else null
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            vocab.word,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            textDecoration = if (vocab.status == "PROFICIENT") androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        IconButton(
+                            onClick = { ttsManager?.speak(vocab.word, vocab.language) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Rounded.VolumeUp,
+                                contentDescription = "Speak",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                     if (vocab.translation.isNotBlank()) {
                         LinkText(
                             vocab.translation,
@@ -647,13 +664,34 @@ fun VocabItem(
                         )
                     }
                     if (vocab.exampleSentence.isNotBlank()) {
-                        Text(
-                            vocab.exampleSentence,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(top = 4.dp),
-                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) {
+                            Text(
+                                vocab.exampleSentence,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            IconButton(
+                                onClick = {
+                                    ttsManager?.speak(
+                                        vocab.exampleSentence,
+                                        vocab.language
+                                    )
+                                },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Rounded.VolumeUp,
+                                    contentDescription = "Speak Example",
+                                    tint = MaterialTheme.colorScheme.outline,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
                     }
                 }
                 Column(horizontalAlignment = Alignment.End) {
