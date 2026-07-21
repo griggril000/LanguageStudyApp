@@ -20,8 +20,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -46,6 +48,7 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -65,6 +68,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.window.core.layout.WindowSizeClass
 import coil3.compose.AsyncImage
 import io.github.langstudy.R
 import io.github.langstudy.data.model.PortfolioItem
@@ -266,7 +270,13 @@ fun PortfolioScreen(
                     onQueryChange = { searchViewModel.setQuery(it) },
                     placeholder = stringResource(R.string.search_portfolio)
                 )
-                AdaptiveContainer {
+                val adaptiveInfo = currentWindowAdaptiveInfoV2()
+                val columns =
+                    if (adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)) 2 else 1
+
+                AdaptiveContainer(
+                    maxWidth = if (columns > 1) 1200.dp else 600.dp
+                ) {
                     if (isLoading && allItems.isEmpty()) {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
@@ -294,8 +304,10 @@ fun PortfolioScreen(
                             EmptyState(message = message)
                         }
                     } else {
-                        LazyColumn(
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(columns),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(horizontal = 16.dp),
@@ -306,7 +318,7 @@ fun PortfolioScreen(
                             val canFeatureMore = featuredItems.size < 3
 
                             if (featuredItems.isNotEmpty()) {
-                                stickyHeader {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
                                     HeaderSection(
                                         stringResource(
                                             R.string.featured_items_format,
@@ -327,7 +339,7 @@ fun PortfolioScreen(
                             }
 
                             if (otherItems.isNotEmpty()) {
-                                stickyHeader {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
                                     HeaderSection(stringResource(R.string.other_items))
                                 }
                                 items(otherItems, key = { it.id }) { item ->
