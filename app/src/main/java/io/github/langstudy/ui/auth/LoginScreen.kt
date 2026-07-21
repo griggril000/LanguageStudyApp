@@ -51,6 +51,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.langstudy.R
+import io.github.langstudy.ui.components.AdaptiveContainer
 import io.github.langstudy.ui.theme.SuccessGreen
 
 @Composable
@@ -80,156 +81,158 @@ fun LoginScreen(
             .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+        AdaptiveContainer {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Text(
-                    stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
 
-                Text(
-                    if (isSignUp) stringResource(R.string.create_account) else stringResource(R.string.master_new_lang),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                    Text(
+                        if (isSignUp) stringResource(R.string.create_account) else stringResource(R.string.master_new_lang),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
 
-                Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(8.dp))
 
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text(stringResource(R.string.email)) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .semantics { contentType = ContentType.EmailAddress },
-                    shape = RoundedCornerShape(12.dp),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Email,
-                        imeAction = ImeAction.Next
-                    ),
-                    singleLine = true
-                )
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text(stringResource(R.string.email)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentType = ContentType.EmailAddress },
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction = ImeAction.Next
+                        ),
+                        singleLine = true
+                    )
 
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text(stringResource(R.string.password)) },
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .semantics { contentType = ContentType.Password },
-                    shape = RoundedCornerShape(12.dp),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Password,
-                        imeAction = ImeAction.Done
-                    ),
-                    trailingIcon = {
-                        val image = if (passwordVisible)
-                            Icons.Filled.Visibility
-                        else Icons.Filled.VisibilityOff
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text(stringResource(R.string.password)) },
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentType = ContentType.Password },
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Done
+                        ),
+                        trailingIcon = {
+                            val image = if (passwordVisible)
+                                Icons.Filled.Visibility
+                            else Icons.Filled.VisibilityOff
 
-                        val description = if (passwordVisible) stringResource(R.string.hide_password_cd) else stringResource(R.string.show_password_cd)
+                            val description = if (passwordVisible) stringResource(R.string.hide_password_cd) else stringResource(R.string.show_password_cd)
 
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = description)
-                        }
-                    },
-                    singleLine = true
-                )
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(imageVector = image, contentDescription = description)
+                            }
+                        },
+                        singleLine = true
+                    )
 
-                if (!isSignUp) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.CenterEnd
-                    ) {
-                        TextButton(
-                            onClick = { viewModel.resetPassword(email) },
-                            contentPadding = PaddingValues(0.dp)
+                    if (!isSignUp) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.CenterEnd
                         ) {
-                            Text(
-                                stringResource(R.string.forgot_password),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
+                            TextButton(
+                                onClick = { viewModel.resetPassword(email) },
+                                contentPadding = PaddingValues(0.dp)
+                            ) {
+                                Text(
+                                    stringResource(R.string.forgot_password),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            if (isSignUp) {
+                                viewModel.signUpWithEmail(email, password)
+                            } else {
+                                viewModel.signInWithEmail(email, password)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = !isLoading
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.onPrimary
                             )
-                        }
-                    }
-                }
-
-                Button(
-                    onClick = {
-                        if (isSignUp) {
-                            viewModel.signUpWithEmail(email, password)
                         } else {
-                            viewModel.signInWithEmail(email, password)
+                            Text(if (isSignUp) stringResource(R.string.sign_up) else stringResource(R.string.login))
                         }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !isLoading
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text(if (isSignUp) stringResource(R.string.sign_up) else stringResource(R.string.login))
                     }
-                }
 
-                TextButton(onClick = { isSignUp = !isSignUp }) {
-                    Text(if (isSignUp) stringResource(R.string.already_have_account_login) else stringResource(R.string.dont_have_account_signup))
-                }
+                    TextButton(onClick = { isSignUp = !isSignUp }) {
+                        Text(if (isSignUp) stringResource(R.string.already_have_account_login) else stringResource(R.string.dont_have_account_signup))
+                    }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    HorizontalDivider(modifier = Modifier.weight(1f))
-                    Text(
-                        stringResource(R.string.or),
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                    HorizontalDivider(modifier = Modifier.weight(1f))
-                }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        HorizontalDivider(modifier = Modifier.weight(1f))
+                        Text(
+                            stringResource(R.string.or),
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        HorizontalDivider(modifier = Modifier.weight(1f))
+                    }
 
-                OutlinedButton(
-                    onClick = { viewModel.signInWithGoogle(context) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !isLoading
-                ) {
-                    Text(stringResource(R.string.sign_in_google))
-                }
+                    OutlinedButton(
+                        onClick = { viewModel.signInWithGoogle(context) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = !isLoading
+                    ) {
+                        Text(stringResource(R.string.sign_in_google))
+                    }
 
-                if (error != null) {
-                    val isSuccess = error?.contains("sent", ignoreCase = true) == true || 
-                                   error?.contains("verified", ignoreCase = true) == true
-                    Text(
-                        text = error!!,
-                        color = if (isSuccess) SuccessGreen else MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    if (error != null) {
+                        val isSuccess = error?.contains("sent", ignoreCase = true) == true || 
+                                       error?.contains("verified", ignoreCase = true) == true
+                        Text(
+                            text = error!!,
+                            color = if (isSuccess) SuccessGreen else MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
             }
         }
