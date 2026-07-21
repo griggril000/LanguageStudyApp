@@ -461,7 +461,7 @@
     },
     "buildHints": {
       "minSdk": 21,
-      "targetSdk": 34,
+      "targetSdk": 37,
       "useJetpackCompose": true,
       "useKotlin": true,
       "packageName": "com.language study",
