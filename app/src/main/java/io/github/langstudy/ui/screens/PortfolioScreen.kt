@@ -68,6 +68,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import io.github.langstudy.R
 import io.github.langstudy.data.model.PortfolioItem
+import io.github.langstudy.ui.components.AdaptiveContainer
 import io.github.langstudy.ui.components.AppButton
 import io.github.langstudy.ui.components.AppFAB
 import io.github.langstudy.ui.components.DeleteConfirmationDialog
@@ -196,7 +197,9 @@ fun PortfolioScreen(
                         .padding(bottom = 16.dp)
                 ) {
                     Text(
-                        if (editingItem == null) stringResource(R.string.add_portfolio_item_title) else stringResource(R.string.edit_portfolio_item_title),
+                        if (editingItem == null) stringResource(R.string.add_portfolio_item_title) else stringResource(
+                            R.string.edit_portfolio_item_title
+                        ),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -243,7 +246,9 @@ fun PortfolioScreen(
                             }
                         },
                         loading = isLoading,
-                        text = if (editingItem == null) stringResource(R.string.add_to_portfolio) else stringResource(R.string.save_changes),
+                        text = if (editingItem == null) stringResource(R.string.add_to_portfolio) else stringResource(
+                            R.string.save_changes
+                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -261,71 +266,82 @@ fun PortfolioScreen(
                     onQueryChange = { searchViewModel.setQuery(it) },
                     placeholder = stringResource(R.string.search_portfolio)
                 )
-
-                if (isLoading && allItems.isEmpty()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                    }
-                } else if (allItems.isEmpty()) {
-                    val emptyMessage =
-                        if (isMentorMode) stringResource(R.string.no_portfolio_mentor) else stringResource(R.string.no_portfolio_user)
-                    EmptyState(message = emptyMessage)
-                } else if (items.isEmpty()) {
-                    val currentLang = languageOverride ?: currentLanguage
-                    val message = if (searchQuery.isNotEmpty()) {
-                        stringResource(R.string.no_results_format, searchQuery)
-                    } else if (currentLang.isNotBlank()) {
-                        if (isMentorMode) stringResource(R.string.no_portfolio_lang_mentor_format, currentLang)
-                        else stringResource(R.string.no_portfolio_lang_user_format, currentLang)
-                    } else {
-                        stringResource(R.string.no_portfolio_filters)
-                    }
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        EmptyState(message = message)
-                    }
-                } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
-                    ) {
-                        val featuredItems = items.filter { it.isTop }
-                        val otherItems = items.filter { !it.isTop }
-                        val canFeatureMore = featuredItems.size < 3
-
-                        if (featuredItems.isNotEmpty()) {
-                            stickyHeader {
-                                HeaderSection(stringResource(R.string.featured_items_format, featuredItems.size))
-                            }
-                            items(featuredItems, key = { it.id }) { item ->
-                                FeaturedPortfolioItem(
-                                    item = item,
-                                    canEdit = canEditContent,
-                                    canChangeStatus = canChangeStatus,
-                                    onEdit = { editingItem = item },
-                                    onDelete = { viewModel.deleteItem(item.id) },
-                                    onUnfeature = { viewModel.toggleFeatured(item) }
-                                )
-                            }
+                AdaptiveContainer {
+                    if (isLoading && allItems.isEmpty()) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         }
+                    } else if (allItems.isEmpty()) {
+                        val emptyMessage =
+                            if (isMentorMode) stringResource(R.string.no_portfolio_mentor) else stringResource(
+                                R.string.no_portfolio_user
+                            )
+                        EmptyState(message = emptyMessage)
+                    } else if (items.isEmpty()) {
+                        val currentLang = languageOverride ?: currentLanguage
+                        val message = if (searchQuery.isNotEmpty()) {
+                            stringResource(R.string.no_results_format, searchQuery)
+                        } else if (currentLang.isNotBlank()) {
+                            if (isMentorMode) stringResource(
+                                R.string.no_portfolio_lang_mentor_format,
+                                currentLang
+                            )
+                            else stringResource(R.string.no_portfolio_lang_user_format, currentLang)
+                        } else {
+                            stringResource(R.string.no_portfolio_filters)
+                        }
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            EmptyState(message = message)
+                        }
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
+                        ) {
+                            val featuredItems = items.filter { it.isTop }
+                            val otherItems = items.filter { !it.isTop }
+                            val canFeatureMore = featuredItems.size < 3
 
-                        if (otherItems.isNotEmpty()) {
-                            stickyHeader {
-                                HeaderSection(stringResource(R.string.other_items))
+                            if (featuredItems.isNotEmpty()) {
+                                stickyHeader {
+                                    HeaderSection(
+                                        stringResource(
+                                            R.string.featured_items_format,
+                                            featuredItems.size
+                                        )
+                                    )
+                                }
+                                items(featuredItems, key = { it.id }) { item ->
+                                    FeaturedPortfolioItem(
+                                        item = item,
+                                        canEdit = canEditContent,
+                                        canChangeStatus = canChangeStatus,
+                                        onEdit = { editingItem = item },
+                                        onDelete = { viewModel.deleteItem(item.id) },
+                                        onUnfeature = { viewModel.toggleFeatured(item) }
+                                    )
+                                }
                             }
-                            items(otherItems, key = { it.id }) { item ->
-                                StandardPortfolioItem(
-                                    item = item,
-                                    canEdit = canEditContent,
-                                    canChangeStatus = canChangeStatus,
-                                    onPlay = { onPlay(item.link) },
-                                    onEdit = { editingItem = item },
-                                    onDelete = { viewModel.deleteItem(item.id) },
-                                    onFeature = { viewModel.toggleFeatured(item) },
-                                    canFeature = canFeatureMore
-                                )
+
+                            if (otherItems.isNotEmpty()) {
+                                stickyHeader {
+                                    HeaderSection(stringResource(R.string.other_items))
+                                }
+                                items(otherItems, key = { it.id }) { item ->
+                                    StandardPortfolioItem(
+                                        item = item,
+                                        canEdit = canEditContent,
+                                        canChangeStatus = canChangeStatus,
+                                        onPlay = { onPlay(item.link) },
+                                        onEdit = { editingItem = item },
+                                        onDelete = { viewModel.deleteItem(item.id) },
+                                        onFeature = { viewModel.toggleFeatured(item) },
+                                        canFeature = canFeatureMore
+                                    )
+                                }
                             }
                         }
                     }
