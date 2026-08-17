@@ -1052,7 +1052,7 @@ private fun compareVersions(v1: String, v2: String): Int {
 
 @Composable
 fun LibrariesView(lazyListState: LazyListState) {
-    val libraries by produceLibraries()
+    val libraries by produceLibraries(io.github.langstudy.R.raw.aboutlibraries)
 
     LibrariesContainer(
         libraries = libraries,

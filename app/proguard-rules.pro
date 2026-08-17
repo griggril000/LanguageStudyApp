@@ -21,3 +21,8 @@
 -keepclassmembers class * {
     @kotlinx.serialization.SerialName *;
 }
+
+# AboutLibraries
+-keep class com.mikepenz.aboutlibraries.entity.** { *; }
+-keep class com.mikepenz.aboutlibraries.Libs { *; }
+-keep class com.mikepenz.aboutlibraries.ui.compose.** { *; }
