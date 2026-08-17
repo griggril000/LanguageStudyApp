@@ -131,7 +131,8 @@ fun VocabScreen(
     var exampleSentence by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("General") }
     var language by remember { mutableStateOf("") }
-    var showAddSheet by remember { mutableStateOf(false) }
+    var editingVocab by remember { mutableStateOf<VocabEntity?>(null) }
+    var showEntrySheet by remember { mutableStateOf(false) }
     var isAddingNewCategory by remember { mutableStateOf(false) }
     var newCategoryName by remember { mutableStateOf("") }
     var categoryExpanded by remember { mutableStateOf(false) }
@@ -140,12 +141,14 @@ fun VocabScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     LaunchedEffect(currentLanguage) {
-        language = currentLanguage
+        if (editingVocab == null) {
+            language = currentLanguage
+        }
     }
 
     LaunchedEffect(Unit) {
         viewModel.error.collect { message ->
-            if (showAddSheet) {
+            if (showEntrySheet) {
                 localErrorMessage = message
             } else {
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -153,8 +156,11 @@ fun VocabScreen(
         }
     }
 
-    LaunchedEffect(showAddSheet) {
-        if (!showAddSheet) localErrorMessage = null
+    LaunchedEffect(showEntrySheet) {
+        if (!showEntrySheet) {
+            localErrorMessage = null
+            editingVocab = null
+        }
     }
 
     if (isAddingNewCategory) {
@@ -207,16 +213,24 @@ fun VocabScreen(
         floatingActionButton = {
             if (canEditContent) {
                 AppFAB(
-                    onClick = { showAddSheet = true },
+                    onClick = {
+                        editingVocab = null
+                        word = ""
+                        translation = ""
+                        exampleSentence = ""
+                        category = selectedCategory ?: "General"
+                        language = currentLanguage
+                        showEntrySheet = true
+                    },
                     icon = Icons.Rounded.Add,
                     contentDescription = stringResource(R.string.add_vocabulary_cd)
                 )
             }
         }
     ) { padding ->
-        if (showAddSheet) {
+        if (showEntrySheet) {
             ModalBottomSheet(
-                onDismissRequest = { showAddSheet = false },
+                onDismissRequest = { showEntrySheet = false },
                 sheetState = sheetState
             ) {
                 Column(
@@ -227,7 +241,8 @@ fun VocabScreen(
                         .padding(bottom = 32.dp)
                 ) {
                     Text(
-                        stringResource(R.string.add_vocabulary_title),
+                        if (editingVocab == null) stringResource(R.string.add_vocabulary_title)
+                        else stringResource(R.string.edit_vocabulary),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -317,15 +332,25 @@ fun VocabScreen(
                     Spacer(Modifier.height(24.dp))
                     AppButton(
                         onClick = {
-                            viewModel.addVocab(word, translation, category, language, exampleSentence)
+                            if (editingVocab == null) {
+                                viewModel.addVocab(word, translation, category, language, exampleSentence)
+                            } else {
+                                viewModel.updateVocab(
+                                    editingVocab!!.copy(
+                                        word = word,
+                                        translation = translation,
+                                        category = category,
+                                        language = language,
+                                        exampleSentence = exampleSentence
+                                    )
+                                )
+                            }
                             if (word.isNotBlank()) {
-                                word = ""
-                                translation = ""
-                                exampleSentence = ""
-                                showAddSheet = false
+                                showEntrySheet = false
                             }
                         },
-                        text = stringResource(R.string.add_to_list),
+                        text = if (editingVocab == null) stringResource(R.string.add_to_list)
+                               else stringResource(R.string.save_changes),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -462,20 +487,17 @@ fun VocabScreen(
                         items(vocabList, key = { it.id }) { vocab ->
                             VocabItem(
                                 vocab = vocab,
-                                learnedLanguages = learnedLanguages,
                                 canEdit = canEditContent,
                                 canChangeStatus = canChangeStatus,
                                 onDelete = { viewModel.deleteVocab(vocab) },
-                                onEdit = { w, t, e, c, l ->
-                                    viewModel.updateVocab(
-                                        vocab.copy(
-                                            word = w,
-                                            translation = t,
-                                            exampleSentence = e,
-                                            category = c,
-                                            language = l
-                                        )
-                                    )
+                                onEditRequest = { v ->
+                                    editingVocab = v
+                                    word = v.word
+                                    translation = v.translation
+                                    exampleSentence = v.exampleSentence
+                                    category = v.category
+                                    language = v.language
+                                    showEntrySheet = true
                                 },
                                 onStatusCycle = { viewModel.cycleVocabStatus(vocab) }
                             )
@@ -494,71 +516,14 @@ fun VocabScreen(
 @Composable
 fun VocabItem(
     vocab: VocabEntity,
-    learnedLanguages: List<String>,
     canEdit: Boolean,
     canChangeStatus: Boolean,
     onDelete: () -> Unit,
-    onEdit: (String, String, String, String, String) -> Unit,
+    onEditRequest: (VocabEntity) -> Unit,
     onStatusCycle: () -> Unit
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    var showEditDialog by remember { mutableStateOf(false) }
     val ttsManager = LocalTtsManager.current
-
-    var editWord by remember { mutableStateOf(vocab.word) }
-    var editTranslation by remember { mutableStateOf(vocab.translation) }
-    var editExampleSentence by remember { mutableStateOf(vocab.exampleSentence) }
-    var editCategory by remember { mutableStateOf(vocab.category) }
-    var editLanguage by remember { mutableStateOf(vocab.language) }
-
-    if (showEditDialog) {
-        AlertDialog(
-            onDismissRequest = { showEditDialog = false },
-            title = { Text(stringResource(R.string.edit_vocabulary)) },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = editWord,
-                        onValueChange = { editWord = it },
-                        label = { Text(stringResource(R.string.word_label)) },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = editTranslation,
-                        onValueChange = { editTranslation = it },
-                        label = { Text(stringResource(R.string.translation_label)) },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = editExampleSentence,
-                        onValueChange = { editExampleSentence = it },
-                        label = { Text(stringResource(R.string.example_sentence_label)) },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    LanguageDropdown(
-                        selectedLanguage = editLanguage,
-                        onLanguageSelected = { editLanguage = it },
-                        availableLanguages = learnedLanguages
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    onEdit(editWord, editTranslation, editExampleSentence, editCategory, editLanguage)
-                    showEditDialog = false
-                }) { Text(stringResource(R.string.save)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEditDialog = false }) { Text(stringResource(R.string.cancel)) }
-            }
-        )
-    }
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
@@ -632,7 +597,7 @@ fun VocabItem(
                     modifier = Modifier
                         .weight(1f)
                         .then(if (canEdit) Modifier.clickable {
-                            showEditDialog = true
+                            onEditRequest(vocab)
                         } else Modifier)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
