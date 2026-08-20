@@ -11,6 +11,7 @@ import io.github.langstudy.data.repository.SampleDataSeeder
 import io.github.langstudy.data.repository.SettingsRepository
 import io.github.langstudy.data.repository.SkillRepository
 import io.github.langstudy.data.repository.VocabRepository
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 
@@ -35,8 +36,18 @@ class LanguageStudyApplication : Application() {
     }
 
     val githubService by lazy {
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .header("User-Agent", "LanguageStudyApp")
+                    .build()
+                chain.proceed(request)
+            }
+            .build()
+
         Retrofit.Builder()
             .baseUrl("https://api.github.com/")
+            .client(client)
             .addConverterFactory(MoshiConverterFactory.create())
             .build()
             .create(GitHubService::class.java)

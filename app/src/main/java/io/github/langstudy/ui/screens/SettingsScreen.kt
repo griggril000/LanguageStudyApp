@@ -574,8 +574,10 @@ fun SettingsScreen(
 
                 "notes" -> {
                     val releaseNotes by settingsViewModel.releaseNotes.collectAsState()
+                    val isLoading by settingsViewModel.isLoadingReleaseNotes.collectAsState()
                     ReleaseNotesView(
                         releaseNotes = releaseNotes,
+                        isLoading = isLoading,
                         scrollState = notesScrollState
                     )
                 }
@@ -914,6 +916,7 @@ fun AppDetailsView(
 @Composable
 fun ReleaseNotesView(
     releaseNotes: List<io.github.langstudy.data.model.GitHubRelease>,
+    isLoading: Boolean,
     scrollState: ScrollState
 ) {
     val currentVersion = BuildConfig.VERSION_NAME
@@ -934,7 +937,7 @@ fun ReleaseNotesView(
     ) {
         if (filteredReleases.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                if (releaseNotes.isEmpty()) {
+                if (isLoading) {
                     CircularProgressIndicator()
                 } else {
                     Text(stringResource(R.string.no_release_notes))
