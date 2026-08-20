@@ -7,6 +7,6 @@ import retrofit2.http.Header
 interface GitHubService {
     @GET("repos/griggril000/LanguageStudyApp/releases")
     suspend fun getReleases(
-        @Header("Authorization") token: String
+        @Header("Authorization") token: String?
     ): List<GitHubRelease>
 }

@@ -82,11 +82,22 @@ class SettingsRepository(
     }
 
     suspend fun getReleaseNotes(): List<GitHubRelease> {
+        val token = io.github.langstudy.BuildConfig.GITHUB_TOKEN
+        val authHeader = if (token.isNotBlank()) "Bearer $token" else null
+
         return try {
-            githubService?.getReleases("Bearer ${io.github.langstudy.BuildConfig.GITHUB_TOKEN}")
-                ?: emptyList()
+            githubService?.getReleases(authHeader) ?: emptyList()
         } catch (e: Exception) {
             android.util.Log.e("SettingsRepository", "Error fetching release notes", e)
+            
+            // Fallback for public repos if auth failed (e.g. token expired)
+            if (authHeader != null && e is retrofit2.HttpException && (e.code() == 401 || e.code() == 403)) {
+                try {
+                    return githubService?.getReleases(null) ?: emptyList()
+                } catch (eF: Exception) {
+                    android.util.Log.e("SettingsRepository", "Error fetching without auth", eF)
+                }
+            }
             emptyList()
         }
     }

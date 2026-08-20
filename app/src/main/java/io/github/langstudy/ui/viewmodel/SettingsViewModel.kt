@@ -73,6 +73,9 @@ class SettingsViewModel(
     private val _releaseNotes = MutableStateFlow<List<GitHubRelease>>(emptyList())
     val releaseNotes: StateFlow<List<GitHubRelease>> = _releaseNotes.asStateFlow()
 
+    private val _isLoadingReleaseNotes = MutableStateFlow(false)
+    val isLoadingReleaseNotes: StateFlow<Boolean> = _isLoadingReleaseNotes.asStateFlow()
+
     private val _resources = MutableStateFlow<List<LanguageResource>>(emptyList())
     val resources: StateFlow<List<LanguageResource>> = _resources.asStateFlow()
 
@@ -147,7 +150,14 @@ class SettingsViewModel(
 
     private fun loadReleaseNotes() {
         viewModelScope.launch {
-            _releaseNotes.value = repository.getReleaseNotes()
+            _isLoadingReleaseNotes.value = true
+            try {
+                _releaseNotes.value = repository.getReleaseNotes()
+            } catch (e: Exception) {
+                android.util.Log.e("SettingsVM", "Error loading release notes", e)
+            } finally {
+                _isLoadingReleaseNotes.value = false
+            }
         }
     }
 
