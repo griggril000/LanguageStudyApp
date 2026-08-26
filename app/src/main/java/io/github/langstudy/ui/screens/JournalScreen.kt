@@ -393,7 +393,8 @@ fun JournalScreen(
                                 onClick = {
                                     showBatchMenu = false
                                     pendingBatchDownloadMimeType = "application/pdf"
-                                    batchDownloadLauncher.launch("Journal_All_Entries.pdf")
+                                    val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
+                                    batchDownloadLauncher.launch("Journal_Export_$timeStamp.pdf")
                                 },
                                 leadingIcon = { Icon(Icons.Rounded.FileDownload, null) }
                             )
@@ -402,7 +403,8 @@ fun JournalScreen(
                                 onClick = {
                                     showBatchMenu = false
                                     pendingBatchDownloadMimeType = "application/msword"
-                                    batchDownloadLauncher.launch("Journal_All_Entries.doc")
+                                    val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
+                                    batchDownloadLauncher.launch("Journal_Export_$timeStamp.doc")
                                 },
                                 leadingIcon = { Icon(Icons.Rounded.FileDownload, null) }
                             )

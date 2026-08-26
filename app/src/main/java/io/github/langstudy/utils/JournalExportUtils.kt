@@ -20,7 +20,8 @@ import java.util.Locale
 object JournalExportUtils {
 
     fun shareEntryAsPdf(context: Context, entry: JournalEntryEntity) {
-        val file = File(context.cacheDir, "${entry.title.filter { it.isLetterOrDigit() }}.pdf")
+        val fileName = "Journal_${entry.title.filter { it.isLetterOrDigit() }}_${entry.id.take(4)}.pdf"
+        val file = File(context.cacheDir, fileName)
         FileOutputStream(file).use { it.write(generatePdfBytes(entry)) }
         shareFile(context, file, "application/pdf")
     }
