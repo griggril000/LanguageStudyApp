@@ -398,16 +398,6 @@ fun JournalScreen(
                                 },
                                 leadingIcon = { Icon(Icons.Rounded.FileDownload, null) }
                             )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.export_all_word)) },
-                                onClick = {
-                                    showBatchMenu = false
-                                    pendingBatchDownloadMimeType = "application/msword"
-                                    val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
-                                    batchDownloadLauncher.launch("Journal_Export_$timeStamp.doc")
-                                },
-                                leadingIcon = { Icon(Icons.Rounded.FileDownload, null) }
-                            )
                         }
                     }
                 }

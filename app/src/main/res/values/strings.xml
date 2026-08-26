@@ -228,8 +228,7 @@
     <string name="saved_successfully">Saved successfully</string>
     <string name="share_entry">Share Entry</string>
     <string name="download_all_entries">Download All Entries</string>
-    <string name="export_all_pdf">Export All as PDF</string>
-    <string name="export_all_word">Export All as Word</string>
+    <string name="export_all_pdf">Download All Entries</string>
 
     <!-- Writing Prompts -->
     <string name="prompt_1">What did you do today?</string>
