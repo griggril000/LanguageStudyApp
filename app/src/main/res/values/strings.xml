@@ -63,7 +63,7 @@
     <string name="skill_names_label">Skill Names (one per line)</string>
     <string name="language_optional">Language (optional)</string>
     <string name="add_skills">Add Skills</string>
-    <string name="search_skills">Search skills...</string>
+    <string name="search_skills">Search skills…</string>
     <string name="total_showing_skills_format">%1$d total skills | %2$d showing</string>
     <string name="done_sorting">Done Sorting</string>
     <string name="reorder">Reorder</string>
@@ -79,7 +79,7 @@
     <string name="skill_name_label">Name</string>
     <string name="skill_language_label">Language</string>
     <string name="drag_to_reorder">Drag to reorder</string>
-    <string name="add_subtask_placeholder">Add subtask...</string>
+    <string name="add_subtask_placeholder">Add subtask…</string>
     <string name="edit_subtask_title">Edit Subtask</string>
     <string name="subtask_label">Subtask</string>
     <string name="delete_subtask_title">Delete Subtask</string>
@@ -224,6 +224,12 @@
     <string name="edit_access">Edit</string>
     <string name="show_prompts">Show Writing Prompts</string>
     <string name="hide_prompts">Hide Writing Prompts</string>
+    <string name="share_as_pdf">Share as PDF</string>
+    <string name="saved_successfully">Saved successfully</string>
+    <string name="share_entry">Share Entry</string>
+    <string name="download_all_entries">Download All Entries</string>
+    <string name="export_all_pdf">Export All as PDF</string>
+    <string name="export_all_word">Export All as Word</string>
 
     <!-- Writing Prompts -->
     <string name="prompt_1">What did you do today?</string>
@@ -299,7 +305,7 @@
     <string name="enable_mentor_view_mentor_summary">Status of student\'s mentor code.</string>
     <string name="student_share_code">Student Share Code</string>
     <string name="mentor_share_code">Mentor Share Code</string>
-    <string name="generating">Generating...</string>
+    <string name="generating">Generating…</string>
     <string name="regenerate_cd">Regenerate</string>
     <string name="student_access_level">Student Access Level</string>
     <string name="mentor_access_level">Mentor Access Level</string>
