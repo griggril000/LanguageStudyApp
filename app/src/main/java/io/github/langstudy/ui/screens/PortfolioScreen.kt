@@ -197,11 +197,11 @@ fun PortfolioScreen(
                     )
                 }
             }
-        ) { padding ->
+        ) { innerPadding ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
+                    .padding(innerPadding)
             ) {
                 Column {
                     GlobalSearchBar(

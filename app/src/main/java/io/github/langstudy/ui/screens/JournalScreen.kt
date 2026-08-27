@@ -180,11 +180,11 @@ fun JournalScreen(
                     )
                 }
             }
-        ) { padding ->
+        ) { innerPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
+                    .padding(innerPadding)
             ) {
                 GlobalSearchBar(
                     query = searchQuery,

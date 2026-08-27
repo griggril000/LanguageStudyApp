@@ -100,6 +100,7 @@ import io.github.langstudy.ui.viewmodel.SkillViewModelFactory
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -202,11 +203,11 @@ fun SkillsScreen(
                     )
                 }
             }
-        ) { padding ->
+        ) { innerPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
+                    .padding(innerPadding)
             ) {
                 GlobalSearchBar(
                     query = searchQuery,
@@ -389,7 +390,7 @@ fun SkillsScreen(
                                                                     draggingOffset =
                                                                         currentTouchY - info.offset - initialTouchY
                                                                 }
-                                                            delay(10)
+                                                            delay(10.milliseconds)
                                                         }
                                                     }
                                                 }

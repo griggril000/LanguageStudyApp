@@ -233,11 +233,11 @@ fun VocabScreen(
                     )
                 }
             }
-        ) { padding ->
+        ) { innerPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
+                    .padding(innerPadding)
             ) {
                 GlobalSearchBar(
                     query = searchQuery,
