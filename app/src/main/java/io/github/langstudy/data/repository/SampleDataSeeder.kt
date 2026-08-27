@@ -167,6 +167,7 @@ class SampleDataSeeder(
                 android.util.Log.d("SampleDataSeeder", "Seeding portfolio...")
                 val portfolios = listOf(
                     PortfolioItem(
+                        id = "sample_p1",
                         title = "Spanish Greeting Practice",
                         link = "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
                         type = "youtube",
@@ -175,6 +176,7 @@ class SampleDataSeeder(
                         isTop = true
                     ),
                     PortfolioItem(
+                        id = "sample_p2",
                         title = "French Alphabet Song",
                         link = "https://www.youtube.com/watch?v=5Xm-0Y_s758",
                         type = "youtube",
@@ -192,16 +194,19 @@ class SampleDataSeeder(
                 android.util.Log.d("SampleDataSeeder", "Seeding journals...")
                 val journals = listOf(
                     JournalEntryEntity(
+                        id = "sample_j1",
                         title = "First Spanish Lesson",
                         content = "Learned how to say hello and thank you today. Spanish sounds wonderful!",
                         language = "Spanish"
                     ),
                     JournalEntryEntity(
+                        id = "sample_j2",
                         title = "Starting French",
                         content = "Bonjour! French pronunciation is quite different from what I expected, but I like it.",
                         language = "French"
                     ),
                     JournalEntryEntity(
+                        id = "sample_j3",
                         title = "Japanese Hiragana Progress",
                         content = "I can now recognize all the vowels and the K-row in Hiragana!",
                         language = "Japanese"
