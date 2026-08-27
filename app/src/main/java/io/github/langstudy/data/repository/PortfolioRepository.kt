@@ -3,6 +3,7 @@ package io.github.langstudy.data.repository
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 import io.github.langstudy.data.model.PortfolioItem
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -61,7 +62,11 @@ class FirestorePortfolioRepository(
             "language" to item.language,
             "dateAdded" to com.google.firebase.firestore.FieldValue.serverTimestamp()
         )
-        getCollection(userId).add(data).await()
+        if (item.id.isNotEmpty()) {
+            getCollection(userId).document(item.id).set(data, SetOptions.merge()).await()
+        } else {
+            getCollection(userId).add(data).await()
+        }
     }
 
     override suspend fun deletePortfolioItem(userId: String, id: String) {
