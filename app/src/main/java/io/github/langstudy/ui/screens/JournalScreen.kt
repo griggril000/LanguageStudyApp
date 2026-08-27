@@ -211,11 +211,45 @@ fun JournalScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                GlobalSearchBar(
-                    query = searchQuery,
-                    onQueryChange = { searchViewModel.setQuery(it) },
-                    placeholder = stringResource(R.string.search_journal)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        GlobalSearchBar(
+                            query = searchQuery,
+                            onQueryChange = { searchViewModel.setQuery(it) },
+                            placeholder = stringResource(R.string.search_journal)
+                        )
+                    }
+                    if (allEntries.isNotEmpty()) {
+                        var showBatchMenu by remember { mutableStateOf(false) }
+                        Box(modifier = Modifier.padding(end = 16.dp)) {
+                            IconButton(onClick = { showBatchMenu = true }) {
+                                Icon(
+                                    Icons.Rounded.FileDownload,
+                                    contentDescription = stringResource(R.string.download_all_entries),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showBatchMenu,
+                                onDismissRequest = { showBatchMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.export_all_pdf)) },
+                                    onClick = {
+                                        showBatchMenu = false
+                                        pendingBatchDownloadMimeType = "application/pdf"
+                                        val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
+                                        batchDownloadLauncher.launch("Journal_Export_$timeStamp.pdf")
+                                    },
+                                    leadingIcon = { Icon(Icons.Rounded.FileDownload, null) }
+                                )
+                            }
+                        }
+                    }
+                }
 
                 if (searchQuery.isEmpty() && !isMentorMode) {
                     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
@@ -269,7 +303,8 @@ fun JournalScreen(
                                     canEdit = canEditThisEntry,
                                     isMentorMode = isMentorMode,
                                     onDelete = { viewModel.deleteEntry(entry) },
-                                    onClick = { if (canEditThisEntry) editingEntry = entry }
+                                    onClick = { if (canEditThisEntry) editingEntry = entry },
+                                    onSharePdf = { JournalExportUtils.shareEntryAsPdf(context, entry) }
                                 )
                             }
                         }
@@ -442,111 +477,6 @@ fun JournalScreen(
             }
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(modifier = Modifier.weight(1f)) {
-                    GlobalSearchBar(
-                        query = searchQuery,
-                        onQueryChange = { searchViewModel.setQuery(it) },
-                        placeholder = stringResource(R.string.search_journal)
-                    )
-                }
-                if (allEntries.isNotEmpty()) {
-                    var showBatchMenu by remember { mutableStateOf(false) }
-                    Box(modifier = Modifier.padding(end = 16.dp)) {
-                        IconButton(onClick = { showBatchMenu = true }) {
-                            Icon(
-                                Icons.Rounded.FileDownload,
-                                contentDescription = stringResource(R.string.download_all_entries),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showBatchMenu,
-                            onDismissRequest = { showBatchMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.export_all_pdf)) },
-                                onClick = {
-                                    showBatchMenu = false
-                                    pendingBatchDownloadMimeType = "application/pdf"
-                                    val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
-                                    batchDownloadLauncher.launch("Journal_Export_$timeStamp.pdf")
-                                },
-                                leadingIcon = { Icon(Icons.Rounded.FileDownload, null) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (searchQuery.isEmpty() && !isMentorMode) {
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    TextButton(
-                        onClick = { showPrompts = !showPrompts },
-                        contentPadding = PaddingValues(0.dp)
-                    ) {
-                        Icon(
-                            Icons.Rounded.Lightbulb,
-                            contentDescription = null,
-                            tint = if (showPrompts) Color(0xFFFF9800) else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = if (showPrompts) stringResource(R.string.hide_prompts) else stringResource(
-                                R.string.show_prompts
-                            ),
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-                    if (showPrompts) {
-                        WritingPromptsSection(onPromptClick = { prompt ->
-                            title = "Journal Entry"
-                            contentText = prompt
-                            showSheet = true
-                        })
-                    }
-                }
-            }
-
-            Column(modifier = Modifier.padding(16.dp)) {
-                if (allEntries.isEmpty()) {
-                    val emptyMessage =
-                        if (isMentorMode) stringResource(R.string.no_journal_mentor) else stringResource(
-                            R.string.no_journal_user
-                        )
-                    EmptyState(message = emptyMessage)
-                } else if (entries.isEmpty() && searchQuery.isNotEmpty()) {
-                    NoResultsState(query = searchQuery)
-                } else {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(entries) { entry ->
-                            val canEditThisEntry = if (isMentorMode) {
-                                entry.mentorAccessLevel == "edit" || mentorAccessLevel == "full"
-                            } else {
-                                true
-                            }
-                            JournalItem(
-                                entry = entry,
-                                canEdit = canEditThisEntry,
-                                isMentorMode = isMentorMode,
-                                onDelete = { viewModel.deleteEntry(entry) },
-                                onClick = { if (canEditThisEntry) editingEntry = entry },
-                                onSharePdf = { JournalExportUtils.shareEntryAsPdf(context, entry) }
-                            )
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
