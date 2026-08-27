@@ -1,6 +1,8 @@
 package io.github.langstudy.ui.screens
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,13 +31,18 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SupervisorAccount
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -81,6 +88,7 @@ import io.github.langstudy.ui.viewmodel.JournalViewModel
 import io.github.langstudy.ui.viewmodel.JournalViewModelFactory
 import io.github.langstudy.ui.viewmodel.SearchViewModel
 import kotlinx.coroutines.launch
+import io.github.langstudy.utils.JournalExportUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,6 +115,23 @@ fun JournalScreen(
     val currentLanguage by viewModel.currentLanguage.collectAsState()
 
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
+
+    var pendingBatchDownloadMimeType by remember { mutableStateOf<String?>(null) }
+    val batchDownloadLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        uri?.let {
+            val bytes = if (pendingBatchDownloadMimeType == "application/pdf") {
+                JournalExportUtils.generateBatchPdfBytes(allEntries)
+            } else {
+                JournalExportUtils.generateBatchWordBytes(allEntries)
+            }
+            context.contentResolver.openOutputStream(it)?.use { os ->
+                os.write(bytes)
+            }
+            Toast.makeText(context, "Journal exported successfully", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     LaunchedEffect(languageOverride) {
         if (languageOverride != null) {
@@ -416,6 +441,112 @@ fun JournalScreen(
                 }
             }
         }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    GlobalSearchBar(
+                        query = searchQuery,
+                        onQueryChange = { searchViewModel.setQuery(it) },
+                        placeholder = stringResource(R.string.search_journal)
+                    )
+                }
+                if (allEntries.isNotEmpty()) {
+                    var showBatchMenu by remember { mutableStateOf(false) }
+                    Box(modifier = Modifier.padding(end = 16.dp)) {
+                        IconButton(onClick = { showBatchMenu = true }) {
+                            Icon(
+                                Icons.Rounded.FileDownload,
+                                contentDescription = stringResource(R.string.download_all_entries),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showBatchMenu,
+                            onDismissRequest = { showBatchMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.export_all_pdf)) },
+                                onClick = {
+                                    showBatchMenu = false
+                                    pendingBatchDownloadMimeType = "application/pdf"
+                                    val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
+                                    batchDownloadLauncher.launch("Journal_Export_$timeStamp.pdf")
+                                },
+                                leadingIcon = { Icon(Icons.Rounded.FileDownload, null) }
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (searchQuery.isEmpty() && !isMentorMode) {
+                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    TextButton(
+                        onClick = { showPrompts = !showPrompts },
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.Lightbulb,
+                            contentDescription = null,
+                            tint = if (showPrompts) Color(0xFFFF9800) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (showPrompts) stringResource(R.string.hide_prompts) else stringResource(
+                                R.string.show_prompts
+                            ),
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                    if (showPrompts) {
+                        WritingPromptsSection(onPromptClick = { prompt ->
+                            title = "Journal Entry"
+                            contentText = prompt
+                            showSheet = true
+                        })
+                    }
+                }
+            }
+
+            Column(modifier = Modifier.padding(16.dp)) {
+                if (allEntries.isEmpty()) {
+                    val emptyMessage =
+                        if (isMentorMode) stringResource(R.string.no_journal_mentor) else stringResource(
+                            R.string.no_journal_user
+                        )
+                    EmptyState(message = emptyMessage)
+                } else if (entries.isEmpty() && searchQuery.isNotEmpty()) {
+                    NoResultsState(query = searchQuery)
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(entries) { entry ->
+                            val canEditThisEntry = if (isMentorMode) {
+                                entry.mentorAccessLevel == "edit" || mentorAccessLevel == "full"
+                            } else {
+                                true
+                            }
+                            JournalItem(
+                                entry = entry,
+                                canEdit = canEditThisEntry,
+                                isMentorMode = isMentorMode,
+                                onDelete = { viewModel.deleteEntry(entry) },
+                                onClick = { if (canEditThisEntry) editingEntry = entry },
+                                onSharePdf = { JournalExportUtils.shareEntryAsPdf(context, entry) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -426,9 +557,11 @@ fun JournalItem(
     canEdit: Boolean,
     isMentorMode: Boolean = false,
     onDelete: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onSharePdf: () -> Unit
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
             if (it == SwipeToDismissBoxValue.EndToStart) {
@@ -536,6 +669,40 @@ fun JournalItem(
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
+
+                        Box {
+                            IconButton(
+                                onClick = { showMenu = true },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Share,
+                                    contentDescription = stringResource(R.string.share_entry),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.share_as_pdf)) },
+                                    onClick = {
+                                        showMenu = false
+                                        onSharePdf()
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Rounded.Share,
+                                            null,
+                                            Modifier.size(18.dp)
+                                        )
+                                    }
+                                )
+                            }
+                        }
+
                         if (entry.language.isNotBlank()) {
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
