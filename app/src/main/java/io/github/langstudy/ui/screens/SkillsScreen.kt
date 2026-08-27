@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -187,31 +189,304 @@ fun SkillsScreen(
         if (!showAddSheet) localErrorMessage = null
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        floatingActionButton = {
-            if (canEditContent) {
-                AppFAB(
-                    onClick = { showAddSheet = true },
-                    icon = Icons.Rounded.Add,
-                    contentDescription = stringResource(R.string.add_skill_cd)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            floatingActionButton = {
+                if (canEditContent) {
+                    AppFAB(
+                        onClick = { showAddSheet = true },
+                        icon = Icons.Rounded.Add,
+                        contentDescription = stringResource(R.string.add_skill_cd)
+                    )
+                }
+            }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                GlobalSearchBar(
+                    query = searchQuery,
+                    onQueryChange = { searchViewModel.setQuery(it) },
+                    placeholder = stringResource(R.string.search_skills)
                 )
+
+                if (availableLanguages.isNotEmpty()) {
+                    ScrollableTabRow(
+                        selectedTabIndex = if (selectedLanguage == null) 0 else availableLanguages.indexOf(
+                            selectedLanguage
+                        ) + 1,
+                        edgePadding = 16.dp,
+                        containerColor = Color.Transparent,
+                        divider = {},
+                        indicator = {}
+                    ) {
+                        FilterChip(
+                            selected = selectedLanguage == null,
+                            onClick = { viewModel.setSelectedLanguage(null) },
+                            label = { Text(stringResource(R.string.all)) },
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+                        availableLanguages.forEach { lang ->
+                            FilterChip(
+                                selected = selectedLanguage == lang,
+                                onClick = { viewModel.setSelectedLanguage(lang) },
+                                label = { Text(lang) },
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                        }
+                    }
+                }
+
+                Column(modifier = Modifier.padding(16.dp)) {
+                    if (allSkills.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = stringResource(R.string.total_showing_skills_format, allSkills.size, skillsList.size),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            if (isDragEnabled) {
+                                TextButton(
+                                    onClick = { isReorderMode = !isReorderMode },
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Icon(
+                                        if (isReorderMode) Icons.Rounded.Check else Icons.Rounded.Reorder,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        if (isReorderMode) stringResource(R.string.done_sorting) else stringResource(R.string.reorder),
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (allSkills.isEmpty()) {
+                        val emptyMessage =
+                            if (isMentorMode) stringResource(R.string.no_skills_mentor) else stringResource(R.string.no_skills_user)
+                        EmptyState(message = emptyMessage)
+                    } else if (skillsList.isEmpty()) {
+                        val currentLang = languageOverride ?: selectedLanguage
+                        val message = if (searchQuery.isNotEmpty()) {
+                            stringResource(R.string.no_results_format, searchQuery)
+                        } else if (currentLang != null && currentLang.isNotBlank()) {
+                            if (isMentorMode) stringResource(R.string.no_skills_lang_mentor_format, currentLang)
+                            else stringResource(R.string.no_skills_lang_user_format, currentLang)
+                        } else {
+                            stringResource(R.string.no_skills_filters)
+                        }
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            EmptyState(message = message)
+                        }
+                    } else {
+                        LazyColumn(
+                            state = lazyListState,
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .pointerInput(isDragEnabled, isReorderMode) {
+                                    if (!isDragEnabled || !isReorderMode) return@pointerInput
+                                    detectDragGesturesAfterLongPress(
+                                        onDragStart = { offset ->
+                                            lazyListState.layoutInfo.visibleItemsInfo
+                                                .firstOrNull { item ->
+                                                    offset.y.toInt() in item.offset..(item.offset + item.size)
+                                                }?.also {
+                                                    draggedItemIndex = it.index
+                                                    initialTouchY = offset.y - it.offset
+                                                    currentTouchY = offset.y
+                                                    draggingOffset = 0f
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                }
+                                        },
+                                        onDrag = { change, dragAmount ->
+                                            change.consume()
+                                            currentTouchY = change.position.y
+
+                                            val currentIdx = draggedItemIndex
+                                                ?: return@detectDragGesturesAfterLongPress
+                                            val itemInfo =
+                                                lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == currentIdx }
+                                                    ?: return@detectDragGesturesAfterLongPress
+
+                                            // Absolute position calculation: stay locked to finger
+                                            draggingOffset =
+                                                currentTouchY - itemInfo.offset - initialTouchY
+
+                                            val currentItemY = itemInfo.offset + draggingOffset
+                                            val currentItemCenterY = currentItemY + itemInfo.size / 2
+
+                                            // Improved swap logic: check if dragged item center crosses target item center
+                                            val targetItem =
+                                                lazyListState.layoutInfo.visibleItemsInfo.find { it ->
+                                                    it.index != currentIdx &&
+                                                            if (it.index > currentIdx) {
+                                                                currentItemCenterY > it.offset + it.size / 2
+                                                            } else {
+                                                                currentItemCenterY < it.offset + it.size / 2
+                                                            }
+                                                }
+
+                                            if (targetItem != null) {
+                                                val targetIdx = targetItem.index
+                                                val newList = localSkillsList.toMutableList()
+                                                val item = newList.removeAt(currentIdx)
+                                                newList.add(targetIdx, item)
+                                                localSkillsList = newList
+
+                                                draggedItemIndex = targetIdx
+                                                // Recalculate offset immediately for the new position
+                                                draggingOffset =
+                                                    currentTouchY - targetItem.offset - initialTouchY
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            }
+
+                                            // Refined Auto-scroll logic with proportional speed
+                                            val viewPortTop = 0
+                                            val viewPortBottom =
+                                                lazyListState.layoutInfo.viewportEndOffset
+                                            val scrollThreshold = 120f
+
+                                            val scrollAmount = when {
+                                                currentItemY < viewPortTop + scrollThreshold ->
+                                                    ((currentItemY - (viewPortTop + scrollThreshold)) / 4).coerceAtMost(
+                                                        -5f
+                                                    )
+
+                                                currentItemY + itemInfo.size > viewPortBottom - scrollThreshold ->
+                                                    ((currentItemY + itemInfo.size - (viewPortBottom - scrollThreshold)) / 4).coerceAtLeast(
+                                                        5f
+                                                    )
+
+                                                else -> 0f
+                                            }
+
+                                            if (scrollAmount != 0f) {
+                                                if (autoScrollJob == null) {
+                                                    autoScrollJob = coroutineScope.launch {
+                                                        while (true) {
+                                                            lazyListState.scrollBy(scrollAmount)
+                                                            // Update draggingOffset to stay in sync with the scrolling list
+                                                            lazyListState.layoutInfo.visibleItemsInfo
+                                                                .firstOrNull { it.index == draggedItemIndex }
+                                                                ?.let { info ->
+                                                                    draggingOffset =
+                                                                        currentTouchY - info.offset - initialTouchY
+                                                                }
+                                                            delay(10)
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                autoScrollJob?.cancel()
+                                                autoScrollJob = null
+                                            }
+                                        },
+                                        onDragEnd = {
+                                            if (localSkillsList != skillsList) {
+                                                viewModel.updateSkillOrder(localSkillsList)
+                                            }
+                                            draggedItemIndex = null
+                                            draggingOffset = 0f
+                                            autoScrollJob?.cancel()
+                                            autoScrollJob = null
+                                        },
+                                        onDragCancel = {
+                                            draggedItemIndex = null
+                                            draggingOffset = 0f
+                                            autoScrollJob?.cancel()
+                                            autoScrollJob = null
+                                            localSkillsList = skillsList
+                                        }
+                                    )
+                                }
+                        ) {
+                            itemsIndexed(
+                                localSkillsList,
+                                key = { _, skill: SkillEntity -> skill.id }) { index: Int, skill: SkillEntity ->
+                                val isDragging = index == draggedItemIndex
+                                val scale by animateFloatAsState(
+                                    if (isDragging) 1.05f else 1f,
+                                    label = "drag_scale"
+                                )
+
+                                SkillItem(
+                                    skill = skill,
+                                    learnedLanguages = learnedLanguages,
+                                    isReorderMode = isReorderMode,
+                                    canEdit = canEditContent,
+                                    canChangeStatus = canChangeStatus,
+                                    onStatusCycle = {
+                                        viewModel.cycleSkillStatus(skill)
+                                    },
+                                    onDelete = { viewModel.deleteSkill(skill) },
+                                    onAddSubtask = { viewModel.addSubtask(skill, it) },
+                                    onSubtaskStatusCycle = {
+                                        viewModel.updateSubtaskStatus(skill, it)
+                                    },
+                                    onSubtaskDelete = { viewModel.deleteSubtask(skill, it) },
+                                    onEditSkill = { name, lang ->
+                                        viewModel.updateSkill(
+                                            skill.copy(
+                                                name = name,
+                                                language = lang
+                                            )
+                                        )
+                                    },
+                                    onEditSubtask = { subtaskId, newText ->
+                                        viewModel.updateSubtaskText(
+                                            skill,
+                                            subtaskId,
+                                            newText
+                                        )
+                                    },
+                                    modifier = (if (isDragging) Modifier else Modifier.animateItem())
+                                        .graphicsLayer {
+                                            translationY = if (isDragging) draggingOffset else 0f
+                                            scaleX = scale
+                                            scaleY = scale
+                                        }
+                                        .zIndex(if (isDragging) 1f else 0f)
+                                )
+                            }
+                        }
+
+                        ProgressStatusLegend(
+                            modifier = if (canEditContent) Modifier.padding(end = 80.dp) else Modifier
+                        )
+                    }
+                }
             }
         }
-    )
- { padding ->
+
         if (showAddSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showAddSheet = false },
-                sheetState = sheetState,
-                containerColor = MaterialTheme.colorScheme.surface
+                sheetState = sheetState
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp)
+                        .imePadding()
+                        .navigationBarsPadding()
                         .padding(bottom = 32.dp)
                 ) {
                     Text(
@@ -249,283 +524,16 @@ fun SkillsScreen(
                         onClick = {
                             viewModel.addSkill(skillName, skillLanguage)
                             if (skillName.isNotBlank()) {
-                                skillName = ""
-                                showAddSheet = false
+                                coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
+                                    if (!sheetState.isVisible) {
+                                        skillName = ""
+                                        showAddSheet = false
+                                    }
+                                }
                             }
                         },
                         text = stringResource(R.string.add_skills),
                         modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            GlobalSearchBar(
-                query = searchQuery,
-                onQueryChange = { searchViewModel.setQuery(it) },
-                placeholder = stringResource(R.string.search_skills)
-            )
-
-            if (availableLanguages.isNotEmpty()) {
-                ScrollableTabRow(
-                    selectedTabIndex = if (selectedLanguage == null) 0 else availableLanguages.indexOf(
-                        selectedLanguage
-                    ) + 1,
-                    edgePadding = 16.dp,
-                    containerColor = Color.Transparent,
-                    divider = {},
-                    indicator = {}
-                ) {
-                    FilterChip(
-                        selected = selectedLanguage == null,
-                        onClick = { viewModel.setSelectedLanguage(null) },
-                        label = { Text(stringResource(R.string.all)) },
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
-                    availableLanguages.forEach { lang ->
-                        FilterChip(
-                            selected = selectedLanguage == lang,
-                            onClick = { viewModel.setSelectedLanguage(lang) },
-                            label = { Text(lang) },
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                        )
-                    }
-                }
-            }
-
-            Column(modifier = Modifier.padding(16.dp)) {
-                if (allSkills.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = stringResource(R.string.total_showing_skills_format, allSkills.size, skillsList.size),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        if (isDragEnabled) {
-                            TextButton(
-                                onClick = { isReorderMode = !isReorderMode },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                modifier = Modifier.height(32.dp)
-                            ) {
-                                Icon(
-                                    if (isReorderMode) Icons.Rounded.Check else Icons.Rounded.Reorder,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    if (isReorderMode) stringResource(R.string.done_sorting) else stringResource(R.string.reorder),
-                                    style = MaterialTheme.typography.labelMedium
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if (allSkills.isEmpty()) {
-                    val emptyMessage =
-                        if (isMentorMode) stringResource(R.string.no_skills_mentor) else stringResource(R.string.no_skills_user)
-                    EmptyState(message = emptyMessage)
-                } else if (skillsList.isEmpty()) {
-                    val currentLang = languageOverride ?: selectedLanguage
-                    val message = if (searchQuery.isNotEmpty()) {
-                        stringResource(R.string.no_results_format, searchQuery)
-                    } else if (currentLang != null && currentLang.isNotBlank()) {
-                        if (isMentorMode) stringResource(R.string.no_skills_lang_mentor_format, currentLang)
-                        else stringResource(R.string.no_skills_lang_user_format, currentLang)
-                    } else {
-                        stringResource(R.string.no_skills_filters)
-                    }
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        EmptyState(message = message)
-                    }
-                } else {
-                    LazyColumn(
-                        state = lazyListState,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .pointerInput(isDragEnabled, isReorderMode) {
-                                if (!isDragEnabled || !isReorderMode) return@pointerInput
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = { offset ->
-                                        lazyListState.layoutInfo.visibleItemsInfo
-                                            .firstOrNull { item ->
-                                                offset.y.toInt() in item.offset..(item.offset + item.size)
-                                            }?.also {
-                                                draggedItemIndex = it.index
-                                                initialTouchY = offset.y - it.offset
-                                                currentTouchY = offset.y
-                                                draggingOffset = 0f
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            }
-                                    },
-                                    onDrag = { change, dragAmount ->
-                                        change.consume()
-                                        currentTouchY = change.position.y
-
-                                        val currentIdx = draggedItemIndex
-                                            ?: return@detectDragGesturesAfterLongPress
-                                        val itemInfo =
-                                            lazyListState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == currentIdx }
-                                                ?: return@detectDragGesturesAfterLongPress
-
-                                        // Absolute position calculation: stay locked to finger
-                                        draggingOffset =
-                                            currentTouchY - itemInfo.offset - initialTouchY
-
-                                        val currentItemY = itemInfo.offset + draggingOffset
-                                        val currentItemCenterY = currentItemY + itemInfo.size / 2
-
-                                        // Improved swap logic: check if dragged item center crosses target item center
-                                        val targetItem =
-                                            lazyListState.layoutInfo.visibleItemsInfo.find { it ->
-                                                it.index != currentIdx &&
-                                                        if (it.index > currentIdx) {
-                                                            currentItemCenterY > it.offset + it.size / 2
-                                                        } else {
-                                                            currentItemCenterY < it.offset + it.size / 2
-                                                        }
-                                            }
-
-                                        if (targetItem != null) {
-                                            val targetIdx = targetItem.index
-                                            val newList = localSkillsList.toMutableList()
-                                            val item = newList.removeAt(currentIdx)
-                                            newList.add(targetIdx, item)
-                                            localSkillsList = newList
-
-                                            draggedItemIndex = targetIdx
-                                            // Recalculate offset immediately for the new position
-                                            draggingOffset =
-                                                currentTouchY - targetItem.offset - initialTouchY
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        }
-
-                                        // Refined Auto-scroll logic with proportional speed
-                                        val viewPortTop = 0
-                                        val viewPortBottom =
-                                            lazyListState.layoutInfo.viewportEndOffset
-                                        val scrollThreshold = 120f
-
-                                        val scrollAmount = when {
-                                            currentItemY < viewPortTop + scrollThreshold ->
-                                                ((currentItemY - (viewPortTop + scrollThreshold)) / 4).coerceAtMost(
-                                                    -5f
-                                                )
-
-                                            currentItemY + itemInfo.size > viewPortBottom - scrollThreshold ->
-                                                ((currentItemY + itemInfo.size - (viewPortBottom - scrollThreshold)) / 4).coerceAtLeast(
-                                                    5f
-                                                )
-
-                                            else -> 0f
-                                        }
-
-                                        if (scrollAmount != 0f) {
-                                            if (autoScrollJob == null) {
-                                                autoScrollJob = coroutineScope.launch {
-                                                    while (true) {
-                                                        lazyListState.scrollBy(scrollAmount)
-                                                        // Update draggingOffset to stay in sync with the scrolling list
-                                                        lazyListState.layoutInfo.visibleItemsInfo
-                                                            .firstOrNull { it.index == draggedItemIndex }
-                                                            ?.let { info ->
-                                                                draggingOffset =
-                                                                    currentTouchY - info.offset - initialTouchY
-                                                            }
-                                                        delay(10)
-                                                    }
-                                                }
-                                            }
-                                        } else {
-                                            autoScrollJob?.cancel()
-                                            autoScrollJob = null
-                                        }
-                                    },
-                                    onDragEnd = {
-                                        if (localSkillsList != skillsList) {
-                                            viewModel.updateSkillOrder(localSkillsList)
-                                        }
-                                        draggedItemIndex = null
-                                        draggingOffset = 0f
-                                        autoScrollJob?.cancel()
-                                        autoScrollJob = null
-                                    },
-                                    onDragCancel = {
-                                        draggedItemIndex = null
-                                        draggingOffset = 0f
-                                        autoScrollJob?.cancel()
-                                        autoScrollJob = null
-                                        localSkillsList = skillsList
-                                    }
-                                )
-                            }
-                    ) {
-                        itemsIndexed(
-                            localSkillsList,
-                            key = { _, skill: SkillEntity -> skill.id }) { index: Int, skill: SkillEntity ->
-                            val isDragging = index == draggedItemIndex
-                            val scale by animateFloatAsState(
-                                if (isDragging) 1.05f else 1f,
-                                label = "drag_scale"
-                            )
-
-                            SkillItem(
-                                skill = skill,
-                                learnedLanguages = learnedLanguages,
-                                isReorderMode = isReorderMode,
-                                canEdit = canEditContent,
-                                canChangeStatus = canChangeStatus,
-                                onStatusCycle = {
-                                    viewModel.cycleSkillStatus(skill)
-                                },
-                                onDelete = { viewModel.deleteSkill(skill) },
-                                onAddSubtask = { viewModel.addSubtask(skill, it) },
-                                onSubtaskStatusCycle = {
-                                    viewModel.updateSubtaskStatus(skill, it)
-                                },
-                                onSubtaskDelete = { viewModel.deleteSubtask(skill, it) },
-                                onEditSkill = { name, lang ->
-                                    viewModel.updateSkill(
-                                        skill.copy(
-                                            name = name,
-                                            language = lang
-                                        )
-                                    )
-                                },
-                                onEditSubtask = { subtaskId, newText ->
-                                    viewModel.updateSubtaskText(
-                                        skill,
-                                        subtaskId,
-                                        newText
-                                    )
-                                },
-                                modifier = (if (isDragging) Modifier else Modifier.animateItem())
-                                    .graphicsLayer {
-                                        translationY = if (isDragging) draggingOffset else 0f
-                                        scaleX = scale
-                                        scaleY = scale
-                                    }
-                                    .zIndex(if (isDragging) 1f else 0f)
-                            )
-                        }
-                    }
-
-                    ProgressStatusLegend(
-                        modifier = if (canEditContent) Modifier.padding(end = 80.dp) else Modifier
                     )
                 }
             }

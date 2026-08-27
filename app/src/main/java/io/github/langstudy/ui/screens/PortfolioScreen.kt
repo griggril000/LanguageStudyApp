@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -57,6 +59,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,6 +87,7 @@ import io.github.langstudy.ui.components.YouTubePlayer
 import io.github.langstudy.ui.viewmodel.PortfolioViewModel
 import io.github.langstudy.ui.viewmodel.SearchViewModel
 import io.github.langstudy.utils.UrlUtils
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -125,6 +129,7 @@ fun PortfolioScreen(
     var editingItem by remember { mutableStateOf<PortfolioItem?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(editingItem) {
         if (editingItem != null) {
@@ -162,11 +167,15 @@ fun PortfolioScreen(
 
     LaunchedEffect(Unit) {
         viewModel.addSuccess.collect {
-            title = ""
-            link = ""
-            localErrorMessage = null
-            showAddSheet = false
-            editingItem = null
+            scope.launch { sheetState.hide() }.invokeOnCompletion {
+                if (!sheetState.isVisible) {
+                    title = ""
+                    link = ""
+                    localErrorMessage = null
+                    showAddSheet = false
+                    editingItem = null
+                }
+            }
         }
     }
 
@@ -175,19 +184,123 @@ fun PortfolioScreen(
         context.startActivity(intent)
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        floatingActionButton = {
-            if (canEditContent) {
-                AppFAB(
-                    onClick = { showAddSheet = true },
-                    icon = Icons.Rounded.Add,
-                    contentDescription = stringResource(R.string.add_portfolio_item_cd)
-                )
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            floatingActionButton = {
+                if (canEditContent) {
+                    AppFAB(
+                        onClick = { showAddSheet = true },
+                        icon = Icons.Rounded.Add,
+                        contentDescription = stringResource(R.string.add_portfolio_item_cd)
+                    )
+                }
+            }
+        ) { padding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                Column {
+                    GlobalSearchBar(
+                        query = searchQuery,
+                        onQueryChange = { searchViewModel.setQuery(it) },
+                        placeholder = stringResource(R.string.search_portfolio)
+                    )
+                    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+                    val columns =
+                        if (adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)) 2 else 1
+
+                    AdaptiveContainer(
+                        maxWidth = if (columns > 1) 1200.dp else 600.dp
+                    ) {
+                        if (isLoading && allItems.isEmpty()) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                            }
+                        } else if (allItems.isEmpty()) {
+                            val emptyMessage =
+                                if (isMentorMode) stringResource(R.string.no_portfolio_mentor) else stringResource(
+                                    R.string.no_portfolio_user
+                                )
+                            EmptyState(message = emptyMessage)
+                        } else if (items.isEmpty()) {
+                            val currentLang = languageOverride ?: currentLanguage
+                            val message = if (searchQuery.isNotEmpty()) {
+                                stringResource(R.string.no_results_format, searchQuery)
+                            } else if (currentLang.isNotBlank()) {
+                                if (isMentorMode) stringResource(
+                                    R.string.no_portfolio_lang_mentor_format,
+                                    currentLang
+                                )
+                                else stringResource(R.string.no_portfolio_lang_user_format, currentLang)
+                            } else {
+                                stringResource(R.string.no_portfolio_filters)
+                            }
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                EmptyState(message = message)
+                            }
+                        } else {
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(columns),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp),
+                                contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
+                            ) {
+                                val featuredItems = items.filter { it.isTop }
+                                val otherItems = items.filter { !it.isTop }
+                                val canFeatureMore = featuredItems.size < 3
+
+                                if (featuredItems.isNotEmpty()) {
+                                    item(span = { GridItemSpan(maxLineSpan) }) {
+                                        HeaderSection(
+                                            stringResource(
+                                                R.string.featured_items_format,
+                                                featuredItems.size
+                                            )
+                                        )
+                                    }
+                                    items(featuredItems, key = { it.id }) { item ->
+                                        FeaturedPortfolioItem(
+                                            item = item,
+                                            canEdit = canEditContent,
+                                            canChangeStatus = canChangeStatus,
+                                            onEdit = { editingItem = item },
+                                            onDelete = { viewModel.deleteItem(item.id) },
+                                            onUnfeature = { viewModel.toggleFeatured(item) }
+                                        )
+                                    }
+                                }
+
+                                if (otherItems.isNotEmpty()) {
+                                    item(span = { GridItemSpan(maxLineSpan) }) {
+                                        HeaderSection(stringResource(R.string.other_items))
+                                    }
+                                    items(otherItems, key = { it.id }) { item ->
+                                        StandardPortfolioItem(
+                                            item = item,
+                                            canEdit = canEditContent,
+                                            canChangeStatus = canChangeStatus,
+                                            onPlay = { onPlay(item.link) },
+                                            onEdit = { editingItem = item },
+                                            onDelete = { viewModel.deleteItem(item.id) },
+                                            onFeature = { viewModel.toggleFeatured(item) },
+                                            canFeature = canFeatureMore
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
-    ) { padding ->
+
         if (showAddSheet) {
             ModalBottomSheet(
                 onDismissRequest = { if (!isLoading) showAddSheet = false },
@@ -198,7 +311,9 @@ fun PortfolioScreen(
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp)
-                        .padding(bottom = 16.dp)
+                        .imePadding()
+                        .navigationBarsPadding()
+                        .padding(bottom = 32.dp)
                 ) {
                     Text(
                         if (editingItem == null) stringResource(R.string.add_portfolio_item_title) else stringResource(
@@ -255,108 +370,6 @@ fun PortfolioScreen(
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
-                }
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            Column {
-                GlobalSearchBar(
-                    query = searchQuery,
-                    onQueryChange = { searchViewModel.setQuery(it) },
-                    placeholder = stringResource(R.string.search_portfolio)
-                )
-                val adaptiveInfo = currentWindowAdaptiveInfoV2()
-                val columns =
-                    if (adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)) 2 else 1
-
-                AdaptiveContainer(
-                    maxWidth = if (columns > 1) 1200.dp else 600.dp
-                ) {
-                    if (isLoading && allItems.isEmpty()) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                        }
-                    } else if (allItems.isEmpty()) {
-                        val emptyMessage =
-                            if (isMentorMode) stringResource(R.string.no_portfolio_mentor) else stringResource(
-                                R.string.no_portfolio_user
-                            )
-                        EmptyState(message = emptyMessage)
-                    } else if (items.isEmpty()) {
-                        val currentLang = languageOverride ?: currentLanguage
-                        val message = if (searchQuery.isNotEmpty()) {
-                            stringResource(R.string.no_results_format, searchQuery)
-                        } else if (currentLang.isNotBlank()) {
-                            if (isMentorMode) stringResource(
-                                R.string.no_portfolio_lang_mentor_format,
-                                currentLang
-                            )
-                            else stringResource(R.string.no_portfolio_lang_user_format, currentLang)
-                        } else {
-                            stringResource(R.string.no_portfolio_filters)
-                        }
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            EmptyState(message = message)
-                        }
-                    } else {
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(columns),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp),
-                            contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
-                        ) {
-                            val featuredItems = items.filter { it.isTop }
-                            val otherItems = items.filter { !it.isTop }
-                            val canFeatureMore = featuredItems.size < 3
-
-                            if (featuredItems.isNotEmpty()) {
-                                item(span = { GridItemSpan(maxLineSpan) }) {
-                                    HeaderSection(
-                                        stringResource(
-                                            R.string.featured_items_format,
-                                            featuredItems.size
-                                        )
-                                    )
-                                }
-                                items(featuredItems, key = { it.id }) { item ->
-                                    FeaturedPortfolioItem(
-                                        item = item,
-                                        canEdit = canEditContent,
-                                        canChangeStatus = canChangeStatus,
-                                        onEdit = { editingItem = item },
-                                        onDelete = { viewModel.deleteItem(item.id) },
-                                        onUnfeature = { viewModel.toggleFeatured(item) }
-                                    )
-                                }
-                            }
-
-                            if (otherItems.isNotEmpty()) {
-                                item(span = { GridItemSpan(maxLineSpan) }) {
-                                    HeaderSection(stringResource(R.string.other_items))
-                                }
-                                items(otherItems, key = { it.id }) { item ->
-                                    StandardPortfolioItem(
-                                        item = item,
-                                        canEdit = canEditContent,
-                                        canChangeStatus = canChangeStatus,
-                                        onPlay = { onPlay(item.link) },
-                                        onEdit = { editingItem = item },
-                                        onDelete = { viewModel.deleteItem(item.id) },
-                                        onFeature = { viewModel.toggleFeatured(item) },
-                                        canFeature = canFeatureMore
-                                    )
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }

@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -55,6 +57,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,6 +85,7 @@ import io.github.langstudy.ui.viewmodel.SearchViewModel
 import io.github.langstudy.ui.viewmodel.VocabViewModel
 import io.github.langstudy.ui.viewmodel.VocabViewModelFactory
 import io.github.langstudy.utils.LocalTtsManager
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -139,6 +143,7 @@ fun VocabScreen(
     var showDeleteCategoryConfirm by remember { mutableStateOf(false) }
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(currentLanguage) {
         if (editingVocab == null) {
@@ -207,27 +212,182 @@ fun VocabScreen(
         )
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        floatingActionButton = {
-            if (canEditContent) {
-                AppFAB(
-                    onClick = {
-                        editingVocab = null
-                        word = ""
-                        translation = ""
-                        exampleSentence = ""
-                        category = selectedCategory ?: "General"
-                        language = currentLanguage
-                        showEntrySheet = true
-                    },
-                    icon = Icons.Rounded.Add,
-                    contentDescription = stringResource(R.string.add_vocabulary_cd)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            floatingActionButton = {
+                if (canEditContent) {
+                    AppFAB(
+                        onClick = {
+                            editingVocab = null
+                            word = ""
+                            translation = ""
+                            exampleSentence = ""
+                            category = selectedCategory ?: "General"
+                            language = currentLanguage
+                            showEntrySheet = true
+                        },
+                        icon = Icons.Rounded.Add,
+                        contentDescription = stringResource(R.string.add_vocabulary_cd)
+                    )
+                }
+            }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                GlobalSearchBar(
+                    query = searchQuery,
+                    onQueryChange = { searchViewModel.setQuery(it) },
+                    placeholder = stringResource(R.string.search_vocab)
                 )
+
+                if (categories.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        ScrollableTabRow(
+                            modifier = Modifier.weight(1f),
+                            selectedTabIndex = if (selectedCategory == null) 0 else categories.indexOf(
+                                selectedCategory
+                            ) + 1,
+                            edgePadding = 16.dp,
+                            containerColor = Color.Transparent,
+                            divider = {},
+                            indicator = {}
+                        ) {
+                            FilterChip(
+                                selected = selectedCategory == null,
+                                onClick = { viewModel.setSelectedCategory(null) },
+                                label = { Text(stringResource(R.string.all)) },
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                            categories.forEach { cat ->
+                                FilterChip(
+                                    selected = selectedCategory == cat,
+                                    onClick = { viewModel.setSelectedCategory(cat) },
+                                    label = { Text(cat) },
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+                            }
+                        }
+                        if (allVocab.isNotEmpty()) {
+                            TextButton(
+                                onClick = {
+                                    onNavigate(
+                                        NavRoute.Flashcards(
+                                            category = selectedCategory,
+                                            language = currentLanguage
+                                        )
+                                    )
+                                },
+                                modifier = Modifier.padding(horizontal = 4.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Style,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    stringResource(R.string.flashcards),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        if (selectedCategory != null && selectedCategory != "General" && canEditContent) {
+                            IconButton(
+                                onClick = { showDeleteCategoryConfirm = true },
+                                modifier = Modifier.padding(end = 8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Delete,
+                                    contentDescription = stringResource(R.string.delete_category_cd),
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    if (allVocab.isNotEmpty()) {
+                        Text(
+                            text = stringResource(R.string.total_showing_vocab_format, allVocab.size, vocabList.size),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+
+                    if (allVocab.isEmpty()) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            val emptyMessage =
+                                if (isMentorMode) stringResource(R.string.no_vocab_mentor) else stringResource(R.string.no_vocab_user)
+                            EmptyState(message = emptyMessage)
+                            if (!isMentorMode) {
+                                Spacer(Modifier.height(16.dp))
+                                TextButton(onClick = { viewModel.seedSampleData() }) {
+                                    Text(stringResource(R.string.seed_sample_data))
+                                }
+                            }
+                        }
+                    } else if (vocabList.isEmpty()) {
+                        val currentLang = languageOverride ?: currentLanguage
+                        val message = if (searchQuery.isNotEmpty()) {
+                            stringResource(R.string.no_results_format, searchQuery)
+                        } else if (currentLang.isNotBlank()) {
+                            if (isMentorMode) stringResource(R.string.no_vocab_lang_mentor_format, currentLang)
+                            else stringResource(R.string.no_vocab_lang_user_format, currentLang)
+                        } else {
+                            stringResource(R.string.no_vocab_filters)
+                        }
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            EmptyState(message = message)
+                        }
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            items(vocabList, key = { it.id }) { vocab ->
+                                VocabItem(
+                                    vocab = vocab,
+                                    canEdit = canEditContent,
+                                    canChangeStatus = canChangeStatus,
+                                    onDelete = { viewModel.deleteVocab(vocab) },
+                                    onEditRequest = { v ->
+                                        editingVocab = v
+                                        word = v.word
+                                        translation = v.translation
+                                        exampleSentence = v.exampleSentence
+                                        category = v.category
+                                        language = v.language
+                                        showEntrySheet = true
+                                    },
+                                    onStatusCycle = { viewModel.cycleVocabStatus(vocab) }
+                                )
+                            }
+                        }
+                        ProgressStatusLegend(
+                            modifier = if (canEditContent) Modifier.padding(end = 80.dp) else Modifier
+                        )
+                    }
+                }
             }
         }
-    ) { padding ->
+
         if (showEntrySheet) {
             ModalBottomSheet(
                 onDismissRequest = { showEntrySheet = false },
@@ -238,6 +398,8 @@ fun VocabScreen(
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp)
+                        .imePadding()
+                        .navigationBarsPadding()
                         .padding(bottom = 32.dp)
                 ) {
                     Text(
@@ -346,165 +508,16 @@ fun VocabScreen(
                                 )
                             }
                             if (word.isNotBlank()) {
-                                showEntrySheet = false
+                                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                    if (!sheetState.isVisible) {
+                                        showEntrySheet = false
+                                    }
+                                }
                             }
                         },
                         text = if (editingVocab == null) stringResource(R.string.add_to_list)
                                else stringResource(R.string.save_changes),
                         modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            GlobalSearchBar(
-                query = searchQuery,
-                onQueryChange = { searchViewModel.setQuery(it) },
-                placeholder = stringResource(R.string.search_vocab)
-            )
-
-            if (categories.isNotEmpty()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    ScrollableTabRow(
-                        modifier = Modifier.weight(1f),
-                        selectedTabIndex = if (selectedCategory == null) 0 else categories.indexOf(
-                            selectedCategory
-                        ) + 1,
-                        edgePadding = 16.dp,
-                        containerColor = Color.Transparent,
-                        divider = {},
-                        indicator = {}
-                    ) {
-                        FilterChip(
-                            selected = selectedCategory == null,
-                            onClick = { viewModel.setSelectedCategory(null) },
-                            label = { Text(stringResource(R.string.all)) },
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                        )
-                        categories.forEach { cat ->
-                            FilterChip(
-                                selected = selectedCategory == cat,
-                                onClick = { viewModel.setSelectedCategory(cat) },
-                                label = { Text(cat) },
-                                modifier = Modifier.padding(horizontal = 4.dp)
-                            )
-                        }
-                    }
-                    if (allVocab.isNotEmpty()) {
-                        TextButton(
-                            onClick = {
-                                onNavigate(
-                                    NavRoute.Flashcards(
-                                        category = selectedCategory,
-                                        language = currentLanguage
-                                    )
-                                )
-                            },
-                            modifier = Modifier.padding(horizontal = 4.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp)
-                        ) {
-                            Icon(
-                                Icons.Rounded.Style,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                stringResource(R.string.flashcards),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                    if (selectedCategory != null && selectedCategory != "General" && canEditContent) {
-                        IconButton(
-                            onClick = { showDeleteCategoryConfirm = true },
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Icon(
-                                Icons.Rounded.Delete,
-                                contentDescription = stringResource(R.string.delete_category_cd),
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-                }
-            }
-
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                if (allVocab.isNotEmpty()) {
-                    Text(
-                        text = stringResource(R.string.total_showing_vocab_format, allVocab.size, vocabList.size),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                }
-
-                if (allVocab.isEmpty()) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        val emptyMessage =
-                            if (isMentorMode) stringResource(R.string.no_vocab_mentor) else stringResource(R.string.no_vocab_user)
-                        EmptyState(message = emptyMessage)
-                        if (!isMentorMode) {
-                            Spacer(Modifier.height(16.dp))
-                            TextButton(onClick = { viewModel.seedSampleData() }) {
-                                Text(stringResource(R.string.seed_sample_data))
-                            }
-                        }
-                    }
-                } else if (vocabList.isEmpty()) {
-                    val currentLang = languageOverride ?: currentLanguage
-                    val message = if (searchQuery.isNotEmpty()) {
-                        stringResource(R.string.no_results_format, searchQuery)
-                    } else if (currentLang.isNotBlank()) {
-                        if (isMentorMode) stringResource(R.string.no_vocab_lang_mentor_format, currentLang)
-                        else stringResource(R.string.no_vocab_lang_user_format, currentLang)
-                    } else {
-                        stringResource(R.string.no_vocab_filters)
-                    }
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        EmptyState(message = message)
-                    }
-                } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        items(vocabList, key = { it.id }) { vocab ->
-                            VocabItem(
-                                vocab = vocab,
-                                canEdit = canEditContent,
-                                canChangeStatus = canChangeStatus,
-                                onDelete = { viewModel.deleteVocab(vocab) },
-                                onEditRequest = { v ->
-                                    editingVocab = v
-                                    word = v.word
-                                    translation = v.translation
-                                    exampleSentence = v.exampleSentence
-                                    category = v.category
-                                    language = v.language
-                                    showEntrySheet = true
-                                },
-                                onStatusCycle = { viewModel.cycleVocabStatus(vocab) }
-                            )
-                        }
-                    }
-                    ProgressStatusLegend(
-                        modifier = if (canEditContent) Modifier.padding(end = 80.dp) else Modifier
                     )
                 }
             }
