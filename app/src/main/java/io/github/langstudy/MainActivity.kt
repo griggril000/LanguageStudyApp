@@ -15,13 +15,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -662,7 +660,7 @@ fun MainScreen(
                 val currentRoute = backStack.lastOrNull() as? NavRoute
                 val isFullScreen =
                     currentRoute == NavRoute.Settings || currentRoute == NavRoute.Admin || currentRoute == NavRoute.VerifyEmail
-                if (!useNavRail && currentUser != null && !WindowInsets.isImeVisible && !isFullScreen) {
+                if (!useNavRail && currentUser != null && !isFullScreen) {
                     NavigationBar {
                         NavRoute.mainRoutes.forEach { route ->
                             NavigationBarItem(

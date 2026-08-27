@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -60,6 +62,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,6 +87,7 @@ import io.github.langstudy.ui.components.NoResultsState
 import io.github.langstudy.ui.viewmodel.JournalViewModel
 import io.github.langstudy.ui.viewmodel.JournalViewModelFactory
 import io.github.langstudy.ui.viewmodel.SearchViewModel
+import kotlinx.coroutines.launch
 import io.github.langstudy.utils.JournalExportUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -153,6 +157,7 @@ fun JournalScreen(
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
     var showPrompts by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(showSheet) {
         if (!showSheet) {
@@ -187,19 +192,92 @@ fun JournalScreen(
         }
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        floatingActionButton = {
-            if (canEditContent) {
-                AppFAB(
-                    onClick = { showSheet = true },
-                    icon = Icons.Rounded.EditNote,
-                    contentDescription = stringResource(R.string.new_entry_cd)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            floatingActionButton = {
+                if (canEditContent) {
+                    AppFAB(
+                        onClick = { showSheet = true },
+                        icon = Icons.Rounded.EditNote,
+                        contentDescription = stringResource(R.string.new_entry_cd)
+                    )
+                }
+            }
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                GlobalSearchBar(
+                    query = searchQuery,
+                    onQueryChange = { searchViewModel.setQuery(it) },
+                    placeholder = stringResource(R.string.search_journal)
                 )
+
+                if (searchQuery.isEmpty() && !isMentorMode) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        TextButton(
+                            onClick = { showPrompts = !showPrompts },
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Icon(
+                                Icons.Rounded.Lightbulb,
+                                contentDescription = null,
+                                tint = if (showPrompts) Color(0xFFFF9800) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = if (showPrompts) stringResource(R.string.hide_prompts) else stringResource(
+                                    R.string.show_prompts
+                                ),
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                        if (showPrompts) {
+                            WritingPromptsSection(onPromptClick = { prompt ->
+                                title = "Journal Entry"
+                                contentText = prompt
+                                showSheet = true
+                            })
+                        }
+                    }
+                }
+
+                Column(modifier = Modifier.padding(16.dp)) {
+                    if (allEntries.isEmpty()) {
+                        val emptyMessage =
+                            if (isMentorMode) stringResource(R.string.no_journal_mentor) else stringResource(
+                                R.string.no_journal_user
+                            )
+                        EmptyState(message = emptyMessage)
+                    } else if (entries.isEmpty() && searchQuery.isNotEmpty()) {
+                        NoResultsState(query = searchQuery)
+                    } else {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(entries) { entry ->
+                                val canEditThisEntry = if (isMentorMode) {
+                                    entry.mentorAccessLevel == "edit" || mentorAccessLevel == "full"
+                                } else {
+                                    true
+                                }
+                                JournalItem(
+                                    entry = entry,
+                                    canEdit = canEditThisEntry,
+                                    isMentorMode = isMentorMode,
+                                    onDelete = { viewModel.deleteEntry(entry) },
+                                    onClick = { if (canEditThisEntry) editingEntry = entry }
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
-    ) { padding ->
+
         if (showSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showSheet = false },
@@ -210,6 +288,8 @@ fun JournalScreen(
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp)
+                        .imePadding()
+                        .navigationBarsPadding()
                         .padding(bottom = 32.dp)
                 ) {
                     Text(
@@ -348,7 +428,11 @@ fun JournalScreen(
                                 editingEntry?.timestamp
                             )
                             if (title.isNotBlank() && contentText.isNotBlank()) {
-                                showSheet = false
+                                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                    if (!sheetState.isVisible) {
+                                        showSheet = false
+                                    }
+                                }
                             }
                         },
                         text = stringResource(R.string.save_entry),
