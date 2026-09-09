@@ -1,0 +1,5 @@
+- [ ] Update `JournalEntryEntity.kt` with `tags` and `JournalTypeConverters`
+- [ ] Update `AppDatabase.kt` to include `JournalTypeConverters` and increment version
+- [ ] Update `JournalRepository.kt` for Firestore sync with `tags`
+- [ ] Update `JournalViewModel.kt` to support `tags` in `saveEntry` and search
+- [ ] Update `JournalScreen.kt` to display and edit tags
