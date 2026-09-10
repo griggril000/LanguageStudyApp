@@ -1,55 +1,49 @@
-# Implementation Plan - Optional Tagging for Journal Entries
+# Implementation Plan - Auto-Populating Journal Tags
 
-Add an optional tagging feature to journal entries to help users organize and filter their study reflections (e.g., "struggle", "vocabulary", "grammar", "success").
+Ensure that previously used tags "auto-populate" in the tag editor, allowing users to quickly select existing tags instead of re-typing them.
+
+## User Review Required
+
+> [!IMPORTANT]
+> The `TagEditor` will now show a list of "Suggested Tags" (all unique tags used across your journal) below the text input when it is expanded. Tapping a suggestion will immediately add it to the entry.
 
 ## Proposed Changes
-
-### Data Layer
-
-#### [MODIFY] [JournalEntryEntity.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/data/local/entity/JournalEntryEntity.kt)
-- Add `val tags: List<String> = emptyList()` to the data class.
-
-#### [NEW] [JournalTypeConverters.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/data/local/entity/JournalTypeConverters.kt)
-- Create a new file to handle `List<String>` serialization for Room using Gson.
-
-#### [MODIFY] [AppDatabase.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/data/local/AppDatabase.kt)
-- Add `JournalTypeConverters::class` to the `@TypeConverters` annotation.
-- Increment database version to `7`.
-- (Optional) Add a migration from `6` to `7` or rely on destructive migration if acceptable (I'll aim for a simple migration if possible, but since `fallbackToDestructiveMigration` is enabled in some contexts, I'll check if a migration is needed). Actually, the project seems to use `fallbackToDestructiveMigration(false)` but then doesn't provide migrations in the `builder`. I'll add a simple migration.
-
-#### [MODIFY] [JournalRepository.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/data/repository/JournalRepository.kt)
-- Update `pushToFirestore` to include the `tags` field.
-- Update `syncOneShot` and `startSync` to read the `tags` field from Firestore.
-
----
 
 ### Business Logic Layer
 
 #### [MODIFY] [JournalViewModel.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/ui/viewmodel/JournalViewModel.kt)
-- Update `saveEntry` function signature to include `tags: List<String>`.
-- Update `filteredEntries` logic to include tags in the search results (if the query matches a tag).
+- Added `allUniqueTags` StateFlow that derives a sorted list of all unique tags from `allEntries`. (Already added).
 
 ---
 
 ### UI Layer
 
 #### [MODIFY] [JournalScreen.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/ui/screens/JournalScreen.kt)
-- **Entry Item**: Display tags as small chips below the content.
-- **Entry Sheet**:
-    - Add a state variable for `tags` (List<String>).
-    - Add a `TagInput` section where users can type a tag and press enter/add to add it to the list.
-    - Display current tags as deletable chips.
-- **Search**: (Optional Improvement) Allow filtering specifically by tags if time permits, otherwise the global search will include them.
+
+**1. Update `TagEditor` Component:**
+- Add `allSystemTags: List<String>` as a parameter.
+- When `isExpanded` is true, show a "Suggested" section below the `OutlinedTextField`.
+- **Filtering Logic**:
+    - If the `TextField` input is **blank**, show a list of all tags from `allSystemTags` that are *not* already on the current entry.
+    - If the `TextField` input has **text** (e.g., "str"), filter the suggestions to only show tags that *contain* or *start with* that text (e.g., "struggle").
+- Tapping a suggested tag triggers `onTagsChanged` with the new tag added and clears the text input.
+
+**2. Update `JournalScreen` and `JournalItem`:**
+- Collect `allUniqueTags` from the `viewModel` in `JournalScreen`.
+- Pass this list down to all `TagEditor` instances (in the main list items and the entry sheet).
+
+**3. Persistence:**
+- Continue using the local-first `updateTags` method to ensure suggestions are updated immediately after a new tag is saved.
 
 ## Verification Plan
 
-### Automated Tests
-- N/A (I will verify manually as the project relies on integration with Firebase).
-
 ### Manual Verification
-1. Open the Journal screen.
-2. Create a new entry and add several tags (e.g., "Grammar", "Struggle").
-3. Save the entry and verify tags appear in the list.
-4. Search for "Grammar" and verify the entry appears.
-5. Edit the entry, remove a tag, and save. Verify the change persists.
-6. Verify sync with Firestore (if possible in this environment).
+1. **Suggestion Visibility**:
+    - Open the tag editor on an entry.
+    - Verify that tags used in *other* entries appear in the "Suggested" list.
+2. **Adding via Suggestion**:
+    - Tap a suggested tag.
+    - Verify it is added to the entry's tags and immediately persisted to local storage.
+    - Verify it disappears from the suggestions list (since it's now applied).
+3. **Filtering**:
+    - (Optional) Filter the suggestions based on the current text input in the `TextField`.

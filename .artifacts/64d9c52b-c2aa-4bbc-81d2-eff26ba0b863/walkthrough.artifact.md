@@ -1,30 +1,23 @@
-# Walkthrough - Optional Tagging for Journal Entries
+# Walkthrough - Simplified Tag Management with Auto-Population
 
-I have successfully added the optional tagging feature to journal entries. This allows users to categorize their entries with custom tags like "struggle", "grammar", or "success", making them easier to find and providing better insight into their learning journey.
+I have streamlined the tagging experience for journal entries. Users can now manage tags with fewer steps through a unified `TagEditor` component that supports auto-save, quick tagging directly from the main list, and intelligent tag suggestions.
 
 ## Changes Made
 
-### Data Layer
-- **[JournalEntryEntity.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/data/local/entity/JournalEntryEntity.kt)**: Added `tags` field and consolidated `JournalTypeConverters` into the file for Room serialization.
-- **[AppDatabase.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/data/local/AppDatabase.kt)**: Incremented version to `7`, registered `JournalTypeConverters`, and added a migration script to add the `tags` column.
-- **[JournalRepository.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/data/repository/JournalRepository.kt)**: Updated Firestore synchronization (both one-shot and listener) to include the `tags` field.
-
-### Business Logic
-- **[JournalViewModel.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/ui/viewmodel/JournalViewModel.kt)**: Updated `saveEntry` to handle tags and enhanced `filteredEntries` to include tag matches in search results.
-
 ### UI & UX
-- **[JournalScreen.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/ui/screens/JournalScreen.kt)**:
-    - Added a tag input section in the entry creation/edit sheet with `AssistChip` for management.
-    - Displayed tags as chips in each journal item.
-    - Updated the entry sheet to correctly initialize and reset tag state.
-- **[JournalExportUtils.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/utils/JournalExportUtils.kt)**: Included tags in both PDF and Word (HTML) exports.
+- **[TagEditor Component](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/ui/screens/JournalScreen.kt)**:
+    - Created a new, reusable component with an interactive "Icon + Plus" trigger.
+    - **Intelligent Suggestions**: When the editor is expanded, it now shows a list of "Suggested Tags" based on previously used tags.
+    - **Dynamic Filtering**: The suggestions list is automatically filtered based on the user's current typing (e.g., typing "str" will suggest "struggle").
+    - Existing tags populate below the input in a scrollable `LazyRow` of deletable chips.
+- **Main List Quick Tagging**: Integrated `TagEditor` into `JournalItem`. Users can now add or remove tags directly from the card in the main journal list.
+- **Simplified Entry Sheet**: Replaced the previous tag UI in the `ModalBottomSheet` with the new `TagEditor`.
 
-## Visual Verification
-
-### Journal Item with Tags
-![Journal Item with Tags](C:/Users/grigg/AppData/Local/Google/AndroidStudio2026.1.3/projects/languagestudyapp.28f60910/.artifacts/64d9c52b-c2aa-4bbc-81d2-eff26ba0b863/scratch/journal_item_preview.png)
+### Persistence & Data
+- **Global Tag Collection**: Updated `JournalViewModel` to expose `allUniqueTags`, ensuring suggestions are consistent across the entire app.
+- **Local-First Updates**: Any tag change triggers an immediate save to local storage (Room) for a snappy feel, followed by background Firestore synchronization.
 
 ## Verification Results
 - **Build**: Successfully assembled the debug APK.
-- **UI**: Verified the `JournalItem` rendering with tags via Compose Preview.
-- **Logic**: Search now includes tags, and exports include tag information.
+- **UX**: Verified the suggestion filtering behavior and quick-selection logic.
+- **Persistence**: Verified that selecting a suggested tag immediately updates the local database.

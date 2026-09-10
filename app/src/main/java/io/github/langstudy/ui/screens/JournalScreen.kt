@@ -35,7 +35,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.FileDownload
-import androidx.compose.material.icons.rounded.Label
+import androidx.compose.material.icons.automirrored.rounded.Label
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SupervisorAccount
@@ -122,6 +122,7 @@ fun JournalScreen(
     val languageOverride by searchViewModel.selectedLanguage.collectAsState()
     val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
+    val allUniqueTags by viewModel.allUniqueTags.collectAsState()
 
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
 
@@ -161,7 +162,6 @@ fun JournalScreen(
     var showSheet by remember { mutableStateOf(openEntry) }
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
     var showPrompts by remember { mutableStateOf(false) }
-    var newTag by remember { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
@@ -175,7 +175,6 @@ fun JournalScreen(
             mentorVisible = isMentorMode // Default true if mentor creates it
             mentorAccessLevelEntry = if (isMentorMode) "edit" else "view"
             tags = emptyList()
-            newTag = ""
         }
     }
 
@@ -288,7 +287,7 @@ fun JournalScreen(
                         NoResultsState(query = searchQuery)
                     } else {
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(entries) { entry ->
+                            items(entries, key = { it.id }) { entry ->
                                 val canEditThisEntry = if (isMentorMode) {
                                     entry.mentorAccessLevel == "edit" || mentorAccessLevel == "full"
                                 } else {
@@ -300,7 +299,11 @@ fun JournalScreen(
                                     isMentorMode = isMentorMode,
                                     onDelete = { viewModel.deleteEntry(entry) },
                                     onClick = { if (canEditThisEntry) editingEntry = entry },
-                                    onSharePdf = { JournalExportUtils.shareEntryAsPdf(context, entry) }
+                                    onSharePdf = { JournalExportUtils.shareEntryAsPdf(context, entry) },
+                                    onTagsChanged = { newTags ->
+                                        viewModel.updateTags(entry, newTags)
+                                    },
+                                    allSystemTags = allUniqueTags
                                 )
                             }
                         }
@@ -364,62 +367,19 @@ fun JournalScreen(
                         includeNone = true
                     )
                     Spacer(Modifier.height(16.dp))
-                    Text(
-                        stringResource(R.string.tags_label),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = newTag,
-                        onValueChange = { newTag = it },
-                        label = { Text(stringResource(R.string.add_tag_hint)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
-                        trailingIcon = {
-                            if (newTag.isNotBlank()) {
-                                IconButton(onClick = {
-                                    if (newTag.isNotBlank() && !tags.contains(newTag.trim())) {
-                                        tags = tags + newTag.trim()
-                                        newTag = ""
-                                    }
-                                }) {
-                                    Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_tag))
-                                }
+                    
+                    TagEditor(
+                        tags = tags,
+                        onTagsChanged = { newTags ->
+                            tags = newTags
+                            editingEntry?.let { entry ->
+                                viewModel.updateTags(entry, newTags)
                             }
                         },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = {
-                            if (newTag.isNotBlank() && !tags.contains(newTag.trim())) {
-                                tags = tags + newTag.trim()
-                                newTag = ""
-                            }
-                        })
+                        allSystemTags = allUniqueTags,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    if (tags.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            items(tags) { tag ->
-                                AssistChip(
-                                    onClick = { tags = tags - tag },
-                                    label = { Text(tag) },
-                                    trailingIcon = {
-                                        Icon(
-                                            Icons.Rounded.Close,
-                                            contentDescription = stringResource(R.string.remove_tag),
-                                            modifier = Modifier.size(AssistChipDefaults.IconSize)
-                                        )
-                                    },
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                            }
-                        }
-                    }
+                    
                     Spacer(Modifier.height(16.dp))
                     if (!isMentorMode) {
                         HorizontalDivider(
@@ -536,13 +496,144 @@ fun JournalScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun TagEditor(
+    tags: List<String>,
+    onTagsChanged: (List<String>) -> Unit,
+    modifier: Modifier = Modifier,
+    allSystemTags: List<String> = emptyList()
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+    var tagInput by remember { mutableStateOf("") }
+
+    val filteredSuggestions = remember(tagInput, allSystemTags, tags) {
+        if (tagInput.isBlank()) {
+            allSystemTags.filter { !tags.contains(it) }
+        } else {
+            allSystemTags.filter { 
+                it.contains(tagInput, ignoreCase = true) && !tags.contains(it)
+            }
+        }
+    }
+
+    Column(modifier = modifier) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                Icons.AutoMirrored.Rounded.Label,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            IconButton(
+                onClick = { isExpanded = !isExpanded },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    if (isExpanded) Icons.Rounded.Close else Icons.Rounded.Add,
+                    contentDescription = if (isExpanded) stringResource(R.string.close) else stringResource(R.string.add_tag),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
+        if (isExpanded) {
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = tagInput,
+                onValueChange = { tagInput = it },
+                label = { Text(stringResource(R.string.add_tag_hint)) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                trailingIcon = {
+                    if (tagInput.isNotBlank()) {
+                        IconButton(onClick = {
+                            if (tagInput.isNotBlank() && !tags.contains(tagInput.trim())) {
+                                onTagsChanged(tags + tagInput.trim())
+                                tagInput = ""
+                            }
+                        }) {
+                            Icon(Icons.Rounded.Check, contentDescription = stringResource(R.string.add_tag))
+                        }
+                    }
+                },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = {
+                    if (tagInput.isNotBlank() && !tags.contains(tagInput.trim())) {
+                        onTagsChanged(tags + tagInput.trim())
+                        tagInput = ""
+                    }
+                })
+            )
+
+            if (filteredSuggestions.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.suggested_tags),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(4.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(filteredSuggestions) { suggestion ->
+                        AssistChip(
+                            onClick = {
+                                onTagsChanged(tags + suggestion)
+                                tagInput = ""
+                            },
+                            label = { Text(suggestion) },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        if (tags.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(tags) { tag ->
+                    AssistChip(
+                        onClick = { onTagsChanged(tags - tag) },
+                        label = { Text(tag) },
+                        trailingIcon = {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.remove_tag),
+                                modifier = Modifier.size(AssistChipDefaults.IconSize)
+                            )
+                        },
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun JournalItem(
     entry: JournalEntryEntity,
     canEdit: Boolean,
     isMentorMode: Boolean = false,
     onDelete: () -> Unit,
     onClick: () -> Unit,
-    onSharePdf: () -> Unit
+    onSharePdf: () -> Unit,
+    onTagsChanged: (List<String>) -> Unit = {},
+    allSystemTags: List<String> = emptyList()
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
@@ -615,7 +706,15 @@ fun JournalItem(
                     maxLines = 3,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
-                if (entry.tags.isNotEmpty()) {
+                
+                if (canEdit) {
+                    TagEditor(
+                        tags = entry.tags,
+                        onTagsChanged = onTagsChanged,
+                        allSystemTags = allSystemTags,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                } else if (entry.tags.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),

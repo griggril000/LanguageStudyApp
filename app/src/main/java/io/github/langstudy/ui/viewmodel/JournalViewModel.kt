@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+import kotlinx.coroutines.flow.map
+
 class JournalViewModel(
     private val repository: JournalRepository,
     private val settingsRepository: SettingsRepository
@@ -28,6 +30,10 @@ class JournalViewModel(
 
     val allEntries: StateFlow<List<JournalEntryEntity>> = repository.allEntries
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allUniqueTags: StateFlow<List<String>> = allEntries.map { entries ->
+        entries.flatMap { it.tags }.distinct().sorted()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -137,6 +143,19 @@ class JournalViewModel(
 
     fun setCurrentLanguage(language: String) {
         _currentLanguage.value = language
+    }
+
+    fun updateTags(entry: JournalEntryEntity, newTags: List<String>) {
+        saveEntry(
+            id = entry.id,
+            title = entry.title,
+            content = entry.content,
+            language = entry.language,
+            mentorVisible = entry.mentorVisible,
+            mentorAccessLevel = entry.mentorAccessLevel,
+            originalTimestamp = entry.timestamp,
+            tags = newTags
+        )
     }
 }
 

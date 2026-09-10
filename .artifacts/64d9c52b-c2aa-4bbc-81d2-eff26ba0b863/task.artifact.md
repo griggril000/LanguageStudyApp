@@ -1,5 +1,5 @@
-- [x] Update `JournalEntryEntity.kt` with `tags` and `JournalTypeConverters`
-- [x] Update `AppDatabase.kt` to include `JournalTypeConverters` and increment version
-- [x] Update `JournalRepository.kt` for Firestore sync with `tags`
-- [x] Update `JournalViewModel.kt` to support `tags` in `saveEntry` and search
-- [x] Update `JournalScreen.kt` to display and edit tags
+- [x] Update `JournalViewModel` to expose `allUniqueTags`
+- [x] Update `JournalScreen` to fetch and pass `allUniqueTags` to `TagEditor`
+- [x] Refine `TagEditor` to show "Suggested Tags" below the input when expanded
+- [x] Ensure local-first updates and immediate UI feedback
+- [x] Verify that selecting a suggested tag auto-populates the entry's tags

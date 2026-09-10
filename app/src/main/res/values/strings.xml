@@ -229,6 +229,7 @@
     <string name="add_tag_hint">Add a tag (e.g. struggle, grammar)</string>
     <string name="add_tag">Add tag</string>
     <string name="remove_tag">Remove tag</string>
+    <string name="suggested_tags">Suggested Tags</string>
     <string name="saved_successfully">Saved successfully</string>
     <string name="share_entry">Share Entry</string>
     <string name="download_all_entries">Download All Entries</string>
