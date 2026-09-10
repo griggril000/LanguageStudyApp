@@ -543,7 +543,17 @@ fun TagEditor(
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = tagInput,
-                onValueChange = { tagInput = it },
+                onValueChange = { input ->
+                    if (input.endsWith(",")) {
+                        val newTagText = input.removeSuffix(",").trim()
+                        if (newTagText.isNotBlank() && !tags.contains(newTagText)) {
+                            onTagsChanged(tags + newTagText)
+                            tagInput = ""
+                        }
+                    } else {
+                        tagInput = input
+                    }
+                },
                 label = { Text(stringResource(R.string.add_tag_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -551,8 +561,9 @@ fun TagEditor(
                 trailingIcon = {
                     if (tagInput.isNotBlank()) {
                         IconButton(onClick = {
-                            if (tagInput.isNotBlank() && !tags.contains(tagInput.trim())) {
-                                onTagsChanged(tags + tagInput.trim())
+                            val newTagText = tagInput.trim()
+                            if (newTagText.isNotBlank() && !tags.contains(newTagText)) {
+                                onTagsChanged(tags + newTagText)
                                 tagInput = ""
                             }
                         }) {
@@ -562,8 +573,9 @@ fun TagEditor(
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = {
-                    if (tagInput.isNotBlank() && !tags.contains(tagInput.trim())) {
-                        onTagsChanged(tags + tagInput.trim())
+                    val newTagText = tagInput.trim()
+                    if (newTagText.isNotBlank() && !tags.contains(newTagText)) {
+                        onTagsChanged(tags + newTagText)
                         tagInput = ""
                     }
                 })

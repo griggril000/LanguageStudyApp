@@ -1,23 +1,20 @@
-# Walkthrough - Simplified Tag Management with Auto-Population
+# Walkthrough - Advanced Tag UX: Shortcuts and Suggestions
 
-I have streamlined the tagging experience for journal entries. Users can now manage tags with fewer steps through a unified `TagEditor` component that supports auto-save, quick tagging directly from the main list, and intelligent tag suggestions.
+I have significantly improved the tagging experience for journal entries by adding advanced keyboard interactions and intelligent suggestions.
 
 ## Changes Made
 
-### UI & UX
+### UI & UX Enhancements
 - **[TagEditor Component](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/ui/screens/JournalScreen.kt)**:
-    - Created a new, reusable component with an interactive "Icon + Plus" trigger.
-    - **Intelligent Suggestions**: When the editor is expanded, it now shows a list of "Suggested Tags" based on previously used tags.
-    - **Dynamic Filtering**: The suggestions list is automatically filtered based on the user's current typing (e.g., typing "str" will suggest "struggle").
-    - Existing tags populate below the input in a scrollable `LazyRow` of deletable chips.
-- **Main List Quick Tagging**: Integrated `TagEditor` into `JournalItem`. Users can now add or remove tags directly from the card in the main journal list.
-- **Simplified Entry Sheet**: Replaced the previous tag UI in the `ModalBottomSheet` with the new `TagEditor`.
+    - **Comma Shortcut**: Typing a comma (`,`) now immediately converts the preceding text into a tag. This allows for rapid multi-tag entry.
+    - **Intelligent Suggestions**: Displays a list of "Suggested Tags" based on previous entries, which filters dynamically as the user types.
+    - **Integrated Management**: Available in both the main journal list and the entry editor with immediate persistence to local storage.
 
 ### Persistence & Data
-- **Global Tag Collection**: Updated `JournalViewModel` to expose `allUniqueTags`, ensuring suggestions are consistent across the entire app.
-- **Local-First Updates**: Any tag change triggers an immediate save to local storage (Room) for a snappy feel, followed by background Firestore synchronization.
+- **Derived Tags State**: `JournalViewModel` now dynamically calculates `allUniqueTags` from all journal entries to provide global suggestions.
+- **Auto-Save Logic**: All tag operations (add, remove, or shortcut-based) trigger immediate local persistence, ensuring no work is lost.
 
 ## Verification Results
 - **Build**: Successfully assembled the debug APK.
-- **UX**: Verified the suggestion filtering behavior and quick-selection logic.
-- **Persistence**: Verified that selecting a suggested tag immediately updates the local database.
+- **UX**: Verified comma-triggering logic and backspace-to-edit behavior in Compose.
+- **Shortcuts**: Typing "lesson," correctly creates a "lesson" tag and clears the field. Pressing backspace immediately after reverts it to editable text.

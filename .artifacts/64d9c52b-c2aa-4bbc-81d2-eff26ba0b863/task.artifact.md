@@ -1,5 +1,6 @@
 - [x] Update `JournalViewModel` to expose `allUniqueTags`
 - [x] Update `JournalScreen` to fetch and pass `allUniqueTags` to `TagEditor`
 - [x] Refine `TagEditor` to show "Suggested Tags" below the input when expanded
+- [x] Implement comma (`,`) as a tag saving shortcut
 - [x] Ensure local-first updates and immediate UI feedback
 - [x] Verify that selecting a suggested tag auto-populates the entry's tags
