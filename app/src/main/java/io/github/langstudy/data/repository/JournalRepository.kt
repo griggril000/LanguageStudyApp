@@ -41,7 +41,8 @@ class JournalRepository(private val journalDao: JournalDao) {
                     dateModified = (data["dateModified"] as? com.google.firebase.Timestamp)?.toDate()?.time
                         ?: now,
                     mentorAccessLevel = data["mentorAccessLevel"] as? String ?: "view",
-                    mentorVisible = data["mentorVisible"] as? Boolean ?: false
+                    mentorVisible = data["mentorVisible"] as? Boolean ?: false,
+                    tags = (data["tags"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
                 )
                 journalDao.insertEntry(entry)
                 remoteIds.add(doc.id)
@@ -95,7 +96,8 @@ class JournalRepository(private val journalDao: JournalDao) {
                                     dateModified = (data["dateModified"] as? com.google.firebase.Timestamp)?.toDate()?.time
                                         ?: now,
                                     mentorAccessLevel = data["mentorAccessLevel"] as? String ?: "view",
-                                    mentorVisible = data["mentorVisible"] as? Boolean ?: false
+                                    mentorVisible = data["mentorVisible"] as? Boolean ?: false,
+                                    tags = (data["tags"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
                                 )
                                 journalDao.insertEntry(entry)
                             }
@@ -139,7 +141,8 @@ class JournalRepository(private val journalDao: JournalDao) {
             "dateAdded" to com.google.firebase.Timestamp(java.util.Date(entry.timestamp)),
             "dateModified" to com.google.firebase.Timestamp(java.util.Date(entry.dateModified)),
             "mentorAccessLevel" to entry.mentorAccessLevel,
-            "mentorVisible" to entry.mentorVisible
+            "mentorVisible" to entry.mentorVisible,
+            "tags" to entry.tags
         )
 
         firestore.collection("users").document(userId)

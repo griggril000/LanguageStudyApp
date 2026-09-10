@@ -26,15 +26,21 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.FileDownload
+import androidx.compose.material.icons.rounded.Label
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SupervisorAccount
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -52,6 +58,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Switch
+import androidx.compose.ui.tooling.preview.Preview
+import io.github.langstudy.ui.theme.LanguageStudyTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -72,6 +80,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.langstudy.LanguageStudyApplication
@@ -152,10 +161,12 @@ fun JournalScreen(
     var language by remember { mutableStateOf("") }
     var mentorVisible by remember { mutableStateOf(false) }
     var mentorAccessLevelEntry by remember { mutableStateOf("view") }
+    var tags by remember { mutableStateOf<List<String>>(emptyList()) }
     var editingEntry by remember { mutableStateOf<JournalEntryEntity?>(null) }
     var showSheet by remember { mutableStateOf(openEntry) }
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
     var showPrompts by remember { mutableStateOf(false) }
+    var newTag by remember { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
@@ -168,6 +179,8 @@ fun JournalScreen(
             language = currentLanguage
             mentorVisible = isMentorMode // Default true if mentor creates it
             mentorAccessLevelEntry = if (isMentorMode) "edit" else "view"
+            tags = emptyList()
+            newTag = ""
         }
     }
 
@@ -178,6 +191,7 @@ fun JournalScreen(
             language = it.language
             mentorVisible = it.mentorVisible
             mentorAccessLevelEntry = it.mentorAccessLevel
+            tags = it.tags
             showSheet = true
         }
     }
@@ -368,6 +382,63 @@ fun JournalScreen(
                         includeNone = true
                     )
                     Spacer(Modifier.height(16.dp))
+                    Text(
+                        stringResource(R.string.tags_label),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = newTag,
+                        onValueChange = { newTag = it },
+                        label = { Text(stringResource(R.string.add_tag_hint)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        trailingIcon = {
+                            if (newTag.isNotBlank()) {
+                                IconButton(onClick = {
+                                    if (newTag.isNotBlank() && !tags.contains(newTag.trim())) {
+                                        tags = tags + newTag.trim()
+                                        newTag = ""
+                                    }
+                                }) {
+                                    Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_tag))
+                                }
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = {
+                            if (newTag.isNotBlank() && !tags.contains(newTag.trim())) {
+                                tags = tags + newTag.trim()
+                                newTag = ""
+                            }
+                        })
+                    )
+                    if (tags.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(tags) { tag ->
+                                AssistChip(
+                                    onClick = { tags = tags - tag },
+                                    label = { Text(tag) },
+                                    trailingIcon = {
+                                        Icon(
+                                            Icons.Rounded.Close,
+                                            contentDescription = stringResource(R.string.remove_tag),
+                                            modifier = Modifier.size(AssistChipDefaults.IconSize)
+                                        )
+                                    },
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
                     if (!isMentorMode) {
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 8.dp),
@@ -460,7 +531,8 @@ fun JournalScreen(
                                 language,
                                 mentorVisible,
                                 mentorAccessLevelEntry,
-                                editingEntry?.timestamp
+                                editingEntry?.timestamp,
+                                tags
                             )
                             if (title.isNotBlank() && contentText.isNotBlank()) {
                                 scope.launch { sheetState.hide() }.invokeOnCompletion {
@@ -561,6 +633,31 @@ fun JournalItem(
                     maxLines = 3,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
+                if (entry.tags.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(entry.tags) { tag ->
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                border = androidx.compose.foundation.BorderStroke(
+                                    0.5.dp,
+                                    MaterialTheme.colorScheme.outlineVariant
+                                )
+                            ) {
+                                Text(
+                                    tag,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
                 Spacer(Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -693,5 +790,24 @@ fun WritingPromptsSection(onPromptClick: (String) -> Unit) {
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun JournalItemPreview() {
+    LanguageStudyTheme {
+        JournalItem(
+            entry = JournalEntryEntity(
+                title = "Study Session",
+                content = "Today I learned about the Japanese particles 'wa' and 'ga'. It was a bit confusing but I think I'm getting the hang of it.",
+                language = "Japanese",
+                tags = listOf("struggle", "grammar", "success")
+            ),
+            canEdit = true,
+            onDelete = {},
+            onClick = {},
+            onSharePdf = {}
+        )
     }
 }
