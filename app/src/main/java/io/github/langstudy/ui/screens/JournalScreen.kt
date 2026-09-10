@@ -122,6 +122,7 @@ fun JournalScreen(
     val languageOverride by searchViewModel.selectedLanguage.collectAsState()
     val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
+    val allUniqueTags by viewModel.allUniqueTags.collectAsState()
 
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
 
@@ -301,7 +302,8 @@ fun JournalScreen(
                                     onSharePdf = { JournalExportUtils.shareEntryAsPdf(context, entry) },
                                     onTagsChanged = { newTags ->
                                         viewModel.updateTags(entry, newTags)
-                                    }
+                                    },
+                                    allSystemTags = allUniqueTags
                                 )
                             }
                         }
@@ -374,6 +376,7 @@ fun JournalScreen(
                                 viewModel.updateTags(entry, newTags)
                             }
                         },
+                        allSystemTags = allUniqueTags,
                         modifier = Modifier.fillMaxWidth()
                     )
                     
@@ -496,10 +499,21 @@ fun JournalScreen(
 fun TagEditor(
     tags: List<String>,
     onTagsChanged: (List<String>) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    allSystemTags: List<String> = emptyList()
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     var tagInput by remember { mutableStateOf("") }
+
+    val filteredSuggestions = remember(tagInput, allSystemTags, tags) {
+        if (tagInput.isBlank()) {
+            allSystemTags.filter { !tags.contains(it) }
+        } else {
+            allSystemTags.filter { 
+                it.contains(tagInput, ignoreCase = true) && !tags.contains(it)
+            }
+        }
+    }
 
     Column(modifier = modifier) {
         Row(
@@ -554,6 +568,34 @@ fun TagEditor(
                     }
                 })
             )
+
+            if (filteredSuggestions.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.suggested_tags),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(4.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(filteredSuggestions) { suggestion ->
+                        AssistChip(
+                            onClick = {
+                                onTagsChanged(tags + suggestion)
+                                tagInput = ""
+                            },
+                            label = { Text(suggestion) },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
+                }
+            }
         }
 
         if (tags.isNotEmpty()) {
@@ -590,7 +632,8 @@ fun JournalItem(
     onDelete: () -> Unit,
     onClick: () -> Unit,
     onSharePdf: () -> Unit,
-    onTagsChanged: (List<String>) -> Unit = {}
+    onTagsChanged: (List<String>) -> Unit = {},
+    allSystemTags: List<String> = emptyList()
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
@@ -668,6 +711,7 @@ fun JournalItem(
                     TagEditor(
                         tags = entry.tags,
                         onTagsChanged = onTagsChanged,
+                        allSystemTags = allSystemTags,
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 } else if (entry.tags.isNotEmpty()) {

@@ -1,46 +1,49 @@
-# Implementation Plan - Simplified Tag Management
+# Implementation Plan - Auto-Populating Journal Tags
 
-Simplify the tagging UX in both the journal list and the entry editor. Implement a unified "Tag Editor" pattern that allows quick additions and provides clear visibility of existing tags, with immediate persistence.
+Ensure that previously used tags "auto-populate" in the tag editor, allowing users to quickly select existing tags instead of re-typing them.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> The tagging UI will change from a static list/separate input to an interactive "Plus" button that reveals a text field. Existing tags will appear below the input in a scrollable list.
+> The `TagEditor` will now show a list of "Suggested Tags" (all unique tags used across your journal) below the text input when it is expanded. Tapping a suggestion will immediately add it to the entry.
 
 ## Proposed Changes
-
-### UI Layer
-
-#### [NEW] `TagEditorComponent.kt` (or internal to `JournalScreen.kt`)
-- Create a reusable Composable `TagEditor`:
-    - **Trigger**: A tag icon next to a plus button.
-    - **Expanded State**: When the plus is clicked, shows an `OutlinedTextField` for entering a new tag.
-    - **Tag List**: Below the text field, show a `LazyRow` or scrollable list of current tags as deletable chips.
-    - **Action**: Pressing Enter or clicking a confirm icon adds the tag.
-    - **Persistence**: If editing an existing entry, each add/delete operation triggers an immediate save to Room (local storage).
-
-#### [MODIFY] [JournalScreen.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/ui/screens/JournalScreen.kt)
-- **Main List (`JournalItem`)**:
-    - Integrate the `TagEditor` directly into the `JournalItem` card. This allows users to add/remove tags without opening the full entry sheet.
-- **Entry Sheet**:
-    - Replace the existing tag input/list with the new `TagEditor` component.
-- **State Management**:
-    - Ensure the UI reacts to Room updates immediately. The `filteredEntries` flow from `JournalViewModel` already provides this, as it's backed by the Room DAO.
 
 ### Business Logic Layer
 
 #### [MODIFY] [JournalViewModel.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/ui/viewmodel/JournalViewModel.kt)
-- (Done) `updateTags(entry: JournalEntryEntity, newTags: List<String>)` handles the persistence to Room first, then Firestore.
+- Added `allUniqueTags` StateFlow that derives a sorted list of all unique tags from `allEntries`. (Already added).
+
+---
+
+### UI Layer
+
+#### [MODIFY] [JournalScreen.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/ui/screens/JournalScreen.kt)
+
+**1. Update `TagEditor` Component:**
+- Add `allSystemTags: List<String>` as a parameter.
+- When `isExpanded` is true, show a "Suggested" section below the `OutlinedTextField`.
+- **Filtering Logic**:
+    - If the `TextField` input is **blank**, show a list of all tags from `allSystemTags` that are *not* already on the current entry.
+    - If the `TextField` input has **text** (e.g., "str"), filter the suggestions to only show tags that *contain* or *start with* that text (e.g., "struggle").
+- Tapping a suggested tag triggers `onTagsChanged` with the new tag added and clears the text input.
+
+**2. Update `JournalScreen` and `JournalItem`:**
+- Collect `allUniqueTags` from the `viewModel` in `JournalScreen`.
+- Pass this list down to all `TagEditor` instances (in the main list items and the entry sheet).
+
+**3. Persistence:**
+- Continue using the local-first `updateTags` method to ensure suggestions are updated immediately after a new tag is saved.
 
 ## Verification Plan
 
 ### Manual Verification
-1. **Main Page Tagging**:
-    - Find an entry in the list. Click the plus button.
-    - Add a tag. Verify it appears immediately in the list.
-    - Re-launch the app to verify it persisted in local storage.
-2. **Entry Sheet Tagging**:
-    - Open an entry. Add/Remove tags using the new editor.
-    - Verify changes are reflected without needing to click the main "Save" button.
-3. **Data Integrity**:
-    - Verify that adding a tag locally eventually syncs to Firestore (background process).
+1. **Suggestion Visibility**:
+    - Open the tag editor on an entry.
+    - Verify that tags used in *other* entries appear in the "Suggested" list.
+2. **Adding via Suggestion**:
+    - Tap a suggested tag.
+    - Verify it is added to the entry's tags and immediately persisted to local storage.
+    - Verify it disappears from the suggestions list (since it's now applied).
+3. **Filtering**:
+    - (Optional) Filter the suggestions based on the current text input in the `TextField`.
