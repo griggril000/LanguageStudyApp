@@ -23,17 +23,17 @@ object JournalExportUtils {
         val fileName = "Journal_${entry.title.filter { it.isLetterOrDigit() }}_${entry.id.take(4)}.pdf"
         val file = File(context.cacheDir, fileName)
         FileOutputStream(file).use { it.write(generatePdfBytes(entry)) }
-        shareFile(context, file, "application/pdf")
+        shareFile(context, file)
     }
 
-    private fun shareFile(context: Context, file: File, mimeType: String) {
+    private fun shareFile(context: Context, file: File) {
         val uri = FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
             file,
         )
         val intent = Intent(Intent.ACTION_SEND).apply {
-            type = mimeType
+            type = "application/pdf"
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
@@ -126,38 +126,5 @@ object JournalExportUtils {
         pdfDocument.writeTo(outputStream)
         pdfDocument.close()
         return outputStream.toByteArray()
-    }
-
-    fun generateWordBytes(entry: JournalEntryEntity): ByteArray {
-        return generateBatchWordBytes(listOf(entry))
-    }
-
-    fun generateBatchWordBytes(entries: List<JournalEntryEntity>): ByteArray {
-        val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-
-        val entriesHtml = entries.joinToString("<hr style='border: 0; border-top: 1px solid #eee; margin: 20px 0;'>") { entry ->
-            val dateStr = dateFormat.format(Date(entry.timestamp))
-            val tagsHtml = if (entry.tags.isNotEmpty()) "<br><span style='color: #888; font-size: 10pt;'>Tags: ${entry.tags.joinToString(", ")}</span>" else ""
-            """
-                <div style='margin-bottom: 30px;'>
-                    <h2 style='margin-bottom: 5px;'>${entry.title}</h2>
-                    <p style='color: #666; font-size: 11pt; margin-top: 0;'><i>$dateStr | ${entry.language}</i>$tagsHtml</p>
-                    <div style='white-space: pre-wrap; font-size: 12pt;'>
-                        ${entry.content.replace("\n", "<br>")}
-                    </div>
-                </div>
-            """.trimIndent()
-        }
-
-        val htmlContent = """
-            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-            <head><meta charset='utf-8'><title>Journal Export</title></head>
-            <body style='font-family: Arial, sans-serif; line-height: 1.6; padding: 20px;'>
-                $entriesHtml
-            </body>
-            </html>
-        """.trimIndent()
-
-        return htmlContent.toByteArray()
     }
 }

@@ -125,16 +125,11 @@ fun JournalScreen(
 
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
 
-    var pendingBatchDownloadMimeType by remember { mutableStateOf<String?>(null) }
     val batchDownloadLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
     ) { uri ->
         uri?.let {
-            val bytes = if (pendingBatchDownloadMimeType == "application/pdf") {
-                JournalExportUtils.generateBatchPdfBytes(allEntries)
-            } else {
-                JournalExportUtils.generateBatchWordBytes(allEntries)
-            }
+            val bytes = JournalExportUtils.generateBatchPdfBytes(allEntries)
             context.contentResolver.openOutputStream(it)?.use { os ->
                 os.write(bytes)
             }
@@ -237,28 +232,15 @@ fun JournalScreen(
                         )
                     }
                     if (allEntries.isNotEmpty()) {
-                        var showBatchMenu by remember { mutableStateOf(false) }
                         Box(modifier = Modifier.padding(end = 16.dp)) {
-                            IconButton(onClick = { showBatchMenu = true }) {
+                            IconButton(onClick = {
+                                val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
+                                batchDownloadLauncher.launch("Journal_Export_$timeStamp.pdf")
+                            }) {
                                 Icon(
                                     Icons.Rounded.FileDownload,
                                     contentDescription = stringResource(R.string.download_all_entries),
                                     tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = showBatchMenu,
-                                onDismissRequest = { showBatchMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.export_all_pdf)) },
-                                    onClick = {
-                                        showBatchMenu = false
-                                        pendingBatchDownloadMimeType = "application/pdf"
-                                        val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
-                                        batchDownloadLauncher.launch("Journal_Export_$timeStamp.pdf")
-                                    },
-                                    leadingIcon = { Icon(Icons.Rounded.FileDownload, null) }
                                 )
                             }
                         }
