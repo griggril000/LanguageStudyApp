@@ -190,29 +190,47 @@ class SampleDataSeeder(
 
         launch {
             val existingJournals = journalRepository.allEntries.first()
+            val now = System.currentTimeMillis()
+            val sampleJournals = listOf(
+                JournalEntryEntity(
+                    id = "sample_j1",
+                    title = "First Spanish Lesson",
+                    content = "Learned how to say hello and thank you today. Spanish sounds wonderful!",
+                    language = "Spanish",
+                    tags = listOf("lesson", "basics"),
+                    timestamp = now - 2000
+                ),
+                JournalEntryEntity(
+                    id = "sample_j2",
+                    title = "Starting French",
+                    content = "Bonjour! French pronunciation is quite different from what I expected, but I like it.",
+                    language = "French",
+                    tags = listOf("pronunciation", "struggle"),
+                    timestamp = now - 1000
+                ),
+                JournalEntryEntity(
+                    id = "sample_j3",
+                    title = "Japanese Hiragana Progress",
+                    content = "I can now recognize all the vowels and the K-row in Hiragana!",
+                    language = "Japanese",
+                    tags = listOf("hiragana", "success"),
+                    timestamp = now
+                )
+            )
+
             if (existingJournals.isEmpty()) {
                 android.util.Log.d("SampleDataSeeder", "Seeding journals...")
-                val journals = listOf(
-                    JournalEntryEntity(
-                        id = "sample_j1",
-                        title = "First Spanish Lesson",
-                        content = "Learned how to say hello and thank you today. Spanish sounds wonderful!",
-                        language = "Spanish"
-                    ),
-                    JournalEntryEntity(
-                        id = "sample_j2",
-                        title = "Starting French",
-                        content = "Bonjour! French pronunciation is quite different from what I expected, but I like it.",
-                        language = "French"
-                    ),
-                    JournalEntryEntity(
-                        id = "sample_j3",
-                        title = "Japanese Hiragana Progress",
-                        content = "I can now recognize all the vowels and the K-row in Hiragana!",
-                        language = "Japanese"
-                    )
-                )
-                journals.forEach { journalRepository.insert(it, userId) }
+                sampleJournals.forEach { journalRepository.insert(it, userId) }
+            } else {
+                // Update sample entries if they exist but don't have tags (e.g. after schema update)
+                // or if their timestamps are not distinct.
+                sampleJournals.forEach { sample ->
+                    val existing = existingJournals.find { it.id == sample.id }
+                    if (existing != null && (existing.tags.isEmpty() || existing.timestamp != sample.timestamp)) {
+                        android.util.Log.d("SampleDataSeeder", "Updating sample journal: ${sample.id}")
+                        journalRepository.insert(sample, userId)
+                    }
+                }
             }
         }
 
