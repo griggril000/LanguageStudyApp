@@ -138,6 +138,19 @@ class JournalViewModel(
     fun setCurrentLanguage(language: String) {
         _currentLanguage.value = language
     }
+
+    fun updateTags(entry: JournalEntryEntity, newTags: List<String>) {
+        saveEntry(
+            id = entry.id,
+            title = entry.title,
+            content = entry.content,
+            language = entry.language,
+            mentorVisible = entry.mentorVisible,
+            mentorAccessLevel = entry.mentorAccessLevel,
+            originalTimestamp = entry.timestamp,
+            tags = newTags
+        )
+    }
 }
 
 class JournalViewModelFactory(

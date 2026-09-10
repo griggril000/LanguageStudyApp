@@ -1,30 +1,23 @@
-# Walkthrough - Optional Tagging for Journal Entries
+# Walkthrough - Simplified Tag Management
 
-I have successfully added the optional tagging feature to journal entries. This allows users to categorize their entries with custom tags like "struggle", "grammar", or "success", making them easier to find and providing better insight into their learning journey.
+I have streamlined the tagging experience for journal entries. Users can now manage tags with fewer steps through a unified `TagEditor` component that supports auto-save and quick tagging directly from the main list.
 
 ## Changes Made
 
-### Data Layer
-- **[JournalEntryEntity.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/data/local/entity/JournalEntryEntity.kt)**: Added `tags` field and consolidated `JournalTypeConverters` into the file for Room serialization.
-- **[AppDatabase.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/data/local/AppDatabase.kt)**: Incremented version to `7`, registered `JournalTypeConverters`, and added a migration script to add the `tags` column.
-- **[JournalRepository.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/data/repository/JournalRepository.kt)**: Updated Firestore synchronization (both one-shot and listener) to include the `tags` field.
-
-### Business Logic
-- **[JournalViewModel.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/ui/viewmodel/JournalViewModel.kt)**: Updated `saveEntry` to handle tags and enhanced `filteredEntries` to include tag matches in search results.
-
 ### UI & UX
-- **[JournalScreen.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/ui/screens/JournalScreen.kt)**:
-    - Added a tag input section in the entry creation/edit sheet with `AssistChip` for management.
-    - Displayed tags as chips in each journal item.
-    - Updated the entry sheet to correctly initialize and reset tag state.
-- **[JournalExportUtils.kt](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/utils/JournalExportUtils.kt)**: Included tags in both PDF and Word (HTML) exports.
+- **[TagEditor Component](file:///C:/Users/grigg/AndroidStudioProjects/LanguageStudyApp/app/src/main/java/io/github/langstudy/ui/screens/JournalScreen.kt)**: Created a new, reusable component with an interactive "Icon + Plus" trigger that reveals a text input. Existing tags populate below the input in a scrollable `LazyRow` of deletable chips.
+- **Main List Quick Tagging**: Integrated `TagEditor` into `JournalItem`. Users can now add or remove tags directly from the card in the main journal list without opening the full editor.
+- **Simplified Entry Sheet**: Replaced the previous tag UI in the `ModalBottomSheet` with the new `TagEditor`, providing a consistent experience.
+
+### Persistence
+- **Local-First Updates**: Added `updateTags` to `JournalViewModel`. Any tag change (add or delete) for an existing entry triggers an immediate save to Room (local storage). This ensures the UI is snappy and changes are persisted instantly before Firestore synchronization occurs in the background.
 
 ## Visual Verification
 
-### Journal Item with Tags
-![Journal Item with Tags](C:/Users/grigg/AppData/Local/Google/AndroidStudio2026.1.3/projects/languagestudyapp.28f60910/.artifacts/64d9c52b-c2aa-4bbc-81d2-eff26ba0b863/scratch/journal_item_preview.png)
+### New Tagging UX in Journal List
+![Simplified Tagging UX](C:/Users/grigg/AppData/Local/Google/AndroidStudio2026.1.3/projects/languagestudyapp.28f60910/.artifacts/64d9c52b-c2aa-4bbc-81d2-eff26ba0b863/scratch/simplified_tagging_preview.png)
 
 ## Verification Results
 - **Build**: Successfully assembled the debug APK.
-- **UI**: Verified the `JournalItem` rendering with tags via Compose Preview.
-- **Logic**: Search now includes tags, and exports include tag information.
+- **UX**: Verified the new "Plus to Expand" behavior and chip layout via Compose Preview.
+- **Auto-save**: The `onTagsChanged` callback correctly triggers `viewModel.updateTags` for existing entries, bypassing the need for a manual "Save" click.
