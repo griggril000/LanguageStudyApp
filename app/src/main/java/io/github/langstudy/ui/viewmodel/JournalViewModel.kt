@@ -48,7 +48,8 @@ class JournalViewModel(
             if (query.isBlank()) baseEntries
             else baseEntries.filter {
                 it.title.contains(query, ignoreCase = true) ||
-                        it.content.contains(query, ignoreCase = true)
+                        it.content.contains(query, ignoreCase = true) ||
+                        it.tags.any { tag -> tag.contains(query, ignoreCase = true) }
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -79,7 +80,8 @@ class JournalViewModel(
         language: String = "",
         mentorVisible: Boolean = false,
         mentorAccessLevel: String = "view",
-        originalTimestamp: Long? = null
+        originalTimestamp: Long? = null,
+        tags: List<String> = emptyList()
     ) {
         if (title.isBlank() || content.isBlank()) {
             viewModelScope.launch { _error.emit("Title and content cannot be empty") }
@@ -97,7 +99,8 @@ class JournalViewModel(
                         timestamp = originalTimestamp ?: now,
                         dateModified = now,
                         mentorVisible = mentorVisible,
-                        mentorAccessLevel = mentorAccessLevel
+                        mentorAccessLevel = mentorAccessLevel,
+                        tags = tags
                     )
                 } else {
                     JournalEntryEntity(
@@ -107,7 +110,8 @@ class JournalViewModel(
                         timestamp = now,
                         dateModified = now,
                         mentorVisible = mentorVisible,
-                        mentorAccessLevel = mentorAccessLevel
+                        mentorAccessLevel = mentorAccessLevel,
+                        tags = tags
                     )
                 }
                 repository.insert(entry, userId)

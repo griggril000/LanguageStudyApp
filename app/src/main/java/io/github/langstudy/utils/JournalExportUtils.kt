@@ -72,7 +72,8 @@ object JournalExportUtils {
 
         entries.forEach { entry ->
             val dateStr = dateFormat.format(Date(entry.timestamp))
-            val metaStr = "$dateStr | ${entry.language}"
+            val tagsStr = if (entry.tags.isNotEmpty()) " | Tags: ${entry.tags.joinToString(", ")}" else ""
+            val metaStr = "$dateStr | ${entry.language}$tagsStr"
 
             val titleLayout = StaticLayout.Builder.obtain(entry.title, 0, entry.title.length, titlePaint, pageWidth - (margin * 2).toInt())
                 .setAlignment(Layout.Alignment.ALIGN_NORMAL)
@@ -136,10 +137,11 @@ object JournalExportUtils {
 
         val entriesHtml = entries.joinToString("<hr style='border: 0; border-top: 1px solid #eee; margin: 20px 0;'>") { entry ->
             val dateStr = dateFormat.format(Date(entry.timestamp))
+            val tagsHtml = if (entry.tags.isNotEmpty()) "<br><span style='color: #888; font-size: 10pt;'>Tags: ${entry.tags.joinToString(", ")}</span>" else ""
             """
                 <div style='margin-bottom: 30px;'>
                     <h2 style='margin-bottom: 5px;'>${entry.title}</h2>
-                    <p style='color: #666; font-size: 11pt; margin-top: 0;'><i>$dateStr | ${entry.language}</i></p>
+                    <p style='color: #666; font-size: 11pt; margin-top: 0;'><i>$dateStr | ${entry.language}</i>$tagsHtml</p>
                     <div style='white-space: pre-wrap; font-size: 12pt;'>
                         ${entry.content.replace("\n", "<br>")}
                     </div>
