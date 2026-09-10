@@ -226,7 +226,7 @@
     <string name="hide_prompts">Hide Writing Prompts</string>
     <string name="share_as_pdf">Share as PDF</string>
     <string name="tags_label">Tags</string>
-    <string name="add_tag_hint">Add a tag (e.g. struggle, grammar)</string>
+    <string name="add_tag_hint">Add a tag (e.g. grammar, vocabulary, etc.)</string>
     <string name="add_tag">Add tag</string>
     <string name="remove_tag">Remove tag</string>
     <string name="suggested_tags">Suggested Tags</string>
