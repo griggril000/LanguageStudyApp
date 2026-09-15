@@ -125,17 +125,32 @@ fun JournalScreen(
     val allUniqueTags by viewModel.allUniqueTags.collectAsState()
 
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
+    var exportMenuVisible by remember { mutableStateOf(false) }
+    var pendingExportEntries by remember { mutableStateOf<List<JournalEntryEntity>>(emptyList()) }
 
     val batchDownloadLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/pdf")
     ) { uri ->
         uri?.let {
-            val bytes = JournalExportUtils.generateBatchPdfBytes(allEntries)
+            if (pendingExportEntries.isEmpty()) {
+                Toast.makeText(context, context.getString(R.string.no_entries_to_export), Toast.LENGTH_SHORT).show()
+                return@let
+            }
+            val bytes = JournalExportUtils.generateBatchPdfBytes(pendingExportEntries)
             context.contentResolver.openOutputStream(it)?.use { os ->
                 os.write(bytes)
             }
             Toast.makeText(context, "Journal exported successfully", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    fun launchExport(entries: List<JournalEntryEntity>, fileName: String) {
+        if (entries.isEmpty()) {
+            Toast.makeText(context, context.getString(R.string.no_entries_to_export), Toast.LENGTH_SHORT).show()
+            return
+        }
+        pendingExportEntries = entries
+        batchDownloadLauncher.launch(fileName)
     }
 
     LaunchedEffect(languageOverride) {
@@ -232,15 +247,52 @@ fun JournalScreen(
                     }
                     if (allEntries.isNotEmpty()) {
                         Box(modifier = Modifier.padding(end = 16.dp)) {
-                            IconButton(onClick = {
-                                val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
-                                batchDownloadLauncher.launch("Journal_Export_$timeStamp.pdf")
-                            }) {
+                            IconButton(onClick = { exportMenuVisible = true }) {
                                 Icon(
                                     Icons.Rounded.FileDownload,
                                     contentDescription = stringResource(R.string.download_all_entries),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
+                            }
+                            DropdownMenu(
+                                expanded = exportMenuVisible,
+                                onDismissRequest = { exportMenuVisible = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.download_all_entries)) },
+                                    onClick = {
+                                        exportMenuVisible = false
+                                        val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
+                                        launchExport(allEntries, "Journal_Export_$timeStamp.pdf")
+                                    }
+                                )
+                                if (allUniqueTags.isNotEmpty()) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.export_by_tag)) },
+                                        onClick = { exportMenuVisible = false },
+                                        enabled = false
+                                    )
+                                    allUniqueTags.forEach { tag ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    stringResource(
+                                                        R.string.export_tag_format,
+                                                        tag
+                                                    )
+                                                )
+                                            },
+                                            onClick = {
+                                                exportMenuVisible = false
+                                                val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
+                                                val sanitizedTag = tag.filter { it.isLetterOrDigit() || it == '-' || it == '_' }
+                                                val fileName = "Journal_${sanitizedTag.ifBlank { "tag" }}_${timeStamp}.pdf"
+                                                val filteredEntries = allEntries.filter { it.tags.contains(tag) }
+                                                launchExport(filteredEntries, fileName)
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
