@@ -46,6 +46,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -126,7 +127,22 @@ fun JournalScreen(
 
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
     var exportMenuVisible by remember { mutableStateOf(false) }
+    var showTagExportSheet by remember { mutableStateOf(false) }
+    var exportTagQuery by remember { mutableStateOf("") }
+    var selectedExportTags by remember { mutableStateOf<List<String>>(emptyList()) }
     var pendingExportEntries by remember { mutableStateOf<List<JournalEntryEntity>>(emptyList()) }
+
+    val selectedExportTagSet = remember(selectedExportTags) { selectedExportTags.toSet() }
+
+    val filteredExportTags = remember(exportTagQuery, allUniqueTags, selectedExportTagSet) {
+        val query = exportTagQuery.trim()
+        val baseSuggestions = if (query.isBlank()) {
+            allUniqueTags
+        } else {
+            allUniqueTags.filter { it.contains(query, ignoreCase = true) }
+        }
+        baseSuggestions.filterNot { selectedExportTagSet.contains(it) }
+    }
 
     val batchDownloadLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/pdf")
@@ -266,33 +282,15 @@ fun JournalScreen(
                                         launchExport(allEntries, "Journal_Export_$timeStamp.pdf")
                                     }
                                 )
-                                if (allUniqueTags.isNotEmpty()) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.export_by_tag)) },
-                                        onClick = { exportMenuVisible = false },
-                                        enabled = false
-                                    )
-                                    allUniqueTags.forEach { tag ->
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    stringResource(
-                                                        R.string.export_tag_format,
-                                                        tag
-                                                    )
-                                                )
-                                            },
-                                            onClick = {
-                                                exportMenuVisible = false
-                                                val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
-                                                val sanitizedTag = tag.filter { it.isLetterOrDigit() || it == '-' || it == '_' }
-                                                val fileName = "Journal_${sanitizedTag.ifBlank { "tag" }}_${timeStamp}.pdf"
-                                                val filteredEntries = allEntries.filter { it.tags.contains(tag) }
-                                                launchExport(filteredEntries, fileName)
-                                            }
-                                        )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.export_by_tag)) },
+                                    onClick = {
+                                        exportMenuVisible = false
+                                        exportTagQuery = ""
+                                        selectedExportTags = emptyList()
+                                        showTagExportSheet = true
                                     }
-                                }
+                                )
                             }
                         }
                     }
@@ -360,6 +358,121 @@ fun JournalScreen(
                             }
                         }
                     }
+                }
+            }
+        }
+
+        if (showTagExportSheet) {
+            ModalBottomSheet(
+                onDismissRequest = {
+                    showTagExportSheet = false
+                    exportTagQuery = ""
+                    selectedExportTags = emptyList()
+                },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .navigationBarsPadding()
+                        .padding(bottom = 32.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.export_by_tag),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = exportTagQuery,
+                        onValueChange = { exportTagQuery = it },
+                        label = { Text("Search tags") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        trailingIcon = {
+                            if (exportTagQuery.isNotBlank()) {
+                                IconButton(onClick = {
+                                    val newTag = exportTagQuery.trim()
+                                    if (newTag.isNotBlank() && allUniqueTags.contains(newTag) && !selectedExportTags.contains(newTag)) {
+                                        selectedExportTags = listOf(newTag) + selectedExportTags
+                                        exportTagQuery = ""
+                                    }
+                                }) {
+                                    Icon(Icons.Rounded.Check, contentDescription = stringResource(R.string.add_tag))
+                                }
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = {
+                            val newTag = exportTagQuery.trim()
+                            if (newTag.isNotBlank() && allUniqueTags.contains(newTag) && !selectedExportTags.contains(newTag)) {
+                                selectedExportTags = listOf(newTag) + selectedExportTags
+                                exportTagQuery = ""
+                            }
+                        })
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    val orderedChips = selectedExportTags + filteredExportTags
+                    if (orderedChips.isEmpty()) {
+                        Text(
+                            text = "No matching tags",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(orderedChips, key = { it }) { tag ->
+                                val isSelected = selectedExportTagSet.contains(tag)
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = {
+                                        if (isSelected) {
+                                            selectedExportTags = selectedExportTags.filterNot { it == tag }
+                                        } else {
+                                            selectedExportTags = listOf(tag) + selectedExportTags
+                                        }
+                                    },
+                                    label = { Text(tag) },
+                                    trailingIcon = if (isSelected) {
+                                        {
+                                            Icon(
+                                                Icons.Rounded.Close,
+                                                contentDescription = stringResource(R.string.remove_tag),
+                                                modifier = Modifier.size(AssistChipDefaults.IconSize)
+                                            )
+                                        }
+                                    } else {
+                                        null
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    AppButton(
+                        onClick = {
+                            if (selectedExportTags.isEmpty()) {
+                                Toast.makeText(context, context.getString(R.string.no_entries_to_export), Toast.LENGTH_SHORT).show()
+                                return@AppButton
+                            }
+                            val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
+                            val tagSummary = selectedExportTags.joinToString("_")
+                            val fileName = "Journal_${tagSummary.ifBlank { "tag" }}_$timeStamp.pdf"
+                            val matchingEntries = allEntries.filter { entry ->
+                                entry.tags.any { tag -> selectedExportTags.contains(tag) }
+                            }
+                            showTagExportSheet = false
+                            exportTagQuery = ""
+                            selectedExportTags = emptyList()
+                            launchExport(matchingEntries, fileName)
+                        },
+                        text = "Download",
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
