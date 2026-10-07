@@ -25,7 +25,7 @@ android {
         applicationId = "io.github.langstudy"
         minSdk = 24
         targetSdk = 37
-        versionCode = 32
+        versionCode = 33
         versionName = "2.8.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
