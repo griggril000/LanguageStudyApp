@@ -82,6 +82,7 @@ import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.langstudy.LanguageStudyApplication
@@ -512,7 +513,8 @@ fun JournalScreen(
                         onValueChange = { title = it },
                         label = { Text(stringResource(R.string.title_label)) },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
                     )
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
@@ -521,7 +523,8 @@ fun JournalScreen(
                         label = { Text(stringResource(R.string.message_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        minLines = 5
+                        minLines = 5,
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
                     )
                     Spacer(Modifier.height(12.dp))
                     LanguageDropdown(
