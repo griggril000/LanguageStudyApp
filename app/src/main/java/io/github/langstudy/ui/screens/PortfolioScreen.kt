@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -57,6 +58,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -120,6 +122,15 @@ fun PortfolioScreen(
 
     LaunchedEffect(searchQuery) {
         viewModel.setSearchQuery(searchQuery)
+    }
+
+    val gridState = rememberLazyGridState()
+    var previousItemsCount by remember { mutableIntStateOf(items.size) }
+    LaunchedEffect(items.size) {
+        if (items.size > previousItemsCount) {
+            gridState.animateScrollToItem(0)
+        }
+        previousItemsCount = items.size
     }
 
     var title by remember { mutableStateOf("") }
@@ -244,6 +255,7 @@ fun PortfolioScreen(
                             }
                         } else {
                             LazyVerticalGrid(
+                                state = gridState,
                                 columns = GridCells.Fixed(columns),
                                 verticalArrangement = Arrangement.spacedBy(16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -358,8 +370,12 @@ fun PortfolioScreen(
                     Spacer(Modifier.height(24.dp))
                     AppButton(
                         onClick = {
-                            if (editingItem == null) {
+                            val isNewItem = editingItem == null
+                            if (isNewItem) {
                                 viewModel.addItem(title, link, itemLanguage)
+                                scope.launch {
+                                    gridState.animateScrollToItem(0)
+                                }
                             } else {
                                 viewModel.updateItem(editingItem!!.id, title, link, itemLanguage)
                             }
