@@ -1,5 +1,6 @@
 package io.github.langstudy.ui.screens
 
+import io.github.langstudy.ui.theme.LanguageStudyTheme
 import android.content.ClipData
 import android.content.pm.PackageManager
 import android.os.Build
@@ -15,6 +16,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -47,6 +50,7 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -60,6 +64,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -83,6 +88,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -90,6 +96,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
+import coil3.compose.AsyncImage
 import io.github.langstudy.BuildConfig
 import io.github.langstudy.R
 import io.github.langstudy.navigation.NavRoute
@@ -627,7 +634,7 @@ fun SettingsMainView(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp)
+                    .padding(vertical = 8.dp)
                     .background(
                         MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
                         RoundedCornerShape(12.dp)
@@ -642,210 +649,232 @@ fun SettingsMainView(
             }
         }
 
-        PreferenceCategory(title = stringResource(R.string.pref_learning))
-        PreferenceItem(
-            title = stringResource(R.string.pref_primary_lang),
-            summary = userSettings.languageLearning.ifBlank { stringResource(R.string.none) },
-            icon = Icons.Default.Done,
-            onClick = if (isMentorMode) ({}) else onShowPrimaryLangDialog
-        )
-        PreferenceItem(
-            title = stringResource(R.string.pref_learning_langs),
-            summary = if (userSettings.learnedLanguages.isEmpty()) stringResource(R.string.none) else userSettings.learnedLanguages.joinToString(
-                ", "
-            ),
-            icon = Icons.Default.Language,
-            onClick = if (isMentorMode) ({}) else onShowLearningLangsDialog
-        )
-        PreferenceItem(
-            title = stringResource(R.string.pref_startup_tab),
-            summary = userSettings.homepageTab.replaceFirstChar { it.uppercase() },
-            icon = Icons.Rounded.Home,
-            onClick = if (isMentorMode) ({}) else onShowStartupTabDialog
-        )
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
-
-        PreferenceCategory(title = stringResource(R.string.pref_display))
-        val systemDefault = stringResource(R.string.system_default)
-        val dynamicColor = stringResource(R.string.dynamic_color)
-        PreferenceItem(
-            title = stringResource(R.string.pref_theme),
-            summary = when (userSettings.theme) {
-                "system" -> systemDefault
-                "dynamic" -> dynamicColor
-                else -> userSettings.theme.replaceFirstChar { it.uppercase() }
-            },
-            icon = Icons.Default.Palette,
-            onClick = if (isMentorMode) ({}) else onShowThemeDialog
-        )
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
-
-        PreferenceCategory(title = stringResource(R.string.pref_mentor_access))
-        SwitchPreference(
-            title = stringResource(R.string.enable_mentor_view),
-            summary = if (isMentorMode) stringResource(R.string.enable_mentor_view_mentor_summary) else stringResource(
-                R.string.enable_mentor_view_summary
-            ),
-            icon = Icons.Default.SupervisorAccount,
-            checked = userSettings.mentorCodeEnabled,
-            onCheckedChange = { settingsViewModel.toggleMentorCode(it) },
-            enabled = !isMentorMode
-        )
-
-        if (userSettings.mentorCodeEnabled || isMentorMode) {
-            val generating = stringResource(R.string.generating)
-            val mentorCodeText = stringResource(R.string.mentor_code_cd)
-            PreferenceItem(
-                title = if (isMentorMode) stringResource(R.string.student_share_code) else stringResource(
-                    R.string.mentor_share_code
-                ),
-                summary = mentorCode ?: generating,
-                icon = Icons.Rounded.Refresh,
-                onClick = {
-                    mentorCode?.let { code ->
-                        scope.launch {
-                            clipboard.setClipEntry(
-                                ClipEntry(
-                                    ClipData.newPlainText(
-                                        mentorCodeText,
-                                        code
-                                    )
-                                )
-                            )
-                        }
-                    }
+        PreferenceGroup(title = stringResource(R.string.pref_account)) {
+            AccountPreferenceItem(
+                title = if (isMentorMode) {
+                    stringResource(R.string.mentoring_student)
+                } else {
+                    currentUser?.displayName?.takeIf { it.isNotBlank() }
+                        ?: currentUser?.email?.substringBefore('@')
+                        ?: stringResource(R.string.signed_in_as)
                 },
-                trailing = {
-                    Row {
-                        IconButton(onClick = onShowQRCodeDialog) {
-                            Icon(
-                                Icons.Default.QrCode,
-                                contentDescription = stringResource(R.string.mentor_share_qr),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        if (!isMentorMode) {
-                            IconButton(onClick = { settingsViewModel.regenerateMentorCode() }) {
-                                Icon(
-                                    Icons.Rounded.Refresh,
-                                    contentDescription = stringResource(R.string.regenerate_cd),
-                                    modifier = Modifier.size(20.dp)
+                summary = if (isMentorMode) {
+                    stringResource(R.string.mentor_code_format, mentorCode ?: "")
+                } else {
+                    currentUser?.email ?: stringResource(R.string.not_signed_in)
+                },
+                photoUrl = currentUser?.photoUrl?.toString()?.takeIf { it.isNotBlank() }
+                    ?.takeUnless { isMentorMode },
+                onClick = {
+                    if (!isMentorMode && currentUser != null) {
+                        onShowAccountOptionsDialog()
+                    }
+                }
+            )
+            PreferenceDivider()
+            PreferenceItem(
+                title = stringResource(R.string.sign_out),
+                icon = Icons.AutoMirrored.Filled.Logout,
+                onClick = { authViewModel.signOut(context) }
+            )
+            if (currentUser != null && !isMentorMode) {
+                PreferenceDivider()
+                PreferenceItem(
+                    title = stringResource(R.string.delete_account),
+                    icon = Icons.Default.DeleteForever,
+                    onClick = onShowDeleteDialog,
+                    isError = true
+                )
+            }
+        }
+
+        PreferenceGroup(title = stringResource(R.string.pref_learning)) {
+            PreferenceItem(
+                title = stringResource(R.string.pref_primary_lang),
+                summary = userSettings.languageLearning.ifBlank { stringResource(R.string.none) },
+                icon = Icons.Default.Done,
+                onClick = if (isMentorMode) ({}) else onShowPrimaryLangDialog
+            )
+            PreferenceDivider()
+            PreferenceItem(
+                title = stringResource(R.string.pref_learning_langs),
+                summary = if (userSettings.learnedLanguages.isEmpty()) {
+                    stringResource(R.string.none)
+                } else {
+                    userSettings.learnedLanguages.joinToString(", ")
+                },
+                icon = Icons.Default.Language,
+                onClick = if (isMentorMode) ({}) else onShowLearningLangsDialog
+            )
+            PreferenceDivider()
+            PreferenceItem(
+                title = stringResource(R.string.pref_startup_tab),
+                summary = userSettings.homepageTab.replaceFirstChar { it.uppercase() },
+                icon = Icons.Rounded.Home,
+                onClick = if (isMentorMode) ({}) else onShowStartupTabDialog
+            )
+        }
+
+        PreferenceGroup(title = stringResource(R.string.pref_display)) {
+            val systemDefault = stringResource(R.string.system_default)
+            val dynamicColor = stringResource(R.string.dynamic_color)
+            PreferenceItem(
+                title = stringResource(R.string.pref_theme),
+                summary = when (userSettings.theme) {
+                    "system" -> systemDefault
+                    "dynamic" -> dynamicColor
+                    else -> userSettings.theme.replaceFirstChar { it.uppercase() }
+                },
+                icon = Icons.Default.Palette,
+                onClick = if (isMentorMode) ({}) else onShowThemeDialog
+            )
+        }
+
+        PreferenceGroup(title = stringResource(R.string.pref_mentor_access)) {
+            SwitchPreference(
+                title = stringResource(R.string.enable_mentor_view),
+                summary = if (isMentorMode) {
+                    stringResource(R.string.enable_mentor_view_mentor_summary)
+                } else {
+                    stringResource(R.string.enable_mentor_view_summary)
+                },
+                icon = Icons.Default.SupervisorAccount,
+                checked = userSettings.mentorCodeEnabled,
+                onCheckedChange = { settingsViewModel.toggleMentorCode(it) },
+                enabled = !isMentorMode
+            )
+
+            if (userSettings.mentorCodeEnabled || isMentorMode) {
+                PreferenceDivider()
+                val generating = stringResource(R.string.generating)
+                val mentorCodeText = stringResource(R.string.mentor_code_cd)
+                PreferenceItem(
+                    title = if (isMentorMode) {
+                        stringResource(R.string.student_share_code)
+                    } else {
+                        stringResource(R.string.mentor_share_code)
+                    },
+                    summary = mentorCode ?: generating,
+                    icon = Icons.Rounded.Refresh,
+                    onClick = {
+                        mentorCode?.let { code ->
+                            scope.launch {
+                                clipboard.setClipEntry(
+                                    ClipEntry(
+                                        ClipData.newPlainText(
+                                            mentorCodeText,
+                                            code
+                                        )
+                                    )
                                 )
                             }
                         }
+                    },
+                    trailing = {
+                        Row {
+                            IconButton(onClick = onShowQRCodeDialog) {
+                                Icon(
+                                    Icons.Default.QrCode,
+                                    contentDescription = stringResource(R.string.mentor_share_qr),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            if (!isMentorMode) {
+                                IconButton(onClick = { settingsViewModel.regenerateMentorCode() }) {
+                                    Icon(
+                                        Icons.Rounded.Refresh,
+                                        contentDescription = stringResource(R.string.regenerate_cd),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
-                }
-            )
-            val readOnly = stringResource(R.string.read_only)
-            val statusUpdates = stringResource(R.string.status_updates)
-            val editAll = stringResource(R.string.edit_all)
-            PreferenceItem(
-                title = if (isMentorMode) stringResource(R.string.student_access_level) else stringResource(
-                    R.string.mentor_access_level
-                ),
-                summary = when (userSettings.mentorAccessLevel) {
-                    "view" -> readOnly
-                    "status" -> statusUpdates
-                    "full" -> editAll
-                    else -> userSettings.mentorAccessLevel.replaceFirstChar { it.uppercase() }
-                },
-                icon = Icons.Default.SupervisorAccount,
-                onClick = if (isMentorMode) ({}) else onShowAccessLevelDialog
-            )
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
-
-        PreferenceCategory(title = stringResource(R.string.pref_mentoring))
-        if (isMentorMode) {
-            PreferenceItem(
-                title = stringResource(R.string.currently_mentoring),
-                summary = stringResource(R.string.currently_mentoring_summary),
-                icon = Icons.Default.School,
-                onClick = { authViewModel.exitMentorMode(context) },
-                trailing = {
-                    TextButton(onClick = { authViewModel.exitMentorMode(context) }) {
-                        Text(stringResource(R.string.exit))
-                    }
-                }
-            )
-        } else {
-            PreferenceItem(
-                title = stringResource(R.string.mentor_student_title),
-                summary = stringResource(R.string.mentor_a_student_summary),
-                icon = Icons.Default.School,
-                onClick = onShowJoinDialog,
-                trailing = {
-                    IconButton(onClick = onShowQRScannerDialog) {
-                        Icon(
-                            Icons.Default.QrCodeScanner,
-                            contentDescription = stringResource(R.string.scan_mentor_qr),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            )
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
-
-        PreferenceCategory(title = stringResource(R.string.pref_account))
-        PreferenceItem(
-            title = if (isMentorMode) stringResource(R.string.mentoring_student) else stringResource(
-                R.string.signed_in_as
-            ),
-            summary = if (isMentorMode) stringResource(
-                R.string.mentor_code_format,
-                mentorCode ?: ""
-            ) else currentUser?.email ?: stringResource(R.string.not_signed_in),
-            icon = Icons.Default.Person,
-            onClick = {
-                if (!isMentorMode && currentUser != null) {
-                    onShowAccountOptionsDialog()
-                }
+                )
+                PreferenceDivider()
+                val readOnly = stringResource(R.string.read_only)
+                val statusUpdates = stringResource(R.string.status_updates)
+                val editAll = stringResource(R.string.edit_all)
+                PreferenceItem(
+                    title = if (isMentorMode) {
+                        stringResource(R.string.student_access_level)
+                    } else {
+                        stringResource(R.string.mentor_access_level)
+                    },
+                    summary = when (userSettings.mentorAccessLevel) {
+                        "view" -> readOnly
+                        "status" -> statusUpdates
+                        "full" -> editAll
+                        else -> userSettings.mentorAccessLevel.replaceFirstChar { it.uppercase() }
+                    },
+                    icon = Icons.Default.SupervisorAccount,
+                    onClick = if (isMentorMode) ({}) else onShowAccessLevelDialog
+                )
             }
-        )
-        PreferenceItem(
-            title = stringResource(R.string.sign_out),
-            icon = Icons.AutoMirrored.Filled.Logout,
-            onClick = { authViewModel.signOut(context) }
-        )
-        if (currentUser != null && !isMentorMode) {
-            PreferenceItem(
-                title = stringResource(R.string.delete_account),
-                icon = Icons.Default.DeleteForever,
-                onClick = onShowDeleteDialog,
-                isError = true
-            )
         }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
+        PreferenceGroup(title = stringResource(R.string.pref_mentoring)) {
+            if (isMentorMode) {
+                PreferenceItem(
+                    title = stringResource(R.string.currently_mentoring),
+                    summary = stringResource(R.string.currently_mentoring_summary),
+                    icon = Icons.Default.School,
+                    onClick = { authViewModel.exitMentorMode(context) },
+                    trailing = {
+                        TextButton(onClick = { authViewModel.exitMentorMode(context) }) {
+                            Text(stringResource(R.string.exit))
+                        }
+                    }
+                )
+            } else {
+                PreferenceItem(
+                    title = stringResource(R.string.mentor_student_title),
+                    summary = stringResource(R.string.mentor_a_student_summary),
+                    icon = Icons.Default.School,
+                    onClick = onShowJoinDialog,
+                    trailing = {
+                        IconButton(onClick = onShowQRScannerDialog) {
+                            Icon(
+                                Icons.Default.QrCodeScanner,
+                                contentDescription = stringResource(R.string.scan_mentor_qr),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                )
+            }
+        }
 
-        PreferenceCategory(title = stringResource(R.string.pref_additional_info))
-        if (!isMentorMode) {
+        PreferenceGroup(title = stringResource(R.string.pref_additional_info)) {
+            if (!isMentorMode) {
+                PreferenceItem(
+                    title = stringResource(R.string.pref_contact),
+                    summary = stringResource(R.string.pref_contact_summary),
+                    icon = Icons.Default.Feedback,
+                    onClick = onShowContactDialog
+                )
+                PreferenceDivider()
+            }
             PreferenceItem(
-                title = stringResource(R.string.pref_contact),
-                summary = stringResource(R.string.pref_contact_summary),
-                icon = Icons.Default.Feedback,
-                onClick = onShowContactDialog
+                title = stringResource(R.string.app_details),
+                summary = stringResource(
+                    R.string.app_details_version_format,
+                    BuildConfig.VERSION_NAME
+                ),
+                onClick = onNavigateToDetails
+            )
+            PreferenceDivider()
+            PreferenceItem(
+                title = stringResource(R.string.libraries_used),
+                onClick = onNavigateToLibraries
+            )
+            PreferenceDivider()
+            PreferenceItem(
+                title = stringResource(R.string.credits),
+                summary = stringResource(R.string.credits_summary),
+                onClick = { uriHandler.openUri("https://www.flaticon.com/free-icons/globe") }
             )
         }
-        PreferenceItem(
-            title = stringResource(R.string.app_details),
-            summary = stringResource(R.string.app_details_version_format, BuildConfig.VERSION_NAME),
-            onClick = onNavigateToDetails
-        )
-        PreferenceItem(
-            title = stringResource(R.string.libraries_used),
-            onClick = onNavigateToLibraries
-        )
-        PreferenceItem(
-            title = stringResource(R.string.credits),
-            summary = stringResource(R.string.credits_summary),
-            onClick = { uriHandler.openUri("https://www.flaticon.com/free-icons/globe") }
-        )
 
         Spacer(Modifier.height(32.dp))
     }
@@ -870,46 +899,46 @@ fun AppDetailsView(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        DetailItem(
-            label = stringResource(R.string.lang_study_version_label),
-            value = BuildConfig.VERSION_NAME
-        )
-        PreferenceItem(
-            title = stringResource(R.string.release_notes),
-            summary = stringResource(R.string.release_notes_summary),
-            onClick = onNavigateToNotes
-        )
-        DetailItem(
-            label = stringResource(R.string.android_version_label),
-            value = android.os.Build.VERSION.RELEASE
-        )
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
+        PreferenceGroup(title = stringResource(R.string.app_details)) {
+            DetailPreferenceItem(
+                label = stringResource(R.string.lang_study_version_label),
+                value = BuildConfig.VERSION_NAME
+            )
+            PreferenceDivider()
+            PreferenceItem(
+                title = stringResource(R.string.release_notes),
+                summary = stringResource(R.string.release_notes_summary),
+                onClick = onNavigateToNotes
+            )
+            PreferenceDivider()
+            DetailPreferenceItem(
+                label = stringResource(R.string.android_version_label),
+                value = android.os.Build.VERSION.RELEASE
+            )
+        }
 
         if (!isMentorMode) {
-            Text(
-                text = stringResource(R.string.personal_data),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            DetailItem(
-                label = stringResource(R.string.vocab_items_label),
-                value = vocabCount.toString()
-            )
-            DetailItem(
-                label = stringResource(R.string.skills_tracked_label),
-                value = skillCount.toString()
-            )
-            DetailItem(
-                label = stringResource(R.string.portfolio_entries_label),
-                value = portfolioCount.toString()
-            )
-            DetailItem(
-                label = stringResource(R.string.journal_entries_label),
-                value = journalCount.toString()
-            )
+            PreferenceGroup(title = stringResource(R.string.personal_data)) {
+                DetailPreferenceItem(
+                    label = stringResource(R.string.vocab_items_label),
+                    value = vocabCount.toString()
+                )
+                PreferenceDivider()
+                DetailPreferenceItem(
+                    label = stringResource(R.string.skills_tracked_label),
+                    value = skillCount.toString()
+                )
+                PreferenceDivider()
+                DetailPreferenceItem(
+                    label = stringResource(R.string.portfolio_entries_label),
+                    value = portfolioCount.toString()
+                )
+                PreferenceDivider()
+                DetailPreferenceItem(
+                    label = stringResource(R.string.journal_entries_label),
+                    value = journalCount.toString()
+                )
+            }
         }
     }
 }
@@ -1202,32 +1231,115 @@ fun MultiSelectionDialog(
 }
 
 @Composable
-fun DetailItem(label: String, value: String) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+fun PreferenceGroup(
+    modifier: Modifier = Modifier,
+    title: String? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+    ) {
+        if (!title.isNullOrBlank()) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            )
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            border = androidx.compose.foundation.BorderStroke(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+            )
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                content()
+            }
+        }
     }
 }
 
 @Composable
-fun PreferenceCategory(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold,
+fun PreferenceDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        thickness = 0.5.dp,
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+    )
+}
+
+@Composable
+fun AccountPreferenceItem(
+    title: String,
+    summary: String? = null,
+    photoUrl: String? = null,
+    onClick: () -> Unit = {}
+) {
+    var imageLoadFailed by remember(photoUrl) { mutableStateOf(false) }
+
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 16.dp, bottom = 4.dp)
-    )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            if (photoUrl != null && !imageLoadFailed) {
+                AsyncImage(
+                    model = photoUrl,
+                    contentDescription = stringResource(R.string.profile_picture_cd),
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    onError = { imageLoadFailed = true }
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
+        Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (summary != null) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -1237,13 +1349,20 @@ fun PreferenceItem(
     icon: ImageVector? = null,
     onClick: () -> Unit = {},
     isError: Boolean = false,
+    enabled: Boolean = true,
     trailing: @Composable (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
+            .then(
+                if (enabled) {
+                    Modifier.clickable(onClick = onClick)
+                } else {
+                    Modifier
+                }
+            )
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) {
@@ -1251,7 +1370,13 @@ fun PreferenceItem(
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                tint = if (isError) {
+                    MaterialTheme.colorScheme.error
+                } else if (!enabled) {
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
             )
             Spacer(Modifier.width(16.dp))
         }
@@ -1259,19 +1384,55 @@ fun PreferenceItem(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                fontWeight = FontWeight.Medium,
+                color = if (isError) {
+                    MaterialTheme.colorScheme.error
+                } else if (!enabled) {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
             )
             if (summary != null) {
+                Spacer(Modifier.height(2.dp))
                 Text(
                     text = summary,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (!enabled) {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                 )
             }
         }
         if (trailing != null) {
+            Spacer(Modifier.width(12.dp))
             trailing()
         }
+    }
+}
+
+@Composable
+fun DetailPreferenceItem(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -1288,20 +1449,21 @@ fun SwitchPreference(
         title = title,
         summary = summary,
         icon = icon,
+        enabled = enabled,
         onClick = { if (enabled) onCheckedChange(!checked) },
         trailing = {
             Switch(
                 checked = checked,
-                onCheckedChange = onCheckedChange,
+                onCheckedChange = if (enabled) onCheckedChange else null,
                 enabled = enabled,
                 thumbContent = {
                     Icon(
                         imageVector = if (checked) Icons.Rounded.Check else Icons.Rounded.Close,
                         contentDescription = null,
-                        modifier = Modifier.size(androidx.compose.material3.SwitchDefaults.IconSize),
+                        modifier = Modifier.size(SwitchDefaults.IconSize),
                     )
                 },
-                colors = androidx.compose.material3.SwitchDefaults.colors(
+                colors = SwitchDefaults.colors(
                     checkedThumbColor = MaterialTheme.colorScheme.primary,
                     checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                     checkedIconColor = MaterialTheme.colorScheme.onPrimary,
