@@ -196,12 +196,13 @@ fun WelcomeWalkthrough(
                     }
 
                     val isLastStep = currentStep == totalSteps
+                    val selectLanguageErrorMessage = stringResource(R.string.welcome_select_lang_error)
                     Button(
                         onClick = {
                             if (currentStep == 2 && selectedLang.isEmpty()) {
                                 Toast.makeText(
                                     context,
-                                    context.getString(R.string.welcome_select_lang_error),
+                                    selectLanguageErrorMessage,
                                     Toast.LENGTH_SHORT
                                 ).show()
                             } else if (currentStep < totalSteps) {

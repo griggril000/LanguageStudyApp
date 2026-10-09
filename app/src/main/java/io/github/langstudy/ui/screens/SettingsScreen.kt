@@ -113,6 +113,7 @@ fun SettingsScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val cameraPermissionDeniedMessage = stringResource(R.string.camera_permission_denied)
     val scope = rememberCoroutineScope()
     val currentUser by authViewModel.user.collectAsState()
     val isMentorMode by authViewModel.isMentorMode.collectAsState()
@@ -151,7 +152,7 @@ fun SettingsScreen(
             } else {
                 makeText(
                     context,
-                    context.getString(R.string.camera_permission_denied),
+                    cameraPermissionDeniedMessage,
                     Toast.LENGTH_SHORT
                 ).show()
             }

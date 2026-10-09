@@ -127,6 +127,7 @@ fun JournalScreen(
     val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
     val allUniqueTags by viewModel.allUniqueTags.collectAsState()
+    val noEntriesToExportMessage = stringResource(R.string.no_entries_to_export)
 
     val lazyListState = rememberLazyListState()
     var previousEntryCount by remember { mutableIntStateOf(entries.size) }
@@ -161,7 +162,7 @@ fun JournalScreen(
     ) { uri ->
         uri?.let {
             if (pendingExportEntries.isEmpty()) {
-                Toast.makeText(context, context.getString(R.string.no_entries_to_export), Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, noEntriesToExportMessage, Toast.LENGTH_SHORT).show()
                 return@let
             }
             val bytes = JournalExportUtils.generateBatchPdfBytes(pendingExportEntries)
@@ -174,7 +175,7 @@ fun JournalScreen(
 
     fun launchExport(entries: List<JournalEntryEntity>, fileName: String) {
         if (entries.isEmpty()) {
-            Toast.makeText(context, context.getString(R.string.no_entries_to_export), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, noEntriesToExportMessage, Toast.LENGTH_SHORT).show()
             return
         }
         pendingExportEntries = entries
@@ -471,7 +472,7 @@ fun JournalScreen(
                     AppButton(
                         onClick = {
                             if (selectedExportTags.isEmpty()) {
-                                Toast.makeText(context, context.getString(R.string.no_entries_to_export), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, noEntriesToExportMessage, Toast.LENGTH_SHORT).show()
                                 return@AppButton
                             }
                             val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
