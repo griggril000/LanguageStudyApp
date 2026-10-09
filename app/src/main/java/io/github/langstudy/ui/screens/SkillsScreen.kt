@@ -63,6 +63,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -126,6 +127,13 @@ fun SkillsScreen(
     val languageOverride by searchViewModel.selectedLanguage.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
+    var previousSkillsCount by remember { mutableIntStateOf(skillsList.size) }
+    LaunchedEffect(skillsList.size) {
+        if (skillsList.size > previousSkillsCount) {
+            lazyListState.animateScrollToItem(0)
+        }
+        previousSkillsCount = skillsList.size
+    }
     val haptic = LocalHapticFeedback.current
 
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
@@ -530,6 +538,9 @@ fun SkillsScreen(
                                         skillName = ""
                                         showAddSheet = false
                                     }
+                                }
+                                coroutineScope.launch {
+                                    lazyListState.animateScrollToItem(0)
                                 }
                             }
                         },

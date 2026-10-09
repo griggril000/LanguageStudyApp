@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -55,6 +56,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -111,6 +113,15 @@ fun VocabScreen(
     val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val searchQuery by searchViewModel.query.collectAsState()
     val languageOverride by searchViewModel.selectedLanguage.collectAsState()
+
+    val lazyListState = rememberLazyListState()
+    var previousVocabCount by remember { mutableIntStateOf(vocabList.size) }
+    LaunchedEffect(vocabList.size) {
+        if (vocabList.size > previousVocabCount) {
+            lazyListState.animateScrollToItem(0)
+        }
+        previousVocabCount = vocabList.size
+    }
 
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
     val canChangeStatus =
@@ -358,6 +369,7 @@ fun VocabScreen(
                         }
                     } else {
                         LazyColumn(
+                            state = lazyListState,
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.weight(1f)
                         ) {
@@ -494,7 +506,8 @@ fun VocabScreen(
                     Spacer(Modifier.height(24.dp))
                     AppButton(
                         onClick = {
-                            if (editingVocab == null) {
+                            val isNewVocab = editingVocab == null
+                            if (isNewVocab) {
                                 viewModel.addVocab(word, translation, category, language, exampleSentence)
                             } else {
                                 viewModel.updateVocab(
@@ -511,6 +524,11 @@ fun VocabScreen(
                                 scope.launch { sheetState.hide() }.invokeOnCompletion {
                                     if (!sheetState.isVisible) {
                                         showEntrySheet = false
+                                    }
+                                }
+                                if (isNewVocab) {
+                                    scope.launch {
+                                        lazyListState.animateScrollToItem(0)
                                     }
                                 }
                             }

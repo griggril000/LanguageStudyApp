@@ -82,7 +82,7 @@ class SkillViewModel(
         }
 
         val skillNames = input.split("\n").filter { it.trim().isNotBlank() }
-        val currentMaxPriority = allSkills.value.maxOfOrNull { it.priority } ?: -1
+        val currentMinPriority = allSkills.value.minOfOrNull { it.priority } ?: 0
 
         viewModelScope.launch {
             try {
@@ -91,7 +91,7 @@ class SkillViewModel(
                         SkillEntity(
                             name = name.trim(),
                             language = language,
-                            priority = currentMaxPriority + 1 + index
+                            priority = currentMinPriority - 1 - index
                         ), userId
                     )
                 }

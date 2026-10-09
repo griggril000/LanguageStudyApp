@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -69,6 +70,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -125,6 +127,15 @@ fun JournalScreen(
     val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
     val allUniqueTags by viewModel.allUniqueTags.collectAsState()
+
+    val lazyListState = rememberLazyListState()
+    var previousEntryCount by remember { mutableIntStateOf(entries.size) }
+    LaunchedEffect(entries.size) {
+        if (entries.size > previousEntryCount) {
+            lazyListState.animateScrollToItem(0)
+        }
+        previousEntryCount = entries.size
+    }
 
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
     var exportMenuVisible by remember { mutableStateOf(false) }
@@ -337,7 +348,10 @@ fun JournalScreen(
                     } else if (entries.isEmpty() && searchQuery.isNotEmpty()) {
                         NoResultsState(query = searchQuery)
                     } else {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        LazyColumn(
+                            state = lazyListState,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
                             items(entries, key = { it.id }) { entry ->
                                 val canEditThisEntry = if (isMentorMode) {
                                     entry.mentorAccessLevel == "edit" || mentorAccessLevel == "full"
@@ -634,6 +648,7 @@ fun JournalScreen(
                     Spacer(Modifier.height(24.dp))
                     AppButton(
                         onClick = {
+                            val isNewEntry = editingEntry == null
                             viewModel.saveEntry(
                                 editingEntry?.id,
                                 title,
@@ -648,6 +663,11 @@ fun JournalScreen(
                                 scope.launch { sheetState.hide() }.invokeOnCompletion {
                                     if (!sheetState.isVisible) {
                                         showSheet = false
+                                    }
+                                }
+                                if (isNewEntry) {
+                                    scope.launch {
+                                        lazyListState.animateScrollToItem(0)
                                     }
                                 }
                             }
