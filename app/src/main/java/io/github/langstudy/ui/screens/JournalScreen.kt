@@ -127,6 +127,7 @@ fun JournalScreen(
     val learnedLanguages by viewModel.learnedLanguages.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
     val allUniqueTags by viewModel.allUniqueTags.collectAsState()
+    val currentDraft by viewModel.currentDraft.collectAsState()
     val noEntriesToExportMessage = stringResource(R.string.no_entries_to_export)
 
     val lazyListState = rememberLazyListState()
@@ -211,6 +212,7 @@ fun JournalScreen(
 
     LaunchedEffect(showSheet) {
         if (!showSheet) {
+            viewModel.flushDraftToRemote()
             localErrorMessage = null
             editingEntry = null
             title = ""
@@ -219,6 +221,54 @@ fun JournalScreen(
             mentorVisible = isMentorMode // Default true if mentor creates it
             mentorAccessLevelEntry = if (isMentorMode) "edit" else "view"
             tags = emptyList()
+        } else {
+            val draft = currentDraft
+            if (editingEntry != null) {
+                if (draft != null && draft.editingId == editingEntry?.id && draft.isNotEmpty()) {
+                    title = draft.title
+                    contentText = draft.content
+                    language = draft.language
+                    mentorVisible = draft.mentorVisible
+                    mentorAccessLevelEntry = draft.mentorAccessLevel
+                    tags = draft.tags
+                } else {
+                    title = editingEntry!!.title
+                    contentText = editingEntry!!.content
+                    language = editingEntry!!.language
+                    mentorVisible = editingEntry!!.mentorVisible
+                    mentorAccessLevelEntry = editingEntry!!.mentorAccessLevel
+                    tags = editingEntry!!.tags
+                }
+            } else {
+                if (draft != null && draft.isNotEmpty()) {
+                    if (draft.editingId.isNotBlank()) {
+                        val matched = allEntries.find { it.id == draft.editingId }
+                        if (matched != null) {
+                            editingEntry = matched
+                        }
+                    }
+                    title = draft.title
+                    contentText = draft.content
+                    language = draft.language
+                    mentorVisible = draft.mentorVisible
+                    mentorAccessLevelEntry = draft.mentorAccessLevel
+                    tags = draft.tags
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(showSheet, title, contentText, language, mentorVisible, mentorAccessLevelEntry, tags, editingEntry) {
+        if (showSheet) {
+            viewModel.updateDraft(
+                title = title,
+                content = contentText,
+                language = language,
+                mentorVisible = mentorVisible,
+                mentorAccessLevel = mentorAccessLevelEntry,
+                editingId = editingEntry?.id ?: "",
+                tags = tags
+            )
         }
     }
 
@@ -507,13 +557,45 @@ fun JournalScreen(
                         .navigationBarsPadding()
                         .padding(bottom = 32.dp)
                 ) {
-                    Text(
-                        if (editingEntry == null) stringResource(R.string.new_journal_entry) else stringResource(
-                            R.string.edit_journal_entry
-                        ),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            if (editingEntry == null) stringResource(R.string.new_journal_entry) else stringResource(
+                                R.string.edit_journal_entry
+                            ),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (currentDraft?.isNotEmpty() == true) {
+                            TextButton(
+                                onClick = {
+                                    viewModel.clearDraft()
+                                    if (editingEntry != null) {
+                                        title = editingEntry!!.title
+                                        contentText = editingEntry!!.content
+                                        language = editingEntry!!.language
+                                        mentorVisible = editingEntry!!.mentorVisible
+                                        mentorAccessLevelEntry = editingEntry!!.mentorAccessLevel
+                                    } else {
+                                        title = ""
+                                        contentText = ""
+                                        language = currentLanguage
+                                        mentorVisible = isMentorMode
+                                        mentorAccessLevelEntry = if (isMentorMode) "edit" else "view"
+                                    }
+                                }
+                            ) {
+                                Text(
+                                    text = "Discard Draft",
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(16.dp))
                     if (localErrorMessage != null) {
                         Text(

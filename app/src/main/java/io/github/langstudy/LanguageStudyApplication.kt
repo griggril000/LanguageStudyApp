@@ -20,7 +20,7 @@ class LanguageStudyApplication : Application() {
     val vocabRepository by lazy { VocabRepository(database.vocabDao(), database.categoryDao()) }
     val skillRepository by lazy { SkillRepository(database.skillDao()) }
     val portfolioRepository by lazy { FirestorePortfolioRepository() }
-    val journalRepository by lazy { JournalRepository(database.journalDao()) }
+    val journalRepository by lazy { JournalRepository(database.journalDao(), this) }
     val settingsRepository by lazy { SettingsRepository(githubService = githubService) }
     val mentorRepository by lazy { MentorRepository }
     val adminRepository by lazy { AdminRepository() }
