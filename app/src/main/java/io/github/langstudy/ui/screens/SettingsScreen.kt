@@ -96,6 +96,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
+import coil3.compose.AsyncImage
 import io.github.langstudy.BuildConfig
 import io.github.langstudy.R
 import io.github.langstudy.navigation.NavRoute
@@ -662,6 +663,8 @@ fun SettingsMainView(
                 } else {
                     currentUser?.email ?: stringResource(R.string.not_signed_in)
                 },
+                photoUrl = currentUser?.photoUrl?.toString()?.takeIf { it.isNotBlank() }
+                    ?.takeUnless { isMentorMode },
                 onClick = {
                     if (!isMentorMode && currentUser != null) {
                         onShowAccountOptionsDialog()
@@ -1283,8 +1286,11 @@ fun PreferenceDivider() {
 fun AccountPreferenceItem(
     title: String,
     summary: String? = null,
+    photoUrl: String? = null,
     onClick: () -> Unit = {}
 ) {
+    var imageLoadFailed by remember(photoUrl) { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1299,12 +1305,22 @@ fun AccountPreferenceItem(
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            if (photoUrl != null && !imageLoadFailed) {
+                AsyncImage(
+                    model = photoUrl,
+                    contentDescription = stringResource(R.string.profile_picture_cd),
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    onError = { imageLoadFailed = true }
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
         }
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {

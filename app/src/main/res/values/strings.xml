@@ -296,6 +296,7 @@
     <string name="mentoring_student">Mentoring Student</string>
     <string name="signed_in_as">Signed in as</string>
     <string name="not_signed_in">Not signed in</string>
+    <string name="profile_picture_cd">Profile picture</string>
     <string name="sign_out">Sign Out</string>
     <string name="delete_account">Delete Account</string>
     <string name="mentor_view_info">You are currently viewing a student\'s data. Most settings are read-only to preserve their preferences.</string>
