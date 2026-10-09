@@ -138,15 +138,6 @@ fun JournalScreen(
         previousEntryCount = entries.size
     }
 
-    val lazyListState = rememberLazyListState()
-    var previousEntryCount by remember { mutableIntStateOf(entries.size) }
-    LaunchedEffect(entries.size) {
-        if (entries.size > previousEntryCount) {
-            lazyListState.animateScrollToItem(0)
-        }
-        previousEntryCount = entries.size
-    }
-
     val canEditContent = !isMentorMode || mentorAccessLevel == "full"
     var exportMenuVisible by remember { mutableStateOf(false) }
     var showTagExportSheet by remember { mutableStateOf(false) }
