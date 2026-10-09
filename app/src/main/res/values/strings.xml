@@ -323,7 +323,7 @@
     <string name="app_details_version_format">Version %1$s</string>
     <string name="credits">Credits</string>
     <string name="credits_summary">Globe icons by Techno Icons - Flaticon</string>
-    <string name="lang_study_version_label">Language Study Version</string>
+    <string name="lang_study_version_label">App Version</string>
     <string name="release_notes_summary">See what\'s new in this version</string>
     <string name="android_version_label">Android Version</string>
     <string name="personal_data">Personal Data</string>
