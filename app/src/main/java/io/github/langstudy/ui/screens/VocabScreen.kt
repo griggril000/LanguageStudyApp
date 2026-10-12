@@ -27,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Style
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material3.AlertDialog
@@ -556,14 +557,8 @@ fun VocabItem(
     var showDeleteConfirm by remember { mutableStateOf(false) }
     val ttsManager = LocalTtsManager.current
 
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = {
-            if (it == SwipeToDismissBoxValue.EndToStart) {
-                showDeleteConfirm = true
-                false // Don't dismiss yet, wait for confirmation
-            } else false
-        }
-    )
+    val coroutineScope = rememberCoroutineScope()
+    val dismissState = rememberSwipeToDismissBoxState()
 
     if (showDeleteConfirm) {
         DeleteConfirmationDialog(
@@ -579,12 +574,36 @@ fun VocabItem(
 
     SwipeToDismissBox(
         state = dismissState,
-        enableDismissFromStartToEnd = false,
+        enableDismissFromStartToEnd = canEdit,
         enableDismissFromEndToStart = canEdit,
+        onDismiss = { direction ->
+            when (direction) {
+                SwipeToDismissBoxValue.EndToStart -> {
+                    if (canEdit) {
+                        showDeleteConfirm = true
+                    }
+                }
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    if (canEdit) {
+                        onEditRequest(vocab)
+                    }
+                }
+                SwipeToDismissBoxValue.Settled -> {}
+            }
+            coroutineScope.launch {
+                dismissState.reset()
+            }
+        },
         backgroundContent = {
             val color = when (dismissState.dismissDirection) {
                 SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
                 else -> Color.Transparent
+            }
+            val alignment = when (dismissState.dismissDirection) {
+                SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                else -> Alignment.CenterEnd
             }
             Box(
                 modifier = Modifier
@@ -592,7 +611,7 @@ fun VocabItem(
                     .padding(vertical = 4.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(color),
-                contentAlignment = Alignment.CenterEnd
+                contentAlignment = alignment
             ) {
                 if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
                     Icon(
@@ -600,6 +619,13 @@ fun VocabItem(
                         contentDescription = stringResource(R.string.delete),
                         modifier = Modifier.padding(end = 24.dp),
                         tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                } else if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) {
+                    Icon(
+                        Icons.Rounded.Edit,
+                        contentDescription = stringResource(R.string.edit),
+                        modifier = Modifier.padding(start = 24.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }
