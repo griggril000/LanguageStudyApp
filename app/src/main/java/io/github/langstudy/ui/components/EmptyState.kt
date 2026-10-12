@@ -54,10 +54,18 @@ fun EmptyState(
 @Composable
 fun NoResultsState(
     query: String,
+    tags: List<String> = emptyList(),
     modifier: Modifier = Modifier
 ) {
+    val message = when {
+        query.isNotBlank() && tags.isNotEmpty() ->
+            stringResource(R.string.no_results_query_with_tags_format, query, tags.joinToString(", "))
+        tags.isNotEmpty() ->
+            stringResource(R.string.no_results_with_tags_format, tags.joinToString(", "))
+        else -> stringResource(R.string.no_results_format, query)
+    }
     EmptyState(
-        message = stringResource(R.string.no_results_format, query),
+        message = message,
         icon = Icons.Rounded.SearchOff,
         modifier = modifier
     )

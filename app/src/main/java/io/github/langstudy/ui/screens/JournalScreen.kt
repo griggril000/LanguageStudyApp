@@ -436,7 +436,13 @@ fun JournalScreen(
                     } else if (displayedEntries.isEmpty() &&
                         (searchQuery.isNotEmpty() || selectedCardTag != null || selectedSearchTags.isNotEmpty())
                     ) {
-                        NoResultsState(query = searchQuery)
+                        NoResultsState(
+                            query = searchQuery,
+                            tags = buildList {
+                                selectedCardTag?.let(::add)
+                                addAll(selectedSearchTags)
+                            }
+                        )
                     } else {
                         LazyColumn(
                             state = lazyListState,
