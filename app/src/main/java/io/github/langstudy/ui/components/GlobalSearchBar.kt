@@ -2,8 +2,11 @@ package io.github.langstudy.ui.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Label
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
@@ -25,7 +28,9 @@ fun GlobalSearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    placeholder: String = stringResource(R.string.search_placeholder)
+    placeholder: String = stringResource(R.string.search_placeholder),
+    onTagSearchClick: (() -> Unit)? = null,
+    tagSearchActive: Boolean = false
 ) {
     Surface(
         modifier = modifier
@@ -47,13 +52,28 @@ fun GlobalSearchBar(
                 )
             },
             trailingIcon = {
-                if (query.isNotEmpty()) {
-                    IconButton(onClick = { onQueryChange("") }) {
-                        Icon(
-                            Icons.Rounded.Close,
-                            contentDescription = stringResource(R.string.clear_cd),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                Row(horizontalArrangement = Arrangement.End) {
+                    if (onTagSearchClick != null) {
+                        IconButton(onClick = onTagSearchClick) {
+                            Icon(
+                                Icons.AutoMirrored.Rounded.Label,
+                                contentDescription = stringResource(R.string.search_by_tag),
+                                tint = if (tagSearchActive) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
+                        }
+                    }
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { onQueryChange("") }) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.clear_cd),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             },

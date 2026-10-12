@@ -27,6 +27,7 @@
     <string name="vocab_mastery">Vocabulary Mastery</string>
     <string name="skills_progress">Skills Progress</string>
     <string name="clear_cd">Clear</string>
+    <string name="search_by_tag">Search by tag</string>
     <string name="search_placeholder">Search…</string>
     <string name="progress_status_legend">Progress Status Legend:</string>
     <string name="in_progress_label">In Progress</string>

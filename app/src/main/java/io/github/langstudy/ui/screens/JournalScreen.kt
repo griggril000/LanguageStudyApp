@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -145,6 +146,16 @@ fun JournalScreen(
     var exportTagQuery by remember { mutableStateOf("") }
     var selectedExportTags by remember { mutableStateOf<List<String>>(emptyList()) }
     var pendingExportEntries by remember { mutableStateOf<List<JournalEntryEntity>>(emptyList()) }
+    var selectedCardTag by remember { mutableStateOf<String?>(null) }
+    var showTagSearch by remember { mutableStateOf(false) }
+    var selectedSearchTags by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    val displayedEntries = remember(entries, selectedCardTag, selectedSearchTags) {
+        entries.filter { entry ->
+            (selectedCardTag == null || selectedCardTag in entry.tags) &&
+                selectedSearchTags.all { it in entry.tags }
+        }
+    }
 
     val selectedExportTagSet = remember(selectedExportTags) { selectedExportTags.toSet() }
 
@@ -323,7 +334,9 @@ fun JournalScreen(
                         GlobalSearchBar(
                             query = searchQuery,
                             onQueryChange = { searchViewModel.setQuery(it) },
-                            placeholder = stringResource(R.string.search_journal)
+                            placeholder = stringResource(R.string.search_journal),
+                            onTagSearchClick = { showTagSearch = !showTagSearch },
+                            tagSearchActive = showTagSearch
                         )
                     }
                     if (allEntries.isNotEmpty()) {
@@ -357,6 +370,28 @@ fun JournalScreen(
                                     }
                                 )
                             }
+                        }
+                    }
+                }
+
+                if (showTagSearch) {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(allUniqueTags) { tag ->
+                            FilterChip(
+                                selected = tag in selectedSearchTags,
+                                onClick = {
+                                    selectedCardTag = null
+                                    selectedSearchTags = if (tag in selectedSearchTags) {
+                                        selectedSearchTags - tag
+                                    } else {
+                                        selectedSearchTags + tag
+                                    }
+                                },
+                                label = { Text(tag) }
+                            )
                         }
                     }
                 }
@@ -398,14 +433,16 @@ fun JournalScreen(
                                 R.string.no_journal_user
                             )
                         EmptyState(message = emptyMessage)
-                    } else if (entries.isEmpty() && searchQuery.isNotEmpty()) {
+                    } else if (displayedEntries.isEmpty() &&
+                        (searchQuery.isNotEmpty() || selectedCardTag != null || selectedSearchTags.isNotEmpty())
+                    ) {
                         NoResultsState(query = searchQuery)
                     } else {
                         LazyColumn(
                             state = lazyListState,
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(entries, key = { it.id }) { entry ->
+                            items(displayedEntries, key = { it.id }) { entry ->
                                 val canEditThisEntry = if (isMentorMode) {
                                     entry.mentorAccessLevel == "edit" || mentorAccessLevel == "full"
                                 } else {
@@ -415,14 +452,16 @@ fun JournalScreen(
                                     entry = entry,
                                     canEdit = canEditThisEntry,
                                     isMentorMode = isMentorMode,
+                                    selectedTag = selectedCardTag,
                                     onDelete = { viewModel.deleteEntry(entry) },
                                     onClick = { viewingEntry = entry },
                                     onEdit = { editingEntry = entry },
                                     onSharePdf = { JournalExportUtils.shareEntryAsPdf(context, entry) },
-                                    onTagsChanged = { newTags ->
-                                        viewModel.updateTags(entry, newTags)
-                                    },
-                                    allSystemTags = allUniqueTags
+                                    onTagClick = { tag ->
+                                        viewingEntry = null
+                                        selectedSearchTags = emptySet()
+                                        selectedCardTag = if (selectedCardTag == tag) null else tag
+                                    }
                                 )
                             }
                         }
@@ -493,8 +532,24 @@ fun JournalScreen(
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(entry.tags) { tag ->
                                 AssistChip(
-                                    onClick = {},
-                                    label = { Text(tag) }
+                                    onClick = {
+                                        viewingEntry = null
+                                        selectedSearchTags = emptySet()
+                                        selectedCardTag = if (selectedCardTag == tag) null else tag
+                                    },
+                                    label = { Text(tag) },
+                                    colors = AssistChipDefaults.assistChipColors(
+                                        containerColor = if (selectedCardTag == tag) {
+                                            MaterialTheme.colorScheme.primaryContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.surfaceVariant
+                                        },
+                                        labelColor = if (selectedCardTag == tag) {
+                                            MaterialTheme.colorScheme.onPrimaryContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
+                                    )
                                 )
                             }
                         }
@@ -1019,12 +1074,12 @@ fun JournalItem(
     entry: JournalEntryEntity,
     canEdit: Boolean,
     isMentorMode: Boolean = false,
+    selectedTag: String? = null,
     onDelete: () -> Unit,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onSharePdf: () -> Unit,
-    onTagsChanged: (List<String>) -> Unit = {},
-    allSystemTags: List<String> = emptyList()
+    onTagClick: (String) -> Unit
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
@@ -1123,34 +1178,51 @@ fun JournalItem(
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
                 
-                if (canEdit) {
-                    TagEditor(
-                        tags = entry.tags,
-                        onTagsChanged = onTagsChanged,
-                        allSystemTags = allSystemTags,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                } else if (entry.tags.isNotEmpty()) {
+                if (entry.tags.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(entry.tags) { tag ->
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                border = androidx.compose.foundation.BorderStroke(
-                                    0.5.dp,
-                                    MaterialTheme.colorScheme.outlineVariant
-                                )
-                            ) {
-                                Text(
-                                    tag,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                        Icon(
+                            Icons.AutoMirrored.Rounded.Label,
+                            contentDescription = stringResource(R.string.tags_label),
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            items(entry.tags) { tag ->
+                                Surface(
+                                    modifier = Modifier.clickable { onTagClick(tag) },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (selectedTag == tag) {
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    },
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (selectedTag == tag) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.outlineVariant
+                                        }
+                                    )
+                                ) {
+                                    Text(
+                                        tag,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (selectedTag == tag) {
+                                            MaterialTheme.colorScheme.onPrimaryContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -1173,15 +1245,18 @@ fun JournalItem(
                         color = MaterialTheme.colorScheme.secondary
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (isMentorMode && canEdit) {
-                            Icon(
-                                Icons.Rounded.Edit,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .padding(end = 8.dp)
-                                    .size(14.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                        if (canEdit) {
+                            IconButton(
+                                onClick = onEdit,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Edit,
+                                    contentDescription = stringResource(R.string.edit),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                         if (!isMentorMode && entry.mentorVisible) {
                             Icon(
@@ -1305,7 +1380,8 @@ fun JournalItemPreview() {
             onDelete = {},
             onClick = {},
             onEdit = {},
-            onSharePdf = {}
+            onSharePdf = {},
+            onTagClick = {}
         )
     }
 }
