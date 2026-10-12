@@ -204,7 +204,9 @@ fun JournalScreen(
     var mentorAccessLevelEntry by remember { mutableStateOf("view") }
     var tags by remember { mutableStateOf<List<String>>(emptyList()) }
     var editingEntry by remember { mutableStateOf<JournalEntryEntity?>(null) }
+    var viewingEntry by remember { mutableStateOf<JournalEntryEntity?>(null) }
     var showSheet by remember { mutableStateOf(openEntry) }
+    var showViewDeleteConfirm by remember { mutableStateOf(false) }
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
     var showPrompts by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -414,13 +416,118 @@ fun JournalScreen(
                                     canEdit = canEditThisEntry,
                                     isMentorMode = isMentorMode,
                                     onDelete = { viewModel.deleteEntry(entry) },
-                                    onClick = { if (canEditThisEntry) editingEntry = entry },
+                                    onClick = { viewingEntry = entry },
+                                    onEdit = { editingEntry = entry },
                                     onSharePdf = { JournalExportUtils.shareEntryAsPdf(context, entry) },
                                     onTagsChanged = { newTags ->
                                         viewModel.updateTags(entry, newTags)
                                     },
                                     allSystemTags = allUniqueTags
                                 )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showViewDeleteConfirm && viewingEntry != null) {
+            DeleteConfirmationDialog(
+                onConfirm = {
+                    viewModel.deleteEntry(viewingEntry!!)
+                    showViewDeleteConfirm = false
+                    viewingEntry = null
+                },
+                onDismiss = { showViewDeleteConfirm = false },
+                title = stringResource(R.string.delete_journal_entry_title),
+                message = stringResource(
+                    R.string.delete_journal_entry_message_format,
+                    viewingEntry!!.title
+                )
+            )
+        }
+
+        if (viewingEntry != null) {
+            val entry = viewingEntry!!
+            ModalBottomSheet(
+                onDismissRequest = { viewingEntry = null },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp)
+                        .navigationBarsPadding()
+                        .padding(bottom = 32.dp)
+                ) {
+                    Text(
+                        text = entry.title,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = java.text.SimpleDateFormat(
+                            "MMM dd, yyyy",
+                            LocalLocale.current.platformLocale
+                        ).format(java.util.Date(entry.timestamp)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                    if (entry.language.isNotBlank()) {
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = entry.language,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Spacer(Modifier.height(20.dp))
+                    Text(
+                        text = entry.content,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    if (entry.tags.isNotEmpty()) {
+                        Spacer(Modifier.height(20.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(entry.tags) { tag ->
+                                AssistChip(
+                                    onClick = {},
+                                    label = { Text(tag) }
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        val canEditEntry = !isMentorMode ||
+                            entry.mentorAccessLevel == "edit" ||
+                            mentorAccessLevel == "full"
+                        if (canEditEntry) {
+                            AppButton(
+                                onClick = {
+                                    viewingEntry = null
+                                    editingEntry = entry
+                                },
+                                text = stringResource(R.string.edit),
+                                modifier = Modifier.weight(1f)
+                            )
+                            AppButton(
+                                onClick = { showViewDeleteConfirm = true },
+                                text = stringResource(R.string.delete),
+                                containerColor = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.weight(1f)
+                            )
+                        } else {
+                            TextButton(
+                                onClick = { viewingEntry = null },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(stringResource(R.string.close))
                             }
                         }
                     }
@@ -914,6 +1021,7 @@ fun JournalItem(
     isMentorMode: Boolean = false,
     onDelete: () -> Unit,
     onClick: () -> Unit,
+    onEdit: () -> Unit,
     onSharePdf: () -> Unit,
     onTagsChanged: (List<String>) -> Unit = {},
     allSystemTags: List<String> = emptyList()
@@ -945,7 +1053,7 @@ fun JournalItem(
                 }
                 SwipeToDismissBoxValue.StartToEnd -> {
                     if (canEdit) {
-                        onClick()
+                        onEdit()
                     }
                 }
                 SwipeToDismissBoxValue.Settled -> {}
@@ -1196,6 +1304,7 @@ fun JournalItemPreview() {
             canEdit = true,
             onDelete = {},
             onClick = {},
+            onEdit = {},
             onSharePdf = {}
         )
     }
