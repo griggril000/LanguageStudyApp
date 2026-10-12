@@ -27,6 +27,7 @@
     <string name="vocab_mastery">Vocabulary Mastery</string>
     <string name="skills_progress">Skills Progress</string>
     <string name="clear_cd">Clear</string>
+    <string name="search_by_tag">Search by tag</string>
     <string name="search_placeholder">Search…</string>
     <string name="progress_status_legend">Progress Status Legend:</string>
     <string name="in_progress_label">In Progress</string>
@@ -70,6 +71,8 @@
     <string name="no_skills_mentor">This student hasn\'t tracked any skills yet.</string>
     <string name="no_skills_user">No skills tracked yet. Tap + to add one!</string>
     <string name="no_results_format">No results for \"%1$s\"</string>
+    <string name="no_results_with_tags_format">No results with tags %1$s</string>
+    <string name="no_results_query_with_tags_format">No results for \"%1$s\" with tags %2$s</string>
     <string name="no_skills_lang_mentor_format">This student hasn\'t tracked any skills for %1$s yet.</string>
     <string name="no_skills_lang_user_format">You haven\'t tracked any skills for %1$s yet.</string>
     <string name="no_skills_filters">No skills found for the current filters.</string>
