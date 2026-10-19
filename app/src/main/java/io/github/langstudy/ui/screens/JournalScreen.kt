@@ -830,7 +830,7 @@ fun JournalScreen(
                                 imageVector = Icons.Rounded.SupervisorAccount,
                                 contentDescription = null,
                                 modifier = Modifier.size(24.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Spacer(Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
@@ -1176,6 +1176,16 @@ fun JournalItem(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
+                if (!isMentorMode && entry.mentorVisible) {
+                    Icon(
+                        Icons.Rounded.SupervisorAccount,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Spacer(Modifier.height(4.dp))
                 Text(
                     entry.content,
@@ -1263,16 +1273,6 @@ fun JournalItem(
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
-                        }
-                        if (!isMentorMode && entry.mentorVisible) {
-                            Icon(
-                                Icons.Rounded.SupervisorAccount,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .padding(end = 8.dp)
-                                    .size(14.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
                         }
 
                         Box {
