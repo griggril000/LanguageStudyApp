@@ -91,6 +91,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.langstudy.LanguageStudyApplication
 import io.github.langstudy.R
 import io.github.langstudy.data.local.entity.JournalEntryEntity
+import io.github.langstudy.data.model.JournalDraft
 import io.github.langstudy.ui.components.AppButton
 import io.github.langstudy.ui.components.AppFAB
 import io.github.langstudy.ui.components.DeleteConfirmationDialog
@@ -461,8 +462,10 @@ fun JournalScreen(
                                 } else {
                                     true
                                 }
+                                val itemDraft = currentDraft?.takeIf { it.editingId == entry.id && it.isNotEmpty() }
                                 JournalItem(
                                     entry = entry,
+                                    draft = itemDraft,
                                     canEdit = canEditThisEntry,
                                     isMentorMode = isMentorMode,
                                     selectedTag = selectedCardTag,
@@ -505,6 +508,12 @@ fun JournalScreen(
 
         if (viewingEntry != null) {
             val entry = viewingEntry!!
+            val viewingDraft = currentDraft?.takeIf { it.editingId == entry.id && it.isNotEmpty() }
+            val displayTitle = viewingDraft?.title?.ifBlank { entry.title } ?: entry.title
+            val displayContent = viewingDraft?.content?.ifBlank { entry.content } ?: entry.content
+            val displayTags = viewingDraft?.tags ?: entry.tags
+            val displayLanguage = viewingDraft?.language ?: entry.language
+
             ModalBottomSheet(
                 onDismissRequest = { viewingEntry = null },
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -517,11 +526,47 @@ fun JournalScreen(
                         .navigationBarsPadding()
                         .padding(bottom = 32.dp)
                 ) {
-                    Text(
-                        text = entry.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = displayTitle,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        if (viewingDraft != null) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.tertiaryContainer,
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.tertiary
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.EditNote,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.draft),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                                    )
+                                }
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = java.text.SimpleDateFormat(
@@ -531,23 +576,23 @@ fun JournalScreen(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.secondary
                     )
-                    if (entry.language.isNotBlank()) {
+                    if (displayLanguage.isNotBlank()) {
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            text = entry.language,
+                            text = displayLanguage,
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
                     Spacer(Modifier.height(20.dp))
                     Text(
-                        text = entry.content,
+                        text = displayContent,
                         style = MaterialTheme.typography.bodyLarge
                     )
-                    if (entry.tags.isNotEmpty()) {
+                    if (displayTags.isNotEmpty()) {
                         Spacer(Modifier.height(20.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(entry.tags) { tag ->
+                            items(displayTags) { tag ->
                                 AssistChip(
                                     onClick = {
                                         viewingEntry = null
@@ -1094,6 +1139,7 @@ fun TagEditor(
 fun JournalItem(
     entry: JournalEntryEntity,
     canEdit: Boolean,
+    draft: JournalDraft? = null,
     isMentorMode: Boolean = false,
     selectedTag: String? = null,
     onDelete: () -> Unit,
@@ -1102,6 +1148,10 @@ fun JournalItem(
     onSharePdf: () -> Unit,
     onTagClick: (String) -> Unit
 ) {
+    val displayTitle = draft?.title?.ifBlank { entry.title } ?: entry.title
+    val displayContent = draft?.content?.ifBlank { entry.content } ?: entry.content
+    val displayTags = draft?.tags ?: entry.tags
+    val displayLanguage = draft?.language ?: entry.language
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -1186,30 +1236,70 @@ fun JournalItem(
             )
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    entry.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                if (!isMentorMode && entry.mentorVisible) {
-                    Icon(
-                        Icons.Rounded.SupervisorAccount,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .size(14.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            displayTitle,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        if (!isMentorMode && entry.mentorVisible) {
+                            Spacer(Modifier.width(4.dp))
+                            Icon(
+                                Icons.Rounded.SupervisorAccount,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    if (draft != null) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.tertiary
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    Icons.Rounded.EditNote,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                                Text(
+                                    text = stringResource(R.string.draft),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+                        }
+                    }
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    entry.content,
+                    displayContent,
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 3,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
                 
-                if (entry.tags.isNotEmpty()) {
+                if (displayTags.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1225,7 +1315,7 @@ fun JournalItem(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.weight(1f)
                         ) {
-                            items(entry.tags) { tag ->
+                            items(displayTags) { tag ->
                                 Surface(
                                     modifier = Modifier.clickable { onTagClick(tag) },
                                     shape = RoundedCornerShape(8.dp),
@@ -1323,13 +1413,13 @@ fun JournalItem(
                             }
                         }
 
-                        if (entry.language.isNotBlank()) {
+                        if (displayLanguage.isNotBlank()) {
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
                                 color = MaterialTheme.colorScheme.secondaryContainer
                             ) {
                                 Text(
-                                    entry.language,
+                                    displayLanguage,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer
