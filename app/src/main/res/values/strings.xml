@@ -210,6 +210,7 @@
     <string name="invalid_url">Invalid URL</string>
 
     <!-- Journal Screen -->
+    <string name="draft">Draft</string>
     <string name="title_label">Title</string>
     <string name="message_label">Message</string>
     <string name="new_entry_cd">New Entry</string>
