@@ -220,6 +220,7 @@ fun JournalScreen(
     var showViewDeleteConfirm by remember { mutableStateOf(false) }
     var localErrorMessage by remember { mutableStateOf<String?>(null) }
     var showPrompts by remember { mutableStateOf(false) }
+    var isInitialized by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
@@ -234,45 +235,56 @@ fun JournalScreen(
             mentorVisible = isMentorMode // Default true if mentor creates it
             mentorAccessLevelEntry = if (isMentorMode) "edit" else "view"
             tags = emptyList()
+            isInitialized = false
         } else {
-            val draft = currentDraft
-            if (editingEntry != null) {
-                if (draft != null && draft.editingId == editingEntry?.id && draft.isNotEmpty()) {
-                    title = draft.title
-                    contentText = draft.content
-                    language = draft.language
-                    mentorVisible = draft.mentorVisible
-                    mentorAccessLevelEntry = draft.mentorAccessLevel
-                    tags = draft.tags
-                } else {
-                    title = editingEntry!!.title
-                    contentText = editingEntry!!.content
-                    language = editingEntry!!.language
-                    mentorVisible = editingEntry!!.mentorVisible
-                    mentorAccessLevelEntry = editingEntry!!.mentorAccessLevel
-                    tags = editingEntry!!.tags
-                }
-            } else {
-                if (draft != null && draft.isNotEmpty()) {
-                    if (draft.editingId.isNotBlank()) {
-                        val matched = allEntries.find { it.id == draft.editingId }
-                        if (matched != null) {
-                            editingEntry = matched
-                        }
+            if (!isInitialized) {
+                val draft = currentDraft
+                if (editingEntry != null) {
+                    if (draft != null && draft.editingId == editingEntry?.id && draft.isNotEmpty()) {
+                        title = draft.title
+                        contentText = draft.content
+                        language = draft.language
+                        mentorVisible = draft.mentorVisible
+                        mentorAccessLevelEntry = draft.mentorAccessLevel
+                        tags = draft.tags
+                    } else {
+                        title = editingEntry!!.title
+                        contentText = editingEntry!!.content
+                        language = editingEntry!!.language
+                        mentorVisible = editingEntry!!.mentorVisible
+                        mentorAccessLevelEntry = editingEntry!!.mentorAccessLevel
+                        tags = editingEntry!!.tags
                     }
-                    title = draft.title
-                    contentText = draft.content
-                    language = draft.language
-                    mentorVisible = draft.mentorVisible
-                    mentorAccessLevelEntry = draft.mentorAccessLevel
-                    tags = draft.tags
+                } else {
+                    if (draft != null && draft.isNotEmpty()) {
+                        if (draft.editingId.isNotBlank()) {
+                            val matched = allEntries.find { it.id == draft.editingId }
+                            if (matched != null) {
+                                editingEntry = matched
+                            }
+                        }
+                        title = draft.title
+                        contentText = draft.content
+                        language = draft.language
+                        mentorVisible = draft.mentorVisible
+                        mentorAccessLevelEntry = draft.mentorAccessLevel
+                        tags = draft.tags
+                    } else if (title.isBlank() && contentText.isBlank()) {
+                        title = ""
+                        contentText = ""
+                        language = currentLanguage
+                        mentorVisible = isMentorMode
+                        mentorAccessLevelEntry = if (isMentorMode) "edit" else "view"
+                        tags = emptyList()
+                    }
                 }
+                isInitialized = true
             }
         }
     }
 
-    LaunchedEffect(showSheet, title, contentText, language, mentorVisible, mentorAccessLevelEntry, tags, editingEntry) {
-        if (showSheet) {
+    LaunchedEffect(showSheet, isInitialized, title, contentText, language, mentorVisible, mentorAccessLevelEntry, tags, editingEntry) {
+        if (showSheet && isInitialized) {
             viewModel.updateDraft(
                 title = title,
                 content = contentText,
@@ -282,18 +294,6 @@ fun JournalScreen(
                 editingId = editingEntry?.id ?: "",
                 tags = tags
             )
-        }
-    }
-
-    LaunchedEffect(editingEntry) {
-        editingEntry?.let {
-            title = it.title
-            contentText = it.content
-            language = it.language
-            mentorVisible = it.mentorVisible
-            mentorAccessLevelEntry = it.mentorAccessLevel
-            tags = it.tags
-            showSheet = true
         }
     }
 
@@ -314,7 +314,12 @@ fun JournalScreen(
             floatingActionButton = {
                 if (canEditContent) {
                     AppFAB(
-                        onClick = { showSheet = true },
+                        onClick = {
+                            if (!showSheet) {
+                                isInitialized = false
+                                showSheet = true
+                            }
+                        },
                         icon = Icons.Rounded.EditNote,
                         contentDescription = stringResource(R.string.new_entry_cd)
                     )
@@ -418,8 +423,10 @@ fun JournalScreen(
                         }
                         if (showPrompts) {
                             WritingPromptsSection(onPromptClick = { prompt ->
+                                editingEntry = null
                                 title = "Journal Entry"
                                 contentText = prompt
+                                isInitialized = true
                                 showSheet = true
                             })
                         }
@@ -461,7 +468,11 @@ fun JournalScreen(
                                     selectedTag = selectedCardTag,
                                     onDelete = { viewModel.deleteEntry(entry) },
                                     onClick = { viewingEntry = entry },
-                                    onEdit = { editingEntry = entry },
+                                    onEdit = {
+                                        editingEntry = entry
+                                        isInitialized = false
+                                        showSheet = true
+                                    },
                                     onSharePdf = { JournalExportUtils.shareEntryAsPdf(context, entry) },
                                     onTagClick = { tag ->
                                         viewingEntry = null
@@ -573,6 +584,8 @@ fun JournalScreen(
                                 onClick = {
                                     viewingEntry = null
                                     editingEntry = entry
+                                    isInitialized = false
+                                    showSheet = true
                                 },
                                 text = stringResource(R.string.edit),
                                 modifier = Modifier.weight(1f)
@@ -747,12 +760,14 @@ fun JournalScreen(
                                         language = editingEntry!!.language
                                         mentorVisible = editingEntry!!.mentorVisible
                                         mentorAccessLevelEntry = editingEntry!!.mentorAccessLevel
+                                        tags = editingEntry!!.tags
                                     } else {
                                         title = ""
                                         contentText = ""
                                         language = currentLanguage
                                         mentorVisible = isMentorMode
                                         mentorAccessLevelEntry = if (isMentorMode) "edit" else "view"
+                                        tags = emptyList()
                                     }
                                 }
                             ) {
